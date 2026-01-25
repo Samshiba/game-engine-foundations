@@ -1,0 +1,18 @@
+#!/bin/sh
+
+BRANCH_NAME=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+JIRA_KEY=$(echo "$BRANCH_NAME" | grep -oE '^[A-Za-z]+-[0-9]+' | head -n 1)
+
+[ -z "$JIRA_KEY" ] && exit 0
+
+JIRA_KEY_UPPER=$(echo "$JIRA_KEY" | tr '[:lower:]' '[:upper:]')
+
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+
+if [ "$COMMIT_SOURCE" = "merge" ] || grep -q "$JIRA_KEY_UPPER" "$COMMIT_MSG_FILE"; then
+  exit 0
+fi
+
+sed -i.bak -e "1s/^/[$JIRA_KEY_UPPER] /" "$COMMIT_MSG_FILE"
