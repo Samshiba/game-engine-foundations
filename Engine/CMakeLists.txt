@@ -26,9 +26,34 @@ target_link_libraries(Engine
         glad
 )
 
+# Compile Options
 target_compile_options(Engine PRIVATE
-        $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
-        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Werror -pedantic -Wold-style-cast>
+        # --- MSVC Config ---
+        $<$<CXX_COMPILER_ID:MSVC>:
+            $<$<CONFIG:Debug>:/Od /Zi /RTC1 /MDd>
+            $<$<CONFIG:Profile>:/O2 /Zi /MD>
+            $<$<CONFIG:Release>:/O2 /MD>
+            /W4 /WX /MP
+        >
+
+        # --- GCC/Clang Config ---
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
+            $<$<CONFIG:Debug>:-O0 -g>
+            $<$<CONFIG:Profile>:-O3 -g>
+            $<$<CONFIG:Release>:-O3>
+            -Wall -Wextra -Werror -pedantic
+        >
+)
+
+# Compile Definitions
+target_compile_definitions(Engine PUBLIC
+        $<$<PLATFORM_ID:Windows>:GEF_PLATFORM_WINDOWS>
+
+        $<$<OR:$<CONFIG:Release>,$<CONFIG:Profile>>:NDEBUG>
+
+        $<$<CONFIG:Debug>:GEF_DEBUG GEF_ENABLE_ASSERTS GEF_ENABLE_LOGGING>
+        $<$<CONFIG:Profile>:GEF_PROFILE GEF_ENABLE_LOGGING>
+        $<$<CONFIG:Release>:GEF_RELEASE>
 )
 
 
