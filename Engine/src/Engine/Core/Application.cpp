@@ -2,7 +2,8 @@
 // Created by genin on 26/01/2026.
 //
 
-#include "Application.hpp"
+#include <Engine/Core/Application.hpp>
+#include "Core.hpp"
 
 namespace GEF {
     void HelloWorld() {

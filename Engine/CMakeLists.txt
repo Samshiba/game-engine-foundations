@@ -6,22 +6,37 @@ add_library(Engine STATIC)
 
 add_subdirectory("vendor/glad")
 
-target_include_directories(Engine PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/src"
-        "${CMAKE_CURRENT_SOURCE_DIR}/vendor"
+file(GLOB_RECURSE ENGINE_SOURCES
+        "src/**/*.cpp"
+        "src/**/*.h"
+        "src/**/*.hpp"
 )
 
-file(GLOB_RECURSE SOURCES
-        "src/**/*.cpp"
-        "src/**/*.hpp")
+file(GLOB_RECURSE ENGINE_HEADERS
+        "include/**/*.h"
+        "include/**/*.hpp"
+)
 
-target_sources(Engine PRIVATE ${SOURCES})
+target_sources(Engine PRIVATE
+        ${ENGINE_SOURCES}
+        ${ENGINE_HEADERS}
+)
+
+target_include_directories(Engine
+        PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+
+        PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        "${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb_image"
+)
 
 target_link_libraries(Engine
         PUBLIC
         glfw
         glm
         spdlog
+
         PRIVATE
         glad
 )

@@ -4,5 +4,4 @@
 
 #pragma once
 
-class App {
-};
+#include "Engine/Core/Application.hpp"

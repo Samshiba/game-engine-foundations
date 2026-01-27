@@ -4,4 +4,6 @@
 
 #pragma once
 
-#include <Engine/Core/Application.hpp>
+namespace GEF {
+    void HelloWorld();
+}
