@@ -3,6 +3,10 @@
 //
 
 #pragma once
+#include <Engine.hpp>
 
-class App {
+class App : public GEF::Application
+{
+public:
+    using GEF::Application::Application;
 };

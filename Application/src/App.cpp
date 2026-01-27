@@ -3,8 +3,8 @@
 //
 
 #include "App.hpp"
-#include <Engine.hpp>
 
-int main(int argc, char *argv[]) {
-    GEF::HelloWorld();
+GEF::Application* GEF::CreateApplication(int argc, char** argv)
+{
+    return new App(argc, argv);
 }

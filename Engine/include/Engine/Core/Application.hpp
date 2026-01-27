@@ -4,6 +4,20 @@
 
 #pragma once
 
-namespace GEF {
-    void HelloWorld();
+namespace GEF
+{
+    class Application
+    {
+    public:
+        Application(int argc, char** argv);
+
+        virtual ~Application() = 0;
+
+        void Run();
+
+    private:
+        bool is_running_ = true;
+    };
+
+    Application* CreateApplication(int argc, char** argv);
 }

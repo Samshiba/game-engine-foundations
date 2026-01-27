@@ -6,15 +6,15 @@ add_library(Engine STATIC)
 
 add_subdirectory("vendor/glad")
 
-file(GLOB_RECURSE ENGINE_SOURCES
-        "src/**/*.cpp"
-        "src/**/*.h"
-        "src/**/*.hpp"
+set(ENGINE_SOURCES
+        "src/Core.hpp"
+        "src/Engine/Core/Application.cpp"
 )
 
-file(GLOB_RECURSE ENGINE_HEADERS
-        "include/**/*.h"
-        "include/**/*.hpp"
+set(ENGINE_HEADERS
+        "include/Engine.hpp"
+        "include/Engine/Core/Application.hpp"
+        "include/Engine/Core/EntryPoint.hpp"
 )
 
 target_sources(Engine PRIVATE
@@ -45,18 +45,18 @@ target_link_libraries(Engine
 target_compile_options(Engine PRIVATE
         # --- MSVC Config ---
         $<$<CXX_COMPILER_ID:MSVC>:
-            $<$<CONFIG:Debug>:/Od /Zi /RTC1 /MDd>
-            $<$<CONFIG:Profile>:/O2 /Zi /MD>
-            $<$<CONFIG:Release>:/O2 /MD>
-            /W4 /WX /MP
+        $<$<CONFIG:Debug>:/Od /Zi /RTC1 /MDd>
+        $<$<CONFIG:Profile>:/O2 /Zi /MD>
+        $<$<CONFIG:Release>:/O2 /MD>
+        /W4 /WX /MP
         >
 
         # --- GCC/Clang Config ---
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
-            $<$<CONFIG:Debug>:-O0 -g>
-            $<$<CONFIG:Profile>:-O3 -g>
-            $<$<CONFIG:Release>:-O3>
-            -Wall -Wextra -Werror -pedantic
+        $<$<CONFIG:Debug>:-O0 -g>
+        $<$<CONFIG:Profile>:-O3 -g>
+        $<$<CONFIG:Release>:-O3>
+        -Wall -Wextra -Werror -pedantic
         >
 )
 
