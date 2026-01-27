@@ -7,14 +7,17 @@ add_library(Engine STATIC)
 add_subdirectory("vendor/glad")
 
 set(ENGINE_SOURCES
-        "src/Core.hpp"
         "src/Engine/Core/Application.cpp"
+        "src/Engine/Core/Log.cpp"
 )
 
 set(ENGINE_HEADERS
+        "include/Core.hpp"
         "include/Engine.hpp"
         "include/Engine/Core/Application.hpp"
         "include/Engine/Core/EntryPoint.hpp"
+        "include/Engine/Core/Base.hpp"
+        "include/Engine/Core/Log.hpp"
 )
 
 target_sources(Engine PRIVATE
@@ -66,9 +69,9 @@ target_compile_definitions(Engine PUBLIC
 
         $<$<OR:$<CONFIG:Release>,$<CONFIG:Profile>>:NDEBUG>
 
-        $<$<CONFIG:Debug>:GEF_DEBUG GEF_ENABLE_ASSERTS GEF_ENABLE_LOGGING>
-        $<$<CONFIG:Profile>:GEF_PROFILE GEF_ENABLE_LOGGING>
-        $<$<CONFIG:Release>:GEF_RELEASE>
+        $<$<CONFIG:Debug>:GEF_DEBUG_BUILD GEF_ENABLE_ASSERTS GEF_ENABLE_LOGGING>
+        $<$<CONFIG:Profile>:GEF_PROFILE_BUILD GEF_ENABLE_LOGGING>
+        $<$<CONFIG:Release>:GEF_RELEASE_BUILD>
 )
 
 

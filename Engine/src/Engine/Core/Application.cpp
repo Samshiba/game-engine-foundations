@@ -3,29 +3,28 @@
 //
 
 #include <Engine/Core/Application.hpp>
-#include "Core.hpp"
 
 namespace GEF
 {
     Application::Application([[maybe_unused]] int argc,
                              [[maybe_unused]] char** argv)
     {
-        std::cout << "Application created" << std::endl;
+        GEF_ENGINE_INFO("Application created");
     }
 
     Application::~Application()
     {
-        std::cout << "Application destroyed" << std::endl;
+        GEF_ENGINE_INFO("Application destroyed");
     }
 
     void Application::Run()
     {
         while (is_running_)
         {
-            std::cout << "Running..." << std::endl;
+            GEF_ENGINE_DEBUG("Running...");
             // DO
             is_running_ = false;
         }
-        std::cout << "Application stopped" << std::endl;
+        GEF_ENGINE_WARN("Application stopped");
     }
 }

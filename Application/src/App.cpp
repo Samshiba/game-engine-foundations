@@ -6,5 +6,6 @@
 
 GEF::Application* GEF::CreateApplication(int argc, char** argv)
 {
+    GEF_INFO("Starting Game");
     return new App(argc, argv);
 }
