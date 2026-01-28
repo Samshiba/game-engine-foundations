@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include <Core.hpp>
+#ifdef GEF_ENABLE_LOGGING
 #include <spdlog/spdlog.h>
-#include <spdlog/common.h>
-#include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/pattern_formatter.h>
+#endif
 
 namespace GEF
 {
@@ -18,15 +18,21 @@ namespace GEF
     public:
         static void Init();
 
+#ifdef GEF_ENABLE_LOGGING
         static std::shared_ptr<spdlog::logger>& GetEngineLogger();
 
         static std::shared_ptr<spdlog::logger>& GetClientLogger();
+#endif
 
     private:
+#ifdef GEF_ENABLE_LOGGING
         static std::shared_ptr<spdlog::logger> EngineLogger_;
         static std::shared_ptr<spdlog::logger> ClientLogger_;
+#endif
     };
 }
+
+#ifdef GEF_ENABLE_LOGGING
 
 inline std::shared_ptr<spdlog::logger>& GEF::Log::GetEngineLogger()
 {
@@ -38,14 +44,33 @@ inline std::shared_ptr<spdlog::logger>& GEF::Log::GetClientLogger()
     return ClientLogger_;
 }
 
-#define GEF_ENGINE_DEBUG(...)       GEF::Log::GetEngineLogger()->log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::debug, __VA_ARGS__)
-#define GEF_ENGINE_INFO(...)        GEF::Log::GetEngineLogger()->log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::info, __VA_ARGS__)
-#define GEF_ENGINE_WARN(...)        GEF::Log::GetEngineLogger()->log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::warn, __VA_ARGS__)
-#define GEF_ENGINE_ERROR(...)       GEF::Log::GetEngineLogger()->log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::error, __VA_ARGS__)
-#define GEF_ENGINE_CRITICAL(...)    GEF::Log::GetEngineLogger()->log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::critical, __VA_ARGS__)
+#define GEF_ENGINE_DEBUG(...)    SPDLOG_LOGGER_CALL(GEF::Log::GetEngineLogger(), spdlog::level::debug, __VA_ARGS__)
+#define GEF_ENGINE_INFO(...)     SPDLOG_LOGGER_CALL(GEF::Log::GetEngineLogger(), spdlog::level::info, __VA_ARGS__)
+#define GEF_ENGINE_WARN(...)     SPDLOG_LOGGER_CALL(GEF::Log::GetEngineLogger(), spdlog::level::warn, __VA_ARGS__)
+#define GEF_ENGINE_ERROR(...)    SPDLOG_LOGGER_CALL(GEF::Log::GetEngineLogger(), spdlog::level::err, __VA_ARGS__)
+#define GEF_ENGINE_CRITICAL(...) SPDLOG_LOGGER_CALL(GEF::Log::GetEngineLogger(), spdlog::level::critical, __VA_ARGS__)
 
-#define GEF_DEBUG(...)              GEF::Log::GetClientLogger()->log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::debug, __VA_ARGS__)
-#define GEF_INFO(...)               GEF::Log::GetClientLogger()->log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::info, __VA_ARGS__)
-#define GEF_WARN(...)               GEF::Log::GetClientLogger()->log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::warn, __VA_ARGS__)
-#define GEF_ERROR(...)              GEF::Log::GetClientLogger()->log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::error, __VA_ARGS__)
-#define GEF_CRITICAL(...)           GEF::Log::GetClientLogger()->log(spdlog::source_loc{__FILE__, __LINE__, SPDLOG_FUNCTION}, spdlog::level::critical, __VA_ARGS__)
+#define GEF_TRACE(...)           SPDLOG_LOGGER_CALL(GEF::Log::GetClientLogger(), spdlog::level::trace, __VA_ARGS__)
+#define GEF_DEBUG(...)           SPDLOG_LOGGER_CALL(GEF::Log::GetClientLogger(), spdlog::level::debug, __VA_ARGS__)
+#define GEF_INFO(...)            SPDLOG_LOGGER_CALL(GEF::Log::GetClientLogger(), spdlog::level::info, __VA_ARGS__)
+#define GEF_WARN(...)            SPDLOG_LOGGER_CALL(GEF::Log::GetClientLogger(), spdlog::level::warn, __VA_ARGS__)
+#define GEF_ERROR(...)           SPDLOG_LOGGER_CALL(GEF::Log::GetClientLogger(), spdlog::level::err, __VA_ARGS__)
+#define GEF_CRITICAL(...)        SPDLOG_LOGGER_CALL(GEF::Log::GetClientLogger(), spdlog::level::critical, __VA_ARGS__)
+
+#else
+
+#define GEF_ENGINE_TRACE(...)    (void)0
+#define GEF_ENGINE_DEBUG(...)    (void)0
+#define GEF_ENGINE_INFO(...)     (void)0
+#define GEF_ENGINE_WARN(...)     (void)0
+#define GEF_ENGINE_ERROR(...)    (void)0
+#define GEF_ENGINE_CRITICAL(...) (void)0
+
+#define GEF_TRACE(...)           (void)0
+#define GEF_DEBUG(...)           (void)0
+#define GEF_INFO(...)            (void)0
+#define GEF_WARN(...)            (void)0
+#define GEF_ERROR(...)           (void)0
+#define GEF_CRITICAL(...)        (void)0
+
+#endif

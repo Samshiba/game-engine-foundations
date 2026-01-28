@@ -7,12 +7,12 @@ add_library(Engine STATIC)
 add_subdirectory("vendor/glad")
 
 set(ENGINE_SOURCES
+        "src/Core.hpp"
         "src/Engine/Core/Application.cpp"
         "src/Engine/Core/Log.cpp"
 )
 
 set(ENGINE_HEADERS
-        "include/Core.hpp"
         "include/Engine.hpp"
         "include/Engine/Core/Application.hpp"
         "include/Engine/Core/EntryPoint.hpp"
@@ -72,6 +72,11 @@ target_compile_definitions(Engine PUBLIC
         $<$<CONFIG:Debug>:GEF_DEBUG_BUILD GEF_ENABLE_ASSERTS GEF_ENABLE_LOGGING>
         $<$<CONFIG:Profile>:GEF_PROFILE_BUILD GEF_ENABLE_LOGGING>
         $<$<CONFIG:Release>:GEF_RELEASE_BUILD>
+
+        # SPDLOG
+        $<$<CONFIG:Debug>:SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE>
+        $<$<CONFIG:Profile>:SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO>
+        $<$<CONFIG:Release>:SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_OFF>
 )
 
 

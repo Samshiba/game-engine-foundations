@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "Core.hpp"
-
 namespace GEF
 {
     class Application

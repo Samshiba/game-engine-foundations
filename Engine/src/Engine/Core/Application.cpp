@@ -4,6 +4,8 @@
 
 #include <Engine/Core/Application.hpp>
 
+#include "Core.hpp"
+
 namespace GEF
 {
     Application::Application([[maybe_unused]] int argc,
