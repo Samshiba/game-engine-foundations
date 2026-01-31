@@ -7,13 +7,26 @@ add_library(Engine STATIC)
 add_subdirectory("vendor/glad")
 
 set(ENGINE_SOURCES
-        "src/Core.hpp"
+        "src/Commons.hpp"
+        # Utils
+        "src/Engine/Utils/FNV-1a.hpp"
+
+        # Core
         "src/Engine/Core/Application.cpp"
         "src/Engine/Core/Log.cpp"
+
+        # Event
+        "src/Engine/Event/Event.hpp"
+        "src/Engine/Event/ApplicationEvent.hpp"
+        "src/Engine/Event/EventBus.hpp"
+        "src/Engine/Event/EventBus.cpp"
+
 )
 
 set(ENGINE_HEADERS
         "include/Engine.hpp"
+
+        # Core
         "include/Engine/Core/Application.hpp"
         "include/Engine/Core/EntryPoint.hpp"
         "include/Engine/Core/Base.hpp"

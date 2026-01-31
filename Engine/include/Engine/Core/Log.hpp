@@ -50,7 +50,6 @@ inline std::shared_ptr<spdlog::logger>& GEF::Log::GetClientLogger()
 #define GEF_ENGINE_ERROR(...)    SPDLOG_LOGGER_CALL(GEF::Log::GetEngineLogger(), spdlog::level::err, __VA_ARGS__)
 #define GEF_ENGINE_CRITICAL(...) SPDLOG_LOGGER_CALL(GEF::Log::GetEngineLogger(), spdlog::level::critical, __VA_ARGS__)
 
-#define GEF_TRACE(...)           SPDLOG_LOGGER_CALL(GEF::Log::GetClientLogger(), spdlog::level::trace, __VA_ARGS__)
 #define GEF_DEBUG(...)           SPDLOG_LOGGER_CALL(GEF::Log::GetClientLogger(), spdlog::level::debug, __VA_ARGS__)
 #define GEF_INFO(...)            SPDLOG_LOGGER_CALL(GEF::Log::GetClientLogger(), spdlog::level::info, __VA_ARGS__)
 #define GEF_WARN(...)            SPDLOG_LOGGER_CALL(GEF::Log::GetClientLogger(), spdlog::level::warn, __VA_ARGS__)
@@ -59,14 +58,12 @@ inline std::shared_ptr<spdlog::logger>& GEF::Log::GetClientLogger()
 
 #else
 
-#define GEF_ENGINE_TRACE(...)    (void)0
 #define GEF_ENGINE_DEBUG(...)    (void)0
 #define GEF_ENGINE_INFO(...)     (void)0
 #define GEF_ENGINE_WARN(...)     (void)0
 #define GEF_ENGINE_ERROR(...)    (void)0
 #define GEF_ENGINE_CRITICAL(...) (void)0
 
-#define GEF_TRACE(...)           (void)0
 #define GEF_DEBUG(...)           (void)0
 #define GEF_INFO(...)            (void)0
 #define GEF_WARN(...)            (void)0

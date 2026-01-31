@@ -4,7 +4,7 @@
 
 #include <Engine/Core/Log.hpp>
 
-#include "Core.hpp"
+#include "Commons.hpp"
 
 namespace GEF
 {
