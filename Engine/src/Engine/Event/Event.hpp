@@ -38,7 +38,9 @@ namespace GEF::Events
 
     inline std::string Event::ToString() const
     {
-        return std::to_string(GetEventType());
+        std::stringstream ss;
+        ss << GetName();
+        return ss.str();
     }
 
     inline void Event::MarkHandled()

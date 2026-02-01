@@ -25,7 +25,7 @@ namespace GEF::Utils
         return hash;
     }
 
-    constexpr std::uint32_t operator"" _hash(const char* s, std::size_t)
+    constexpr std::uint32_t operator""_hash(const char* s, std::size_t)
     {
         return HashFNV1a(s);
     }
