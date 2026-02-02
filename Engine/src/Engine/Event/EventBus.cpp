@@ -2,7 +2,8 @@
 // Created by genin on 31/01/2026.
 //
 
-#include "EventBus.hpp"
+#include <Engine/Event/EventBus.hpp>
+#include <Engine/Core/Log.hpp>
 
 namespace GEF::Events
 {

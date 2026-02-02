@@ -5,12 +5,18 @@
 #include <Engine/Core/Application.hpp>
 
 #include "Commons.hpp"
+#include "../../../include/Engine/Event/ApplicationEvent.hpp"
 
 namespace GEF
 {
     Application::Application([[maybe_unused]] int argc,
                              [[maybe_unused]] char** argv)
     {
+        window_ = std::unique_ptr<Window>(Window::Create());
+
+        window_->SetEventCallback([this](Events::Event& e) {
+            this->OnEvent(e);
+        });
         GEF_ENGINE_INFO("Application created");
     }
 
@@ -25,8 +31,15 @@ namespace GEF
         {
             GEF_ENGINE_DEBUG("Running...");
             // DO
-            is_running_ = false;
+            window_->OnUpdate();
         }
         GEF_ENGINE_WARN("Application stopped");
+    }
+
+    void Application::OnEvent(Events::Event& e)
+    {
+        GEF_ENGINE_INFO(e.ToString());
+
+        event_bus_.TriggerEvent(e);
     }
 }

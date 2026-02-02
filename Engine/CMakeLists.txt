@@ -15,12 +15,9 @@ set(ENGINE_SOURCES
         # Core
         "src/Engine/Core/Application.cpp"
         "src/Engine/Core/Log.cpp"
-        "src/Engine/Core/Window.hpp"
+        "src/Engine/Core/Window.cpp"
 
         # Event
-        "src/Engine/Event/Event.hpp"
-        "src/Engine/Event/ApplicationEvent.hpp"
-        "src/Engine/Event/EventBus.hpp"
         "src/Engine/Event/EventBus.cpp"
 
         # Platform
@@ -42,6 +39,12 @@ set(ENGINE_HEADERS
         "include/Engine/Core/EntryPoint.hpp"
         "include/Engine/Core/Base.hpp"
         "include/Engine/Core/Log.hpp"
+        "include/Engine/Core/Window.hpp"
+
+        # Event
+        "include/Engine/Event/Event.hpp"
+        "include/Engine/Event/ApplicationEvent.hpp"
+        "include/Engine/Event/EventBus.hpp"
 )
 
 target_sources(Engine PRIVATE

@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include "Window.hpp"
+#include <Engine/Event/EventBus.hpp>
+
 namespace GEF
 {
     class Application
@@ -14,8 +17,12 @@ namespace GEF
 
         void Run();
 
+        void OnEvent(Events::Event& e);
+
     private:
         bool is_running_ = true;
+        std::unique_ptr<Window> window_;
+        Events::EventBus event_bus_;
     };
 
     Application* CreateApplication(int argc, char** argv);

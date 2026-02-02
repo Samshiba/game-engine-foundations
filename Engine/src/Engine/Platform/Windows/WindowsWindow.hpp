@@ -5,6 +5,8 @@
 #pragma once
 
 #include <Engine/Core/Window.hpp>
+#include <Engine/Platform/OpenGL/OpenGlContext.hpp>
+#include <Engine/Event/Event.hpp>
 #include <GLFW/glfw3.h>
 
 #include "Commons.hpp"
@@ -14,6 +16,8 @@ namespace GEF::Platform
     class WindowsWindow : public Window
     {
     private:
+        using EventCallbackFunction = std::function<void(Events::Event&)>;
+
         struct WindowData
         {
             std::string title;
@@ -29,6 +33,7 @@ namespace GEF::Platform
 
     public:
         WindowsWindow(const WindowProps& props);
+        ~WindowsWindow();
 
         void OnUpdate() override;
 
@@ -45,11 +50,25 @@ namespace GEF::Platform
         [[nodiscard]] void* GetNativeWindow() const override;
 
     private:
-        virtual void Init(const WindowProps& props);
-        virtual void Shutdown();
+        void Init(const WindowProps& props);
+        void Shutdown();
+
+        static void ErrorCallback(int error, const char* description);
+        static void WindowResizeCallback(GLFWwindow* window, int width,
+                                         int height);
+        // static void WindowCloseCallback(GLFWwindow* window);
+        // static void KeyCallback(GLFWwindow* window, int key, int scancode,
+        //                         int action, int mods);
+        // static void MouseButtonCallback(GLFWwindow* window, int button,
+        //                                 int action, int mods);
+        // static void CursorPositionCallback(GLFWwindow* window, double xPos,
+        //                                    double yPos);
+        // static void ScrollCallback(GLFWwindow* window, double xOffset,
+        //                            double yOffset);
 
     private:
-        unsigned int monitor_ = 0;
+        unsigned int monitor_ = 0; // TODO SUPPORT MULTI MONITOR
+        std::unique_ptr<Renderer::GraphicsContext> context_;
         GLFWwindow* window_ = nullptr;
         WindowData windowData_;
     };
