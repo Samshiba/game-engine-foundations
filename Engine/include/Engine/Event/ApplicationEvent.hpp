@@ -25,6 +25,14 @@ namespace GEF::Events
         unsigned int height_;
     };
 
+    class WindowCloseEvent : public Event
+    {
+    public:
+        EVENT_TYPE("WindowCloseEvent")
+
+        WindowCloseEvent() = default;
+    };
+
     inline WindowResizeEvent::WindowResizeEvent(int width, int height)
         : width_(width), height_(height)
     {
@@ -34,7 +42,7 @@ namespace GEF::Events
     {
         std::stringstream ss;
         ss << "WindowResizeEvent: " << width_ << ", " << height_;
-        return ss.str();
+        return ss.str().c_str();
     }
 
     inline unsigned int WindowResizeEvent::GetWidth() const

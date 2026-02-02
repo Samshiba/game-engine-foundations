@@ -131,7 +131,7 @@ namespace GEF::Platform
         SetVSync(true);
 
         glfwSetWindowSizeCallback(window_, WindowResizeCallback);
-        // glfwSetWindowCloseCallback(window_, WindowCloseCallback);
+        glfwSetWindowCloseCallback(window_, WindowCloseCallback);
         // glfwSetKeyCallback(window_, KeyCallback);
         // glfwSetMouseButtonCallback(window_, MouseButtonCallback);
         // glfwSetCursorPosCallback(window_, CursorPositionCallback);
@@ -162,11 +162,15 @@ namespace GEF::Platform
         data.eventCallback(event);
     }
 
-    // void WindowsWindow::WindowCloseCallback(GLFWwindow* window)
-    // {
-    //     // TODO
-    // }
-    //
+    void WindowsWindow::WindowCloseCallback(GLFWwindow* window)
+    {
+        auto& data = *static_cast<WindowData*>(
+            glfwGetWindowUserPointer(window));
+
+        Events::WindowCloseEvent event;
+        data.eventCallback(event);
+    }
+
     // void WindowsWindow::KeyCallback(GLFWwindow* window, int key, int scancode,
     //                                 int action, int mods)
     // {

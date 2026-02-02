@@ -29,7 +29,6 @@ namespace GEF
     {
         while (is_running_)
         {
-            GEF_ENGINE_DEBUG("Running...");
             // DO
             window_->OnUpdate();
         }
@@ -39,6 +38,11 @@ namespace GEF
     void Application::OnEvent(Events::Event& e)
     {
         GEF_ENGINE_INFO(e.ToString());
+
+        if (e.GetEventType() == Events::WindowCloseEvent::GetStaticEventType())
+        {
+            is_running_ = false;
+        }
 
         event_bus_.TriggerEvent(e);
     }

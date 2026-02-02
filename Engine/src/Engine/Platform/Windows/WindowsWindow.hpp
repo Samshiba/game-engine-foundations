@@ -56,7 +56,7 @@ namespace GEF::Platform
         static void ErrorCallback(int error, const char* description);
         static void WindowResizeCallback(GLFWwindow* window, int width,
                                          int height);
-        // static void WindowCloseCallback(GLFWwindow* window);
+        static void WindowCloseCallback(GLFWwindow* window);
         // static void KeyCallback(GLFWwindow* window, int key, int scancode,
         //                         int action, int mods);
         // static void MouseButtonCallback(GLFWwindow* window, int button,
