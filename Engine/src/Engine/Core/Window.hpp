@@ -8,30 +8,16 @@
 
 namespace GEF
 {
-    struct WindowProps
-    {
-        std::string title;
-        uint32_t width;
-        uint32_t height;
-
-        WindowProps(const std::string& title = "GEF Engine",
-                    uint32_t width = 1280,
-                    uint32_t height = 720)
-            : title(title), width(width), height(height)
-        {
-        }
-    };
-
     class Window
     {
     public:
-        enum Mode
+        enum class WindowMode
         {
-            MODE_WINDOWED,
-            MODE_MINIMIZED,
-            MODE_MAXIMIZED,
-            MODE_FULLSCREEN,
-            MODE_EXCLUSIVE,
+            WINDOWED,
+            MINIMIZED,
+            MAXIMIZED,
+            FULLSCREEN,
+            EXCLUSIVE,
         };
 
         enum WindowFlags : uint32_t
@@ -46,14 +32,36 @@ namespace GEF
             FLAGS_NO_FOCUS = 1 << 6,
             FLAGS_NO_CLOSE = 1 << 7,
             FLAGS_VISIBLE = 1 << 8,
-            FLAGS_NB = 1 << 9,
         };
 
-        enum WindowInitialPosition
+        enum class WindowInitialPosition
         {
-            WINDOW_INITIAL_POSITION_ABSOLUTE,
-            WINDOW_INITIAL_POSITION_CENTER_PRIMARY_SCREEN,
-            WINDOW_INITIAL_POSITION_CENTER_OTHER_SCREEN,
+            ABSOLUTE,
+            CENTER_PRIMARY_SCREEN,
+            CENTER_OTHER_SCREEN,
+            CENTER_MONITOR_INDEX,
+        };
+
+        struct WindowProps
+        {
+            std::string title;
+            uint32_t width;
+            uint32_t height;
+            WindowMode mode;
+            WindowInitialPosition position;
+            uint32_t flags;
+
+            WindowProps(const std::string& title = "GEF Engine",
+                        uint32_t width = 1280, uint32_t height = 720,
+                        WindowMode mode = WindowMode::WINDOWED,
+                        WindowInitialPosition position =
+                            WindowInitialPosition::CENTER_PRIMARY_SCREEN,
+                        uint32_t flags = FLAGS_VISIBLE)
+                : title(title), width(width), height(height), mode(mode),
+                  position(position),
+                  flags(flags)
+            {
+            }
         };
 
         using EventCallbackFunction = Events::EventBus::EventCallbackFunction;
@@ -63,17 +71,20 @@ namespace GEF
 
         virtual void OnUpdate() = 0;
 
-        [[nodiscard]] virtual unsigned int GetWidth() const = 0;
-        virtual void SetWidth(unsigned int width) = 0;
+        [[nodiscard]] virtual uint32_t GetWidth() const = 0;
+        [[nodiscard]] virtual uint32_t GetHeight() const = 0;
 
-        [[nodiscard]] virtual unsigned int GetHeight() const = 0;
-        virtual void SetHeight(unsigned int height) = 0;
+        virtual void SetWidth(uint32_t width) = 0;
+        virtual void SetHeight(uint32_t height) = 0;
+
+        virtual void SetVSync(bool enabled) = 0;
+        [[nodiscard]] virtual bool IsVSync() const = 0;
 
         virtual void SetEventCallback(const EventCallbackFunction& callback) =
         0;
 
-        static Window* Create(const WindowProps& props = WindowProps(),
-                              Mode mode = Mode::MODE_WINDOWED,
-                              uint32_t flags = WindowFlags::NONE);
+        [[nodiscard]] virtual void* GetNativeWindow() const = 0;
+
+        static Window* Create(const WindowProps& props = WindowProps());
     };
 }
