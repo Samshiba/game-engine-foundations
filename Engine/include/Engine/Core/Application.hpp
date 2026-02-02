@@ -10,7 +10,6 @@ namespace GEF
     {
     public:
         Application(int argc, char** argv);
-
         virtual ~Application() = 0;
 
         void Run();

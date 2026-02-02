@@ -29,16 +29,13 @@ namespace GEF::Events
 
     public:
         EventBus() = default;
-
         ~EventBus() = default;
 
         EventBus(const EventBus&) = delete;
-
         EventBus& operator=(const EventBus&) = delete;
 
         SubscriberID Subscribe(EventType eventType,
                                const EventCallbackFunction& callback);
-
         void Unsubscribe(EventType eventType, SubscriberID subscriberID);
 
         void TriggerEvent(Event& event);

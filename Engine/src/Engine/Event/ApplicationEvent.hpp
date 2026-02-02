@@ -18,7 +18,6 @@ namespace GEF::Events
         std::string ToString() const override;
 
         [[nodiscard]] unsigned int GetWidth() const;
-
         [[nodiscard]] unsigned int GetHeight() const;
 
     private:
@@ -28,7 +27,8 @@ namespace GEF::Events
 
     inline WindowResizeEvent::WindowResizeEvent(int width, int height)
         : width_(width), height_(height)
-    {}
+    {
+    }
 
     inline std::string WindowResizeEvent::ToString() const
     {

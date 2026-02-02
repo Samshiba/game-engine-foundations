@@ -20,7 +20,6 @@ namespace GEF
 
 #ifdef GEF_ENABLE_LOGGING
         static std::shared_ptr<spdlog::logger>& GetEngineLogger();
-
         static std::shared_ptr<spdlog::logger>& GetClientLogger();
 #endif
 

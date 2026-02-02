@@ -14,12 +14,17 @@ set(ENGINE_SOURCES
         # Core
         "src/Engine/Core/Application.cpp"
         "src/Engine/Core/Log.cpp"
+        "src/Engine/Core/Window.hpp"
 
         # Event
         "src/Engine/Event/Event.hpp"
         "src/Engine/Event/ApplicationEvent.hpp"
         "src/Engine/Event/EventBus.hpp"
         "src/Engine/Event/EventBus.cpp"
+
+        # Platform
+        "src/Engine/Platform/Windows/WindowsWindow.hpp"
+        "src/Engine/Platform/Windows/WindowsWindow.cpp"
 
 )
 

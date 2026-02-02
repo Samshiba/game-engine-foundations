@@ -14,7 +14,6 @@ namespace GEF::Events
         using EventType = std::uint32_t;
 
         Event() = default;
-
         virtual ~Event() = default;
 
         [[nodiscard]] virtual std::string ToString() const;
@@ -24,7 +23,6 @@ namespace GEF::Events
         [[nodiscard]] virtual const char* GetName() const = 0;
 
         [[nodiscard]] virtual bool IsHandled() const;
-
         void MarkHandled();
 
     private:

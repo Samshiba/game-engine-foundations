@@ -20,5 +20,6 @@
 #include <unordered_set>
 
 #include <Engine/Core/Log.hpp>
+#include <Engine/Event/EventBus.hpp>
 
 #include <Engine/Utils/FNV-1a.hpp>
