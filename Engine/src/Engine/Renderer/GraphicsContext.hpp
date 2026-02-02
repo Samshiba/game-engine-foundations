@@ -4,7 +4,7 @@
 
 #pragma once
 
-namespace GEF
+namespace GEF::Renderer
 {
     class GraphicsContext
     {

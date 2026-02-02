@@ -4,14 +4,12 @@
 
 #pragma once
 
-
 #include <Engine/Core/Window.hpp>
 #include <GLFW/glfw3.h>
 
 #include "Commons.hpp"
 
-
-namespace GEF
+namespace GEF::Platform
 {
     class WindowsWindow : public Window
     {

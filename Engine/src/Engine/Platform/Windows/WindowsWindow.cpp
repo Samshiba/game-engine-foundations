@@ -4,6 +4,6 @@
 
 #include "WindowsWindow.hpp"
 
-namespace GEF
+namespace GEF::Platform
 {
 }

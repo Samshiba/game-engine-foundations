@@ -8,7 +8,7 @@ add_subdirectory("vendor/glad")
 
 set(ENGINE_SOURCES
         "src/Commons.hpp"
-        
+
         # Utils
         "src/Engine/Utils/FNV-1a.hpp"
 
@@ -26,6 +26,8 @@ set(ENGINE_SOURCES
         # Platform
         "src/Engine/Platform/Windows/WindowsWindow.hpp"
         "src/Engine/Platform/Windows/WindowsWindow.cpp"
+        "src/Engine/Platform/OpenGL/OpenGlContext.hpp"
+        "src/Engine/Platform/OpenGL/OpenGlContext.cpp"
 
         # Renderer
         "src/Engine/Renderer/GraphicsContext.hpp"
