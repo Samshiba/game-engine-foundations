@@ -42,7 +42,7 @@ namespace GEF::Events
     {
         std::stringstream ss;
         ss << "WindowResizeEvent: " << width_ << ", " << height_;
-        return ss.str().c_str();
+        return ss.str();
     }
 
     inline unsigned int WindowResizeEvent::GetWidth() const
