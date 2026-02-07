@@ -15,7 +15,7 @@ namespace GEF::Events
 
         WindowResizeEvent(int width, int height);
 
-        std::string ToString() const override;
+        [[nodiscard]] std::string ToString() const override;
 
         [[nodiscard]] unsigned int GetWidth() const;
         [[nodiscard]] unsigned int GetHeight() const;
@@ -25,6 +25,7 @@ namespace GEF::Events
         unsigned int height_;
     };
 
+    // Window Events
     class WindowCloseEvent : public Event
     {
     public:
@@ -33,25 +34,104 @@ namespace GEF::Events
         WindowCloseEvent() = default;
     };
 
-    inline WindowResizeEvent::WindowResizeEvent(int width, int height)
-        : width_(width), height_(height)
+    // Key Events
+    class KeyPressedEvent : public Event
     {
-    }
+    public:
+        EVENT_TYPE("KeyPressedEvent")
 
-    inline std::string WindowResizeEvent::ToString() const
-    {
-        std::stringstream ss;
-        ss << "WindowResizeEvent: " << width_ << ", " << height_;
-        return ss.str();
-    }
+        KeyPressedEvent(int key, int repeat);
 
-    inline unsigned int WindowResizeEvent::GetWidth() const
-    {
-        return width_;
-    }
+        [[nodiscard]] std::string ToString() const override;
 
-    inline unsigned int WindowResizeEvent::GetHeight() const
+        [[nodiscard]] int GetKey() const;
+        [[nodiscard]] bool IsHeld() const;
+
+    private:
+        int key_;
+        int repeat_;
+    };
+
+    class KeyReleasedEvent : public Event
     {
-        return height_;
-    }
+    public:
+        EVENT_TYPE("KeyReleasedEvent")
+
+        KeyReleasedEvent(int key);
+
+        [[nodiscard]] std::string ToString() const override;
+
+        [[nodiscard]] int GetKey() const;
+
+    private:
+        int key_;
+    };
+
+    // Mouse Button Events
+    class MouseButtonPressedEvent : public Event
+    {
+    public:
+        EVENT_TYPE("MouseButtonPressedEvent")
+
+        MouseButtonPressedEvent(int button);
+
+        [[nodiscard]] std::string ToString() const override;
+
+        [[nodiscard]] int GetButton() const;
+
+    private:
+        int button_;
+    };
+
+    class MouseButtonReleasedEvent : public Event
+    {
+    public:
+        EVENT_TYPE("MouseButtonReleasedEvent")
+
+        MouseButtonReleasedEvent(int button);
+
+        [[nodiscard]] std::string ToString() const override;
+
+        [[nodiscard]] int GetButton() const;
+
+    private:
+        int button_;
+    };
+
+    // Mouse Move Event
+    class MouseMovedEvent : public Event
+    {
+    public:
+        EVENT_TYPE("MouseMovedEvent")
+
+        MouseMovedEvent(double x, double y);
+
+        [[nodiscard]] std::string ToString() const override;
+
+        [[nodiscard]] double GetX() const;
+        [[nodiscard]] double GetY() const;
+
+    private:
+        double x_;
+        double y_;
+    };
+
+    class MouseScrolledEvent : public Event
+    {
+    public:
+        EVENT_TYPE("MouseScrolledEvent")
+
+        MouseScrolledEvent(double xOffset, double yOffset);
+
+        [[nodiscard]] std::string ToString() const override;
+
+        [[nodiscard]] double GetXOffset() const;
+        [[nodiscard]] double GetYOffset() const;
+
+    private:
+        double xOffset_;
+        double yOffset_;
+    };
 }
+
+#include "ApplicationEvent.hxx"

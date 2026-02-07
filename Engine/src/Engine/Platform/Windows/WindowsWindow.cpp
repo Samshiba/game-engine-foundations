@@ -149,10 +149,10 @@ namespace GEF::Platform
 
         glfwSetWindowSizeCallback(window_, WindowResizeCallback);
         glfwSetWindowCloseCallback(window_, WindowCloseCallback);
-        // glfwSetKeyCallback(window_, KeyCallback);
-        // glfwSetMouseButtonCallback(window_, MouseButtonCallback);
-        // glfwSetCursorPosCallback(window_, CursorPositionCallback);
-        // glfwSetScrollCallback(window_, ScrollCallback);
+        glfwSetKeyCallback(window_, KeyCallback);
+        glfwSetMouseButtonCallback(window_, MouseButtonCallback);
+        glfwSetCursorPosCallback(window_, CursorPositionCallback);
+        glfwSetScrollCallback(window_, ScrollCallback);
     }
 
     void WindowsWindow::Shutdown()
@@ -190,27 +190,84 @@ namespace GEF::Platform
         data.eventCallback(event);
     }
 
-    // void WindowsWindow::KeyCallback(GLFWwindow* window, int key, int scancode,
-    //                                 int action, int mods)
-    // {
-    //     // TODO
-    // }
-    //
-    // void WindowsWindow::MouseButtonCallback(GLFWwindow* window, int button,
-    //                                         int action, int mods)
-    // {
-    //     // TODO
-    // }
-    //
-    // void WindowsWindow::CursorPositionCallback(GLFWwindow* window, double xPos,
-    //                                            double yPos)
-    // {
-    //     // TODO
-    // }
-    //
-    // void WindowsWindow::ScrollCallback(GLFWwindow* window, double xOffset,
-    //                                    double yOffset)
-    // {
-    //     // TODO
-    // }
+    void WindowsWindow::KeyCallback(GLFWwindow* window, int key, int scancode,
+                                    int action, int mods)
+    {
+        // TODO SUPPORT MODS AND SCANCODE
+        (void)scancode;
+        (void)mods;
+
+        auto const& data = *static_cast<WindowData*>(
+            glfwGetWindowUserPointer(window));
+
+        switch (action)
+        {
+        case GLFW_PRESS: {
+            Events::KeyPressedEvent event(key, 0);
+            data.eventCallback(event);
+            break;
+        }
+        case GLFW_RELEASE: {
+            Events::KeyReleasedEvent event(key);
+            data.eventCallback(event);
+            break;
+        }
+        case GLFW_REPEAT: {
+            Events::KeyPressedEvent event(key, 1);
+            data.eventCallback(event);
+            break;
+        }
+        default: {
+            GEF_ENGINE_ERROR("Unknown KeyCallback action type {}", action);
+        }
+        }
+    }
+
+    void WindowsWindow::MouseButtonCallback(GLFWwindow* window, int button,
+                                            int action, int mods)
+    {
+        // TODO SUPPORT MODS
+        (void)mods;
+
+        auto const& data = *static_cast<WindowData*>(
+            glfwGetWindowUserPointer(window));
+
+        switch (action)
+        {
+        case GLFW_PRESS: {
+            Events::MouseButtonPressedEvent event(button);
+            data.eventCallback(event);
+            break;
+        }
+        case GLFW_RELEASE: {
+            Events::MouseButtonReleasedEvent event(button);
+            data.eventCallback(event);
+            break;
+        }
+        default: {
+            GEF_ENGINE_ERROR("Unknown MouseButtonCallback action type {}",
+                             action);
+        }
+        }
+    }
+
+    void WindowsWindow::CursorPositionCallback(GLFWwindow* window, double xPos,
+                                               double yPos)
+    {
+        auto const& data = *static_cast<WindowData*>(
+            glfwGetWindowUserPointer(window));
+
+        Events::MouseMovedEvent event(xPos, yPos);
+        data.eventCallback(event);
+    }
+
+    void WindowsWindow::ScrollCallback(GLFWwindow* window, double xOffset,
+                                       double yOffset)
+    {
+        auto const& data = *static_cast<WindowData*>(
+            glfwGetWindowUserPointer(window));
+
+        Events::MouseScrolledEvent event(xOffset, yOffset);
+        data.eventCallback(event);
+    }
 }
