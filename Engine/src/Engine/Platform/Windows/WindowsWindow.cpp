@@ -57,7 +57,10 @@ namespace GEF::Platform
     void WindowsWindow::SetVSync(bool enabled)
     {
         if (enabled)
+        {
+            GEF_ENGINE_DEBUG("VSync enabled");
             glfwSwapInterval(1);
+        }
         else
             glfwSwapInterval(0);
         windowData_.VSync = enabled;
@@ -154,6 +157,8 @@ namespace GEF::Platform
 
     void WindowsWindow::Shutdown()
     {
+        // TODO REFACTO TO HANDLE MULTI WINDOWS
+        GEF_ENGINE_WARN("Destroying windows");
         glfwDestroyWindow(window_);
         glfwTerminate();
     }
