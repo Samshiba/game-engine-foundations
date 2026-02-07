@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "Commons.hpp"
 #include <Engine/Renderer/GraphicsContext.hpp>
 
 struct GLFWwindow;

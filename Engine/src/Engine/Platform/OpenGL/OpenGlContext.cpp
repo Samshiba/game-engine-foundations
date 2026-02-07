@@ -2,10 +2,10 @@
 // Created by genin on 02/02/2026.
 //
 
-#include "OpenGlContext.hpp"
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#include "OpenGlContext.hpp"
 
 namespace GEF::Platform
 {

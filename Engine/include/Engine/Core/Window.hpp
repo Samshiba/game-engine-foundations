@@ -5,13 +5,14 @@
 #pragma once
 
 #include "Engine/Event/EventBus.hpp"
+#include "Engine/Renderer/RendererAPI.hpp"
 
 namespace GEF
 {
     class Window
     {
     public:
-        enum class WindowMode
+        enum class WindowMode : uint8_t
         {
             WINDOWED,
             MINIMIZED,
@@ -34,7 +35,7 @@ namespace GEF
             FLAGS_VISIBLE = 1 << 8,
         };
 
-        enum class WindowInitialPosition
+        enum class WindowInitialPosition : uint8_t
         {
             ABSOLUTE,
             CENTER_PRIMARY_SCREEN,
@@ -48,18 +49,20 @@ namespace GEF
             uint32_t width;
             uint32_t height;
             WindowMode mode;
+            Renderer::RendererBackend backend;
             WindowInitialPosition position;
             uint32_t flags;
 
             WindowProps(const std::string& title = "GEF Engine",
                         uint32_t width = 1280, uint32_t height = 720,
                         WindowMode mode = WindowMode::WINDOWED,
+                        Renderer::RendererBackend backend =
+                            Renderer::RendererBackend::OpenGL,
                         WindowInitialPosition position =
                             WindowInitialPosition::CENTER_PRIMARY_SCREEN,
                         uint32_t flags = FLAGS_VISIBLE)
                 : title(title), width(width), height(height), mode(mode),
-                  position(position),
-                  flags(flags)
+                  backend(backend), position(position), flags(flags)
             {
             }
         };

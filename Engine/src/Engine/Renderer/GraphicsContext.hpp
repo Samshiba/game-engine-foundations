@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <Engine/Renderer/RendererAPI.hpp>
+
+#include "Commons.hpp"
+
 namespace GEF::Renderer
 {
     class GraphicsContext
@@ -13,5 +17,8 @@ namespace GEF::Renderer
 
         virtual void Init() = 0;
         virtual void SwapBuffers() = 0;
+
+        static std::unique_ptr<GraphicsContext> Create(
+            void* windowHandle, RendererBackend backend);
     };
 }

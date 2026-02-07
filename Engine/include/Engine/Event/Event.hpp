@@ -8,6 +8,8 @@
 #include <sstream>
 #include <algorithm>
 
+#include <Engine/Utils/FNV-1a.hpp>
+
 
 namespace GEF::Events
 {

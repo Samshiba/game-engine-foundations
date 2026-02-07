@@ -2,11 +2,19 @@
 // Created by genin on 02/02/2026.
 //
 
+#include <Engine/Platform/OpenGL/OpenGlContext.hpp>
+#include <Engine/Event/ApplicationEvent.hpp>
+
 #include "WindowsWindow.hpp"
 #include "Commons.hpp"
 
-#include <Engine/Platform/OpenGL/OpenGlContext.hpp>
-#include <Engine/Event/ApplicationEvent.hpp>
+namespace GEF
+{
+    Window* Window::Create(const WindowProps& props)
+    {
+        return new Platform::WindowsWindow(props);
+    }
+}
 
 namespace GEF::Platform
 {
@@ -123,8 +131,14 @@ namespace GEF::Platform
         }
         window_ = window;
 
-        // TODO REFACTO TO NOT HARDCODE OPENGL CONTEXT
-        context_ = std::make_unique<OpenGLContext>(window_);
+        context_ = Renderer::GraphicsContext::Create(window_, props.backend);
+        if (!context_)
+        {
+            GEF_ENGINE_ERROR("Failed to create Graphics Context");
+            glfwDestroyWindow(window_);
+            glfwTerminate();
+            return;
+        }
         context_->Init();
 
         glfwSetWindowUserPointer(window_, &windowData_);
@@ -164,7 +178,7 @@ namespace GEF::Platform
 
     void WindowsWindow::WindowCloseCallback(GLFWwindow* window)
     {
-        auto& data = *static_cast<WindowData*>(
+        auto const& data = *static_cast<WindowData*>(
             glfwGetWindowUserPointer(window));
 
         Events::WindowCloseEvent event;

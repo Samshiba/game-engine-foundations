@@ -9,30 +9,44 @@ add_subdirectory("vendor/glad")
 set(ENGINE_SOURCES
         "src/Commons.hpp"
 
-        # Utils
-        "src/Engine/Utils/FNV-1a.hpp"
-
         # Core
         "src/Engine/Core/Application.cpp"
         "src/Engine/Core/Log.cpp"
-        "src/Engine/Core/Window.cpp"
 
         # Event
         "src/Engine/Event/EventBus.cpp"
 
         # Platform
-        "src/Engine/Platform/Windows/WindowsWindow.hpp"
-        "src/Engine/Platform/Windows/WindowsWindow.cpp"
         "src/Engine/Platform/OpenGL/OpenGlContext.hpp"
         "src/Engine/Platform/OpenGL/OpenGlContext.cpp"
 
         # Renderer
         "src/Engine/Renderer/GraphicsContext.hpp"
-
+        "src/Engine/Renderer/GraphicsContext.cpp"
 )
+
+if (WIN32)
+    list(APPEND ENGINE_SOURCES
+            "src/Engine/Platform/Windows/WindowsWindow.hpp"
+            "src/Engine/Platform/Windows/WindowsWindow.cpp"
+    )
+elseif (UNIX AND NOT APPLE)
+    list(APPEND ENGINE_SOURCES
+            #"src/Engine/Platform/Linux/LinuxWindow.hpp"
+            #"src/Engine/Platform/Linux/LinuxWindow.cpp"
+    )
+elseif (APPLE)
+    list(APPEND ENGINE_SOURCES
+            #"src/Engine/Platform/MacOS/MacOSWindow.hpp"
+            #"src/Engine/Platform/MacOS/MacOSWindow.cpp"
+    )
+endif ()
 
 set(ENGINE_HEADERS
         "include/Engine.hpp"
+
+        # Utils
+        "include/Engine/Utils/FNV-1a.hpp"
 
         # Core
         "include/Engine/Core/Application.hpp"
@@ -45,6 +59,9 @@ set(ENGINE_HEADERS
         "include/Engine/Event/Event.hpp"
         "include/Engine/Event/ApplicationEvent.hpp"
         "include/Engine/Event/EventBus.hpp"
+
+        # Renderer
+        "include/Engine/Renderer/RendererAPI.hpp"
 )
 
 target_sources(Engine PRIVATE
@@ -92,10 +109,13 @@ target_compile_options(Engine PRIVATE
 
 # Compile Definitions
 target_compile_definitions(Engine PUBLIC
+        # Platform
         $<$<PLATFORM_ID:Windows>:GEF_PLATFORM_WINDOWS>
+        $<$<PLATFORM_ID:Linux>:GEF_PLATFORM_LINUX>
+        $<$<PLATFORM_ID:Darwin>:GEF_PLATFORM_MACOS>
 
+        # Build Type
         $<$<OR:$<CONFIG:Release>,$<CONFIG:Profile>>:NDEBUG>
-
         $<$<CONFIG:Debug>:GEF_DEBUG_BUILD GEF_ENABLE_ASSERTS GEF_ENABLE_LOGGING>
         $<$<CONFIG:Profile>:GEF_PROFILE_BUILD GEF_ENABLE_LOGGING>
         $<$<CONFIG:Release>:GEF_RELEASE_BUILD>
@@ -105,8 +125,3 @@ target_compile_definitions(Engine PUBLIC
         $<$<CONFIG:Profile>:SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO>
         $<$<CONFIG:Release>:SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_OFF>
 )
-
-
-
-
-

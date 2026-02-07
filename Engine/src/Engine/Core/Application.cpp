@@ -3,9 +3,9 @@
 //
 
 #include <Engine/Core/Application.hpp>
+#include <Engine/Event/ApplicationEvent.hpp>
 
 #include "Commons.hpp"
-#include "../../../include/Engine/Event/ApplicationEvent.hpp"
 
 namespace GEF
 {
