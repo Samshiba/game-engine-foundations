@@ -6,9 +6,13 @@
 #include <Engine/Event/ApplicationEvent.hpp>
 
 #include "Commons.hpp"
+#include "Input.hpp"
 
 namespace GEF
 {
+    // Static member init
+    Application* Application::instance_ = nullptr;
+
     Application::Application([[maybe_unused]] int argc,
                              [[maybe_unused]] char** argv)
     {
@@ -17,6 +21,7 @@ namespace GEF
         window_->SetEventCallback([this](Events::Event& e) {
             this->OnEvent(e);
         });
+        instance_ = this;
         GEF_ENGINE_INFO("Application created");
     }
 
@@ -29,7 +34,8 @@ namespace GEF
     {
         while (is_running_)
         {
-            // DO
+            Input::Update();
+
             window_->OnUpdate();
         }
         GEF_ENGINE_WARN("Application stopped");
@@ -45,5 +51,15 @@ namespace GEF
         }
 
         event_bus_.TriggerEvent(e);
+    }
+
+    Application& Application::Get()
+    {
+        return *instance_;
+    }
+
+    Window& Application::GetWindow() const
+    {
+        return *window_;
     }
 }

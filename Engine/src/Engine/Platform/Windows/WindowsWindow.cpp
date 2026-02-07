@@ -190,8 +190,9 @@ namespace GEF::Platform
         data.eventCallback(event);
     }
 
-    void WindowsWindow::KeyCallback(GLFWwindow* window, int key, int scancode,
-                                    int action, int mods)
+    void WindowsWindow::KeyCallback(GLFWwindow* window, int key,
+                                    [[maybe_unused]] int scancode,
+                                    int action, [[maybe_unused]] int mods)
     {
         // TODO SUPPORT MODS AND SCANCODE
         (void)scancode;
@@ -224,7 +225,8 @@ namespace GEF::Platform
     }
 
     void WindowsWindow::MouseButtonCallback(GLFWwindow* window, int button,
-                                            int action, int mods)
+                                            int action,
+                                            [[maybe_unused]] int mods)
     {
         // TODO SUPPORT MODS
         (void)mods;

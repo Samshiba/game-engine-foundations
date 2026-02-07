@@ -12,6 +12,9 @@ set(ENGINE_SOURCES
         # Core
         "src/Engine/Core/Application.cpp"
         "src/Engine/Core/Log.cpp"
+        "src/Engine/Core/KeyCodes.hpp"
+        "src/Engine/Core/Input.hpp"
+        "src/Engine/Core/Input.cpp"
 
         # Event
         "src/Engine/Event/EventBus.cpp"

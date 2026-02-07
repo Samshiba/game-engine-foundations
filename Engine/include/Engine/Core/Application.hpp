@@ -17,12 +17,16 @@ namespace GEF
 
         void Run();
 
+        [[nodiscard]] static Application& Get();
+        [[nodiscard]] Window& GetWindow() const;
+
         void OnEvent(Events::Event& e);
 
     private:
         bool is_running_ = true;
         std::unique_ptr<Window> window_;
         Events::EventBus event_bus_;
+        static Application* instance_;
     };
 
     Application* CreateApplication(int argc, char** argv);
