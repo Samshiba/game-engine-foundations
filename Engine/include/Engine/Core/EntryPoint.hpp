@@ -1,5 +1,6 @@
 //
 // Created by genin on 27/01/2026.
+// Path: Engine/include/Engine/Core/EntryPoint.hpp
 //
 
 #pragma once
@@ -9,13 +10,14 @@
 
 #ifdef GEF_PLATFORM_WINDOWS
 
-extern GEF::Application* GEF::CreateApplication(int argc, char** argv);
+extern GEF::Application* GEF::CreateApplication(ApplicationSpecification& spec);
 
 int main(int argc, char** argv)
 {
     GEF::Log::Init();
 
-    auto app = GEF::CreateApplication(argc, argv);
+    auto spec = GEF::ApplicationSpecification();
+    auto app = GEF::CreateApplication(spec);
     app->Run();
 
     delete app;

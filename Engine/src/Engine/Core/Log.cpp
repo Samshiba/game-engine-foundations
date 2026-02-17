@@ -1,5 +1,6 @@
 //
 // Created by genin on 27/01/2026.
+// Path: Engine/src/Engine/Core/Log.cpp
 //
 
 #include <Engine/Core/Log.hpp>

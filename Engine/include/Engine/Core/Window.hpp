@@ -1,14 +1,17 @@
 //
 // Created by genin on 02/02/2026.
+// Path: Engine/include/Engine/Core/Window.hpp
 //
 
 #pragma once
 
-#include "Engine/Event/EventBus.hpp"
-#include "Engine/Renderer/RendererAPI.hpp"
+#include <Engine/Event/EventBus.hpp>
+#include <Engine/Renderer/RendererAPI.hpp>
 
 namespace GEF
 {
+    struct ApplicationSpecification;
+
     class Window
     {
     public:
@@ -49,20 +52,13 @@ namespace GEF
             uint32_t width;
             uint32_t height;
             WindowMode mode;
-            Renderer::RendererBackend backend;
-            WindowInitialPosition position;
             uint32_t flags;
 
-            WindowProps(const std::string& title = "GEF Engine",
-                        uint32_t width = 1280, uint32_t height = 720,
-                        WindowMode mode = WindowMode::WINDOWED,
-                        Renderer::RendererBackend backend =
-                            Renderer::RendererBackend::OpenGL,
-                        WindowInitialPosition position =
-                            WindowInitialPosition::CENTER_PRIMARY_SCREEN,
-                        uint32_t flags = FLAGS_VISIBLE)
+            WindowProps(const std::string& title,
+                        uint32_t width, uint32_t height, WindowMode mode,
+                        uint32_t flags)
                 : title(title), width(width), height(height), mode(mode),
-                  backend(backend), position(position), flags(flags)
+                  flags(flags)
             {
             }
         };
@@ -88,6 +84,6 @@ namespace GEF
 
         [[nodiscard]] virtual void* GetNativeWindow() const = 0;
 
-        static Window* Create(const WindowProps& props = WindowProps());
+        static Window* Create(const ApplicationSpecification& spec);
     };
 }

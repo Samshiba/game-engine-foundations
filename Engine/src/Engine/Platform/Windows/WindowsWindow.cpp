@@ -1,5 +1,6 @@
 //
 // Created by genin on 02/02/2026.
+// Path: Engine/src/Engine/Platform/Windows/WindowsWindow.cpp
 //
 
 #include <Engine/Platform/OpenGL/OpenGlContext.hpp>
@@ -8,19 +9,12 @@
 #include "WindowsWindow.hpp"
 #include "Commons.hpp"
 
-namespace GEF
-{
-    Window* Window::Create(const WindowProps& props)
-    {
-        return new Platform::WindowsWindow(props);
-    }
-}
-
 namespace GEF::Platform
 {
-    WindowsWindow::WindowsWindow(const WindowProps& props)
+    WindowsWindow::WindowsWindow(const WindowProps& props,
+                                 Renderer::RendererBackend backend)
     {
-        Init(props);
+        Init(props, backend);
     }
 
     WindowsWindow::~WindowsWindow()
@@ -81,7 +75,8 @@ namespace GEF::Platform
         return window_;
     }
 
-    void WindowsWindow::Init(const WindowProps& props)
+    void WindowsWindow::Init(const WindowProps& props,
+                             Renderer::RendererBackend backend)
     {
         GEF_ENGINE_INFO("Creating window : {} ({} x {})", props.title,
                         props.width, props.height);
@@ -105,6 +100,11 @@ namespace GEF::Platform
             }
             glfwSetErrorCallback(ErrorCallback);
             s_GLFWInitialized = true;
+        }
+
+        if (backend != Renderer::RendererBackend::OpenGL)
+        {
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         }
 
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -134,7 +134,7 @@ namespace GEF::Platform
         }
         window_ = window;
 
-        context_ = Renderer::GraphicsContext::Create(window_, props.backend);
+        context_ = Renderer::GraphicsContext::Create(window_, backend);
         if (!context_)
         {
             GEF_ENGINE_ERROR("Failed to create Graphics Context");

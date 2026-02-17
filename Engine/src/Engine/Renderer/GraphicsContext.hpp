@@ -1,5 +1,6 @@
 //
 // Created by genin on 02/02/2026.
+// Path: Engine/src/Engine/Renderer/GraphicsContext.hpp
 //
 
 #pragma once

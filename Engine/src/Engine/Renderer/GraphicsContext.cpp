@@ -1,8 +1,8 @@
 //
 // Created by genin on 07/02/2026.
+// Path: Engine/src/Engine/Renderer/GraphicsContext.cpp
 //
 
-#include <Engine/Renderer/RendererAPI.hpp>
 #include <Engine/Platform/OpenGL/OpenGlContext.hpp>
 
 #include "Commons.hpp"

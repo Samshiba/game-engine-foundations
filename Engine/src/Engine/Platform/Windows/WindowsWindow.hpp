@@ -1,5 +1,6 @@
 //
 // Created by genin on 02/02/2026.
+// Path: Engine/src/Engine/Platform/Windows/WindowsWindow.hpp
 //
 
 #pragma once
@@ -32,7 +33,8 @@ namespace GEF::Platform
         };
 
     public:
-        WindowsWindow(const WindowProps& props);
+        WindowsWindow(const WindowProps& props,
+                      Renderer::RendererBackend backend);
         ~WindowsWindow();
 
         void OnUpdate() override;
@@ -50,7 +52,7 @@ namespace GEF::Platform
         [[nodiscard]] void* GetNativeWindow() const override;
 
     private:
-        void Init(const WindowProps& props);
+        void Init(const WindowProps& props, Renderer::RendererBackend backend);
         void Shutdown();
 
         static void ErrorCallback(int error, const char* description);

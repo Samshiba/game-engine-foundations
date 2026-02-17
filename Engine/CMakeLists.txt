@@ -15,6 +15,7 @@ set(ENGINE_SOURCES
         "src/Engine/Core/KeyCodes.hpp"
         "src/Engine/Core/Input.hpp"
         "src/Engine/Core/Input.cpp"
+        "src/Engine/Core/Window.cpp"
 
         # Event
         "src/Engine/Event/EventBus.cpp"
@@ -22,10 +23,21 @@ set(ENGINE_SOURCES
         # Platform
         "src/Engine/Platform/OpenGL/OpenGlContext.hpp"
         "src/Engine/Platform/OpenGL/OpenGlContext.cpp"
+        "src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp"
+        "src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.cpp"
+        "src/Engine/Platform/OpenGL/OpenGlIndexBuffer.hpp"
+        "src/Engine/Platform/OpenGL/OpenGlIndexBuffer.cpp"
+        "src/Engine/Platform/OpenGL/OpenGlVertexBuffer.hpp"
+        "src/Engine/Platform/OpenGL/OpenGlVertexBuffer.cpp"
+        "src/Engine/Platform/OpenGL/OpenGlVertexArray.hpp"
+        "src/Engine/Platform/OpenGL/OpenGlVertexArray.cpp"
+        "src/Engine/Platform/OpenGL/OpenGlCommandList.hpp"
 
         # Renderer
         "src/Engine/Renderer/GraphicsContext.hpp"
         "src/Engine/Renderer/GraphicsContext.cpp"
+        "src/Engine/Renderer/GraphicsDevice.cpp"
+
 )
 
 if (WIN32)
@@ -65,6 +77,12 @@ set(ENGINE_HEADERS
 
         # Renderer
         "include/Engine/Renderer/RendererAPI.hpp"
+        "include/Engine/Renderer/GraphicsDevice.hpp"
+        "include/Engine/Renderer/Buffer.hpp"
+        "include/Engine/Renderer/IndexBuffer.hpp"
+        "include/Engine/Renderer/VertexBuffer.hpp"
+        "include/Engine/Renderer/VertexArray.hpp"
+        "include/Engine/Renderer/CommandList.hpp"
 )
 
 target_sources(Engine PRIVATE

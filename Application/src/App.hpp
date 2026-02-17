@@ -1,8 +1,10 @@
 //
 // Created by genin on 26/01/2026.
+// Path: Application/src/App.hpp
 //
 
 #pragma once
+
 #include <Engine.hpp>
 
 class App : public GEF::Application

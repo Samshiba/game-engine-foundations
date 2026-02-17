@@ -1,28 +1,35 @@
 //
 // Created by genin on 26/01/2026.
+// Path: Engine/src/Engine/Core/Application.cpp
 //
 
 #include <Engine/Core/Application.hpp>
 #include <Engine/Event/ApplicationEvent.hpp>
+#include <Engine/Renderer/GraphicsDevice.hpp>
+#include <Engine/Renderer/Buffer.hpp>
 
 #include "Commons.hpp"
 #include "Input.hpp"
 
-#include "glad/glad.h"
-#include "GLFW/glfw3.h"
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 const GLchar* vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 position;\n"
+    "layout (location = 1) in vec3 color;\n"
+    "out vec3 ourColor;\n"
     "void main()\n"
     "{\n"
-    "gl_Position = vec4(position.x, position.y, position.z, 1.0);\n"
+    "ourColor = color;\n"
+    "gl_Position = vec4(position, 1.0);\n"
     "}\0";
 
 const GLchar* fragmentShaderSource = "#version 330 core\n"
+    "in vec3 ourColor;\n"
     "out vec4 color;\n"
     "void main()\n"
     "{\n"
-    "color = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+    "color = vec4(ourColor, 1.0);\n"
     "}\n\0";
 
 namespace GEF
@@ -30,10 +37,13 @@ namespace GEF
     // Static member init
     Application* Application::instance_ = nullptr;
 
-    Application::Application([[maybe_unused]] int argc,
-                             [[maybe_unused]] char** argv)
+
+    Application::Application(const ApplicationSpecification& spec)
+        : spec_(spec)
     {
-        window_ = std::unique_ptr<Window>(Window::Create());
+        window_ = std::unique_ptr<Window>(Window::Create(spec));
+
+        graphics_device_ = Renderer::GraphicsDevice::Create(spec.backend);
 
         window_->SetEventCallback([this](Events::Event& e) {
             this->OnEvent(e);
@@ -93,45 +103,40 @@ namespace GEF
         glDeleteShader(fragmentShader);
 
         // Set up vertex data (and buffer(s)) and attribute pointers
-        GLfloat vertices[] = {
-            -0.5f, -0.5f, 0.0f, // Left
-            0.5f, -0.5f, 0.0f, // Right
-            0.0f, 0.5f, 0.0f // Top
+        float vertices[] = {
+            -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // Bas Gauche (Rouge)
+            0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // Bas Droite (Vert)
+            0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f // Haut Centre (Bleu)
         };
-        GLuint VBO, VAO;
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
-        // Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
-        glBindVertexArray(VAO);
+        uint32_t indices[] = { 0, 1, 2 };
 
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices,
-                     GL_STATIC_DRAW);
+        auto vertexBuffer = graphics_device_->CreateVertexBuffer(
+            vertices, sizeof(vertices));
+        vertexBuffer->SetLayout(
+        { { Renderer::ShaderDataType::Float3, "position" },
+          { Renderer::ShaderDataType::Float3, "color" } });
+        auto vertexArray = graphics_device_->CreateVertexArray();
+        auto layout = Renderer::BufferLayout();
+        vertexArray->AddVertexBuffer(vertexBuffer);
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat),
-                              (GLvoid*)0);
-        glEnableVertexAttribArray(0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        // Note that this is allowed, the call to glVertexAttribPointer registered VBO as the currently bound vertex buffer object so afterwards we can safely unbind
-
-        glBindVertexArray(0);
-        // Unbind VAO (it's always a good thing to unbind any buffer/array to prevent strange bugs)
+        auto indexBuffer = graphics_device_->CreateIndexBuffer(indices, 3);
+        vertexArray->SetIndexBuffer(indexBuffer);
 
         while (is_running_)
         {
             Input::Update();
 
             // Render
-            // Clear the colorbuffer
-            glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
+            auto cmd = graphics_device_->BeginCommandList();
+            cmd->SetClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            cmd->Clear();
 
-            // Draw our first triangle
             glUseProgram(shaderProgram);
-            glBindVertexArray(VAO);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
-            glBindVertexArray(0);
+
+            cmd->BindVertexArray(vertexArray);
+            cmd->DrawIndexed(vertexArray->GetIndexBuffer()->GetCount());
+
+            graphics_device_->SubmitCommandList(cmd);
 
             window_->OnUpdate();
         }
@@ -158,5 +163,10 @@ namespace GEF
     Window& Application::GetWindow() const
     {
         return *window_;
+    }
+
+    ApplicationSpecification Application::GetSpecification() const
+    {
+        return spec_;
     }
 }

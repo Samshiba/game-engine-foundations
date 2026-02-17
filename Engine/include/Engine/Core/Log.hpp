@@ -1,5 +1,6 @@
 //
 // Created by genin on 27/01/2026.
+// Path: Engine/include/Engine/Core/Log.hpp
 //
 
 #pragma once
