@@ -13,11 +13,7 @@ namespace GEF::Platform
     OpenGLContext::OpenGLContext(GLFWwindow* windowHandle)
         : windowHandle_(windowHandle)
     {
-        if (!windowHandle_)
-        {
-            GEF_ENGINE_ERROR("GLFW window handle is null");
-            // TODO ASSERT NULL
-        }
+        GEF_CORE_ASSERT(windowHandle != nullptr, "GLFW window handle is null");
     }
 
     void OpenGLContext::Init()

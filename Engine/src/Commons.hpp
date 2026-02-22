@@ -21,7 +21,7 @@
 #include <unordered_set>
 
 #include <Engine/Core/Base.hpp>
-
 #include <Engine/Core/Log.hpp>
+#include <Engine/Core/Assert.hpp>
 
 #include <Engine/Utils/FNV-1a.hpp>

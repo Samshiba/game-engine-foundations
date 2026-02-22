@@ -92,12 +92,7 @@ namespace GEF::Platform
         if (!s_GLFWInitialized)
         {
             int success = glfwInit();
-            // TODO ASSERT SUCCESS
-            if (!success)
-            {
-                GEF_ENGINE_ERROR("Failed to initialize GLFW");
-                return;
-            }
+            GEF_CORE_ASSERT(success, "Failed to initialize GLFW");
             glfwSetErrorCallback(ErrorCallback);
             s_GLFWInitialized = true;
         }

@@ -7,6 +7,8 @@
 
 #include "OpenGlVertexArray.hpp"
 
+#include "Engine/Core/Assert.hpp"
+
 namespace GEF::Platform
 {
     OpenGlVertexArray::~OpenGlVertexArray()
@@ -99,8 +101,7 @@ namespace GEF::Platform
                 break;
             }
             default:
-                // TODO ASSERT
-                GEF_ENGINE_ERROR("Unsupported data type");
+                GEF_CORE_ASSERT(false, "Unsupported data type");
             }
         }
         vertexBuffers_.push_back(vertexBuffer);

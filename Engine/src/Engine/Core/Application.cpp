@@ -116,7 +116,6 @@ namespace GEF
         { { Renderer::ShaderDataType::Float3, "position" },
           { Renderer::ShaderDataType::Float3, "color" } });
         auto vertexArray = graphics_device_->CreateVertexArray();
-        auto layout = Renderer::BufferLayout();
         vertexArray->AddVertexBuffer(vertexBuffer);
 
         auto indexBuffer = graphics_device_->CreateIndexBuffer(indices, 3);

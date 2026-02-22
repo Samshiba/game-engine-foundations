@@ -69,6 +69,7 @@ set(ENGINE_HEADERS
         "include/Engine/Core/Base.hpp"
         "include/Engine/Core/Log.hpp"
         "include/Engine/Core/Window.hpp"
+        "include/Engine/Core/Assert.hpp"
 
         # Event
         "include/Engine/Event/Event.hpp"
@@ -116,7 +117,7 @@ target_compile_options(Engine PRIVATE
         $<$<CONFIG:Debug>:/Od /Zi /RTC1 /MDd>
         $<$<CONFIG:Profile>:/O2 /Zi /MD>
         $<$<CONFIG:Release>:/O2 /MD>
-        /W4 /WX /MP
+        /W4 /WX /MP /Zc:preprocessor
         >
 
         # --- GCC/Clang Config ---
