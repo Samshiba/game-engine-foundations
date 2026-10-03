@@ -32,9 +32,10 @@ namespace GEF
         level = spdlog::level::info;
 
 #else
-        // Fallback
-        stdout_pattern = "%^[%T] %n: %v%$";
-        level = spdlog::level::info;
+        // Release: only warnings and errors
+        stdout_pattern = "%^[%T] [%n] %l%$ - %v";
+        file_pattern = "[%T] [%n] %l - %v";
+        level = spdlog::level::warn;
 #endif
 
         std::vector<spdlog::sink_ptr> sinks;
