@@ -1,12 +1,13 @@
 # CMakeList.txt : Top-level CMake project file
 
 cmake_minimum_required(VERSION 3.28)
-project(GameEngineFoundations VERSION 1.0.0.0 LANGUAGES C CXX)
+project(GameEngineFoundations VERSION 0.1.0 LANGUAGES C CXX)
 
 # Global settings
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -23,24 +24,39 @@ else ()
     endif ()
 endif ()
 
-set_property(GLOBAL PROPERTY CMAKE_MAP_IMPORTED_CONFIG_PROFILE RelWithDebInfo Release)
+# Profile = optimized build with debug info. CMake has no defaults for custom
+# configurations, so it borrows the RelWithDebInfo flags (for dependencies too).
+foreach (lang C CXX)
+    set(CMAKE_${lang}_FLAGS_PROFILE "${CMAKE_${lang}_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
+endforeach ()
+set(CMAKE_EXE_LINKER_FLAGS_PROFILE "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
+set(CMAKE_STATIC_LINKER_FLAGS_PROFILE "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
+set(CMAKE_MAP_IMPORTED_CONFIG_PROFILE RelWithDebInfo Release)
 
-# Setup libraries
+# Same MSVC runtime for every target, dependencies included
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+
+# Strict warnings, applied to our own targets only
+function(gef_set_warnings target)
+    target_compile_options(${target} PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive- /Zc:preprocessor /utf-8>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
+            -Wall -Wextra -Wpedantic -Werror
+            -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual>
+    )
+endfunction()
+
+# Setup libraries (SYSTEM: their headers don't trigger our warnings)
 include(FetchContent)
-FetchContent_Declare(glfw GIT_REPOSITORY https://github.com/glfw/glfw.git GIT_TAG 3.4)
-FetchContent_Declare(glm GIT_REPOSITORY https://github.com/g-truc/glm.git GIT_TAG 1.0.3)
-FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git GIT_TAG v1.17.0)
+FetchContent_Declare(glfw GIT_REPOSITORY https://github.com/glfw/glfw.git GIT_TAG 3.4 SYSTEM)
+FetchContent_Declare(glm GIT_REPOSITORY https://github.com/g-truc/glm.git GIT_TAG 1.0.3 SYSTEM)
+FetchContent_Declare(spdlog GIT_REPOSITORY https://github.com/gabime/spdlog.git GIT_TAG v1.17.0 SYSTEM)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(glfw)
-FetchContent_MakeAvailable(glm)
-FetchContent_MakeAvailable(spdlog)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(glfw glm spdlog)
 
 # Projects
 add_subdirectory(Engine)
 add_subdirectory(Application)
-
-
-
-

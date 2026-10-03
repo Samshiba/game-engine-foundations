@@ -5,3 +5,5 @@ project(Application)
 add_executable(Application "src/App.cpp")
 
 target_link_libraries(Application PRIVATE Engine)
+
+gef_set_warnings(Application)

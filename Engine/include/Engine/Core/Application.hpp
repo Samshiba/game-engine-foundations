@@ -5,6 +5,10 @@
 
 #pragma once
 
+#include <cstdint>
+#include <memory>
+#include <string>
+
 #include "Window.hpp"
 #include <Engine/Event/EventBus.hpp>
 #include <Engine/Renderer/GraphicsDevice.hpp>
@@ -13,27 +17,14 @@ namespace GEF
 {
     struct ApplicationSpecification
     {
-        std::string title;
-        uint32_t width;
-        uint32_t height;
-        Window::WindowMode mode;
-        Renderer::RendererBackend backend;
-        Window::WindowInitialPosition position;
-        uint32_t flags;
-
-        ApplicationSpecification(const std::string& title = "GEF Engine",
-                                 uint32_t width = 1280, uint32_t height = 720,
-                                 Window::WindowMode mode =
-                                     Window::WindowMode::WINDOWED,
-                                 Renderer::RendererBackend backend =
-                                     Renderer::RendererBackend::OpenGL,
-                                 Window::WindowInitialPosition position =
-                                     Window::WindowInitialPosition::CENTER_PRIMARY_SCREEN,
-                                 uint32_t flags = Window::FLAGS_VISIBLE)
-            : title(title), width(width), height(height), mode(mode),
-              backend(backend), position(position), flags(flags)
-        {
-        }
+        std::string title = "GEF Engine";
+        uint32_t width = 1280;
+        uint32_t height = 720;
+        Window::WindowMode mode = Window::WindowMode::WINDOWED;
+        Renderer::RendererBackend backend = Renderer::RendererBackend::OpenGL;
+        Window::WindowInitialPosition position =
+            Window::WindowInitialPosition::CENTER_PRIMARY_SCREEN;
+        uint32_t flags = Window::FLAGS_VISIBLE;
     };
 
     class Application

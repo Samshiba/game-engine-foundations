@@ -144,11 +144,17 @@ namespace GEF
 
     void Application::OnEvent(Events::Event& e)
     {
-        GEF_ENGINE_INFO(e.ToString());
-
         if (e.GetEventType() == Events::WindowCloseEvent::GetStaticEventType())
         {
             is_running_ = false;
+        }
+        else if (e.GetEventType() ==
+            Events::WindowResizeEvent::GetStaticEventType())
+        {
+            // TODO(GEF-38): goes through the CommandList once it records
+            const auto& resize = static_cast<Events::WindowResizeEvent&>(e);
+            glViewport(0, 0, static_cast<GLsizei>(resize.GetWidth()),
+                       static_cast<GLsizei>(resize.GetHeight()));
         }
 
         event_bus_.TriggerEvent(e);

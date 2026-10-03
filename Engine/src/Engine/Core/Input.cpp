@@ -6,6 +6,8 @@
 #include <Engine/Core/Application.hpp>
 #include <GLFW/glfw3.h>
 
+#include <cstring>
+
 #include "Commons.hpp"
 #include "Input.hpp"
 
@@ -28,14 +30,10 @@ namespace GEF
     }
 
     // Static member init
-    bool Input::keyData_[ToSz(
-        Key::KeyCode::KEY_LAST)] = { false };
-    bool Input::prevKeyData_[ToSz(
-        Key::KeyCode::KEY_LAST)] = { false };
-    bool Input::mouseButtons_[ToSz(
-        Key::MouseCode::MOUSE_BUTTON_LAST)] = { false };
-    bool Input::prevMouseButtons_[ToSz(
-        Key::MouseCode::MOUSE_BUTTON_LAST)] = { false };
+    bool Input::keyData_[KeyCount] = { false };
+    bool Input::prevKeyData_[KeyCount] = { false };
+    bool Input::mouseButtons_[MouseButtonCount] = { false };
+    bool Input::prevMouseButtons_[MouseButtonCount] = { false };
     std::pair<double, double> Input::mousePos_ = { 0.0f, 0.0f };
     std::pair<double, double> Input::prevMousePos_ = { 0.0f, 0.0f };
 
@@ -45,21 +43,19 @@ namespace GEF
             GetNativeWindow());
 
         // --- Keyboard ---
-        std::memcpy(prevKeyData_, keyData_,
-                    ToSz(Key::KeyCode::KEY_LAST) * sizeof(bool));
+        std::memcpy(prevKeyData_, keyData_, sizeof(keyData_));
 
-        for (int i = 32; i < ToInt(Key::KeyCode::KEY_LAST); ++i)
+        for (int i = ToInt(Key::KeyCode::KEY_SPACE);
+             i <= ToInt(Key::KeyCode::KEY_LAST); ++i)
         {
             const int state = glfwGetKey(window, i);
             keyData_[i] = (state == GLFW_PRESS || state == GLFW_REPEAT);
         }
 
         // --- Mouse Buttons ---
-        std::memcpy(prevMouseButtons_, mouseButtons_, ToSz(
-                        Key::MouseCode::MOUSE_BUTTON_LAST) * sizeof(bool));
+        std::memcpy(prevMouseButtons_, mouseButtons_, sizeof(mouseButtons_));
 
-        for (int i = 0; i < ToInt(Key::MouseCode::MOUSE_BUTTON_LAST);
-             ++i)
+        for (int i = 0; i <= ToInt(Key::MouseCode::MOUSE_BUTTON_LAST); ++i)
         {
             const int state = glfwGetMouseButton(window, i);
             mouseButtons_[i] = (state == GLFW_PRESS);
@@ -76,7 +72,7 @@ namespace GEF
 
     bool Input::IsKeyPressed(Key::KeyCode key)
     {
-        if (key >= Key::KeyCode::KEY_LAST)
+        if (key > Key::KeyCode::KEY_LAST)
         {
             GEF_ENGINE_WARN("Invalid key code: {}", ToSz(key));
             return false;
@@ -86,7 +82,7 @@ namespace GEF
 
     bool Input::IsKeyJustPressed(Key::KeyCode key)
     {
-        if (key >= Key::KeyCode::KEY_LAST)
+        if (key > Key::KeyCode::KEY_LAST)
         {
             GEF_ENGINE_WARN("Invalid key code: {}", ToSz(key));
             return false;
@@ -97,7 +93,7 @@ namespace GEF
 
     bool Input::IsKeyJustReleased(Key::KeyCode key)
     {
-        if (key >= Key::KeyCode::KEY_LAST)
+        if (key > Key::KeyCode::KEY_LAST)
         {
             GEF_ENGINE_WARN("Invalid key code: {}", ToSz(key));
             return false;
@@ -108,7 +104,7 @@ namespace GEF
 
     bool Input::IsMouseButtonPressed(Key::MouseCode button)
     {
-        if (button >= Key::MouseCode::MOUSE_BUTTON_LAST)
+        if (button > Key::MouseCode::MOUSE_BUTTON_LAST)
         {
             GEF_ENGINE_WARN("Invalid mouse button code: {}",
                             ToSz(button));
@@ -120,7 +116,7 @@ namespace GEF
 
     bool Input::IsMouseButtonJustPressed(Key::MouseCode button)
     {
-        if (button >= Key::MouseCode::MOUSE_BUTTON_LAST)
+        if (button > Key::MouseCode::MOUSE_BUTTON_LAST)
         {
             GEF_ENGINE_WARN("Invalid mouse button code: {}",
                             ToSz(button));
@@ -133,7 +129,7 @@ namespace GEF
 
     bool Input::IsMouseButtonJustReleased(Key::MouseCode button)
     {
-        if (button >= Key::MouseCode::MOUSE_BUTTON_LAST)
+        if (button > Key::MouseCode::MOUSE_BUTTON_LAST)
         {
             GEF_ENGINE_WARN("Invalid mouse button code: {}",
                             ToSz(button));

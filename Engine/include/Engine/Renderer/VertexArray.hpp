@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "IndexBuffer.hpp"
 #include "VertexBuffer.hpp"
 

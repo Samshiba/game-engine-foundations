@@ -1,54 +1,54 @@
 //
 // Created by genin on 02/02/2026.
-// Path: Engine/src/Engine/Platform/Windows/WindowsWindow.cpp
+// Path: Engine/src/Engine/Platform/Glfw/GlfwWindow.cpp
 //
 
 #include <Engine/Platform/OpenGL/OpenGlContext.hpp>
 #include <Engine/Event/ApplicationEvent.hpp>
 
-#include "WindowsWindow.hpp"
+#include "GlfwWindow.hpp"
 #include "Commons.hpp"
 
 namespace GEF::Platform
 {
-    WindowsWindow::WindowsWindow(const WindowProps& props,
+    GlfwWindow::GlfwWindow(const WindowProps& props,
                                  Renderer::RendererBackend backend)
     {
         Init(props, backend);
     }
 
-    WindowsWindow::~WindowsWindow()
+    GlfwWindow::~GlfwWindow()
     {
         Shutdown();
     }
 
-    void WindowsWindow::OnUpdate()
+    void GlfwWindow::OnUpdate()
     {
         glfwPollEvents();
         context_->SwapBuffers();
     }
 
-    uint32_t WindowsWindow::GetWidth() const
+    uint32_t GlfwWindow::GetWidth() const
     {
         return windowData_.width;
     }
 
-    uint32_t WindowsWindow::GetHeight() const
+    uint32_t GlfwWindow::GetHeight() const
     {
         return windowData_.height;
     }
 
-    void WindowsWindow::SetWidth(uint32_t width)
+    void GlfwWindow::SetWidth(uint32_t width)
     {
         windowData_.width = width;
     }
 
-    void WindowsWindow::SetHeight(uint32_t height)
+    void GlfwWindow::SetHeight(uint32_t height)
     {
         windowData_.height = height;
     }
 
-    void WindowsWindow::SetVSync(bool enabled)
+    void GlfwWindow::SetVSync(bool enabled)
     {
         if (enabled)
         {
@@ -60,22 +60,22 @@ namespace GEF::Platform
         windowData_.VSync = enabled;
     }
 
-    bool WindowsWindow::IsVSync() const
+    bool GlfwWindow::IsVSync() const
     {
         return windowData_.VSync;
     }
 
-    void WindowsWindow::SetEventCallback(const EventCallbackFunction& callback)
+    void GlfwWindow::SetEventCallback(const EventCallbackFunction& callback)
     {
         windowData_.eventCallback = callback;
     }
 
-    void* WindowsWindow::GetNativeWindow() const
+    void* GlfwWindow::GetNativeWindow() const
     {
         return window_;
     }
 
-    void WindowsWindow::Init(const WindowProps& props,
+    void GlfwWindow::Init(const WindowProps& props,
                              Renderer::RendererBackend backend)
     {
         GEF_ENGINE_INFO("Creating window : {} ({} x {})", props.title,
@@ -150,7 +150,7 @@ namespace GEF::Platform
         glfwSetScrollCallback(window_, ScrollCallback);
     }
 
-    void WindowsWindow::Shutdown()
+    void GlfwWindow::Shutdown()
     {
         // TODO REFACTO TO HANDLE MULTI WINDOWS
         GEF_ENGINE_WARN("Destroying windows");
@@ -158,12 +158,13 @@ namespace GEF::Platform
         glfwTerminate();
     }
 
-    void WindowsWindow::ErrorCallback(int error, const char* description)
+    void GlfwWindow::ErrorCallback([[maybe_unused]] int error,
+                                   [[maybe_unused]] const char* description)
     {
         GEF_ENGINE_ERROR("GLFW Error : ({}) : {}", error, description);
     }
 
-    void WindowsWindow::WindowResizeCallback(GLFWwindow* window, int width,
+    void GlfwWindow::WindowResizeCallback(GLFWwindow* window, int width,
                                              int height)
     {
         auto& data = *static_cast<WindowData*>(
@@ -176,7 +177,7 @@ namespace GEF::Platform
         data.eventCallback(event);
     }
 
-    void WindowsWindow::WindowCloseCallback(GLFWwindow* window)
+    void GlfwWindow::WindowCloseCallback(GLFWwindow* window)
     {
         auto const& data = *static_cast<WindowData*>(
             glfwGetWindowUserPointer(window));
@@ -185,7 +186,7 @@ namespace GEF::Platform
         data.eventCallback(event);
     }
 
-    void WindowsWindow::KeyCallback(GLFWwindow* window, int key,
+    void GlfwWindow::KeyCallback(GLFWwindow* window, int key,
                                     [[maybe_unused]] int scancode,
                                     int action, [[maybe_unused]] int mods)
     {
@@ -219,7 +220,7 @@ namespace GEF::Platform
         }
     }
 
-    void WindowsWindow::MouseButtonCallback(GLFWwindow* window, int button,
+    void GlfwWindow::MouseButtonCallback(GLFWwindow* window, int button,
                                             int action,
                                             [[maybe_unused]] int mods)
     {
@@ -248,7 +249,7 @@ namespace GEF::Platform
         }
     }
 
-    void WindowsWindow::CursorPositionCallback(GLFWwindow* window, double xPos,
+    void GlfwWindow::CursorPositionCallback(GLFWwindow* window, double xPos,
                                                double yPos)
     {
         auto const& data = *static_cast<WindowData*>(
@@ -258,7 +259,7 @@ namespace GEF::Platform
         data.eventCallback(event);
     }
 
-    void WindowsWindow::ScrollCallback(GLFWwindow* window, double xOffset,
+    void GlfwWindow::ScrollCallback(GLFWwindow* window, double xOffset,
                                        double yOffset)
     {
         auto const& data = *static_cast<WindowData*>(

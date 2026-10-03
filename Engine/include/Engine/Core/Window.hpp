@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include <cstdint>
+#include <string>
+
 #include <Engine/Event/EventBus.hpp>
 #include <Engine/Renderer/RendererAPI.hpp>
 
@@ -53,14 +56,6 @@ namespace GEF
             uint32_t height;
             WindowMode mode;
             uint32_t flags;
-
-            WindowProps(const std::string& title,
-                        uint32_t width, uint32_t height, WindowMode mode,
-                        uint32_t flags)
-                : title(title), width(width), height(height), mode(mode),
-                  flags(flags)
-            {
-            }
         };
 
         using EventCallbackFunction = Events::EventBus::EventCallbackFunction;
