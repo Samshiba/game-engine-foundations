@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include <cstddef>
+#include <utility>
+
 #include "KeyCodes.hpp"
 
 namespace GEF
@@ -28,13 +31,16 @@ namespace GEF
         [[nodiscard]] static std::pair<double, double> GetMouseDelta();
 
     private:
-        static bool keyData_[static_cast<size_t>(Key::KeyCode::KEY_LAST)];
-        static bool prevKeyData_[static_cast<size_t>(Key::KeyCode::KEY_LAST)];
+        static constexpr size_t KeyCount =
+            static_cast<size_t>(Key::KeyCode::KEY_LAST) + 1;
+        static constexpr size_t MouseButtonCount =
+            static_cast<size_t>(Key::MouseCode::MOUSE_BUTTON_LAST) + 1;
 
-        static bool mouseButtons_[static_cast<size_t>(
-            Key::MouseCode::MOUSE_BUTTON_LAST)];
-        static bool prevMouseButtons_[static_cast<size_t>(
-            Key::MouseCode::MOUSE_BUTTON_LAST)];
+        static bool keyData_[KeyCount];
+        static bool prevKeyData_[KeyCount];
+
+        static bool mouseButtons_[MouseButtonCount];
+        static bool prevMouseButtons_[MouseButtonCount];
 
         static std::pair<double, double> mousePos_;
         static std::pair<double, double> prevMousePos_;

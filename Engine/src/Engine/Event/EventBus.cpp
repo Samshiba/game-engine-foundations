@@ -31,24 +31,13 @@ namespace GEF::Events
 
     void EventBus::TriggerEvent(Event& event)
     {
-        EventType type = event.GetEventType();
+        const auto it = subscribers_.find(event.GetEventType());
+        if (it == subscribers_.end())
+            return;
 
-        if (subscribers_.contains(type))
+        for (auto const& subscriber : it->second)
         {
-            auto const& list = subscribers_[type];
-            GEF_ENGINE_INFO("EventBus: Dispatching [{}] to {} subscribers",
-                            event.ToString(), list.size());
-
-            for (auto const& subscriber : subscribers_[type])
-            {
-                subscriber.callback(event);
-            }
-        }
-        else
-        {
-            GEF_ENGINE_WARN(
-                "EventBus: Event [{}] dispatched but no subscribers found!",
-                event.ToString());
+            subscriber.callback(event);
         }
     }
 
