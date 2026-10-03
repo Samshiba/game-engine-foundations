@@ -28,18 +28,10 @@ namespace GEF::Renderer
         0;
 
         static std::unique_ptr<GraphicsDevice> Create(RendererBackend backend);
-        static GraphicsDevice* Get();
 
         virtual std::shared_ptr<CommandList> BeginCommandList() = 0;
         virtual void SubmitCommandList(
             const std::shared_ptr<CommandList>& commandList) = 0;
 
-    protected:
-        static GraphicsDevice* instance_;
     };
-
-    inline GraphicsDevice* GraphicsDevice::Get()
-    {
-        return instance_;
-    }
 }

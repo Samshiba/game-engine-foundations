@@ -10,9 +10,6 @@
 
 namespace GEF::Renderer
 {
-    // Static member init
-    GraphicsDevice* GraphicsDevice::instance_ = nullptr;
-
     std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(
         RendererBackend backend)
     {

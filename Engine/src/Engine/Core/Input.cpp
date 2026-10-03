@@ -3,13 +3,14 @@
 // Path: Engine/src/Engine/Core/Input.cpp
 //
 
-#include <Engine/Core/Application.hpp>
+#include <Engine/Core/Input.hpp>
+#include <Engine/Core/Window.hpp>
+
 #include <GLFW/glfw3.h>
 
 #include <cstring>
 
 #include "Commons.hpp"
-#include "Input.hpp"
 
 namespace GEF
 {
@@ -29,18 +30,9 @@ namespace GEF
         }
     }
 
-    // Static member init
-    bool Input::keyData_[KeyCount] = { false };
-    bool Input::prevKeyData_[KeyCount] = { false };
-    bool Input::mouseButtons_[MouseButtonCount] = { false };
-    bool Input::prevMouseButtons_[MouseButtonCount] = { false };
-    std::pair<double, double> Input::mousePos_ = { 0.0f, 0.0f };
-    std::pair<double, double> Input::prevMousePos_ = { 0.0f, 0.0f };
-
-    void Input::Update()
+    void Input::Update(const Window& window)
     {
-        auto* window = static_cast<GLFWwindow*>(Application::Get().GetWindow().
-            GetNativeWindow());
+        auto* glfwWindow = static_cast<GLFWwindow*>(window.GetNativeWindow());
 
         // --- Keyboard ---
         std::memcpy(prevKeyData_, keyData_, sizeof(keyData_));
@@ -48,7 +40,7 @@ namespace GEF
         for (int i = ToInt(Key::KeyCode::KEY_SPACE);
              i <= ToInt(Key::KeyCode::KEY_LAST); ++i)
         {
-            const int state = glfwGetKey(window, i);
+            const int state = glfwGetKey(glfwWindow, i);
             keyData_[i] = (state == GLFW_PRESS || state == GLFW_REPEAT);
         }
 
@@ -57,7 +49,7 @@ namespace GEF
 
         for (int i = 0; i <= ToInt(Key::MouseCode::MOUSE_BUTTON_LAST); ++i)
         {
-            const int state = glfwGetMouseButton(window, i);
+            const int state = glfwGetMouseButton(glfwWindow, i);
             mouseButtons_[i] = (state == GLFW_PRESS);
         }
 
@@ -66,11 +58,11 @@ namespace GEF
 
         double xPos;
         double yPos;
-        glfwGetCursorPos(window, &xPos, &yPos);
+        glfwGetCursorPos(glfwWindow, &xPos, &yPos);
         mousePos_ = { xPos, yPos };
     }
 
-    bool Input::IsKeyPressed(Key::KeyCode key)
+    bool Input::IsKeyPressed(Key::KeyCode key) const
     {
         if (key > Key::KeyCode::KEY_LAST)
         {
@@ -80,7 +72,7 @@ namespace GEF
         return keyData_[ToSz(key)];
     }
 
-    bool Input::IsKeyJustPressed(Key::KeyCode key)
+    bool Input::IsKeyJustPressed(Key::KeyCode key) const
     {
         if (key > Key::KeyCode::KEY_LAST)
         {
@@ -91,7 +83,7 @@ namespace GEF
             !prevKeyData_[ToSz(key)];
     }
 
-    bool Input::IsKeyJustReleased(Key::KeyCode key)
+    bool Input::IsKeyJustReleased(Key::KeyCode key) const
     {
         if (key > Key::KeyCode::KEY_LAST)
         {
@@ -102,7 +94,7 @@ namespace GEF
             prevKeyData_[ToSz(key)];
     }
 
-    bool Input::IsMouseButtonPressed(Key::MouseCode button)
+    bool Input::IsMouseButtonPressed(Key::MouseCode button) const
     {
         if (button > Key::MouseCode::MOUSE_BUTTON_LAST)
         {
@@ -114,7 +106,7 @@ namespace GEF
         return mouseButtons_[ToSz(button)];
     }
 
-    bool Input::IsMouseButtonJustPressed(Key::MouseCode button)
+    bool Input::IsMouseButtonJustPressed(Key::MouseCode button) const
     {
         if (button > Key::MouseCode::MOUSE_BUTTON_LAST)
         {
@@ -127,7 +119,7 @@ namespace GEF
             !prevMouseButtons_[ToSz(button)];
     }
 
-    bool Input::IsMouseButtonJustReleased(Key::MouseCode button)
+    bool Input::IsMouseButtonJustReleased(Key::MouseCode button) const
     {
         if (button > Key::MouseCode::MOUSE_BUTTON_LAST)
         {
@@ -140,12 +132,12 @@ namespace GEF
             prevMouseButtons_[ToSz(button)];
     }
 
-    std::pair<double, double> Input::GetMousePosition()
+    std::pair<double, double> Input::GetMousePosition() const
     {
         return mousePos_;
     }
 
-    std::pair<double, double> Input::GetMouseDelta()
+    std::pair<double, double> Input::GetMouseDelta() const
     {
         return { mousePos_.first - prevMousePos_.first,
                  mousePos_.second - prevMousePos_.second };
