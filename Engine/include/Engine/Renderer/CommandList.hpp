@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include <cstdint>
+#include <memory>
+
 #include "VertexArray.hpp"
 
 namespace GEF::Renderer

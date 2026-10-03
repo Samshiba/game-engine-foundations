@@ -5,7 +5,9 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <utility>
 #include <vector>
 #include <string>
@@ -39,8 +41,8 @@ namespace GEF::Renderer
         size_t offset;
         bool normalized;
 
-        BufferElement(ShaderDataType type, std::string name,
-                      bool normalized = false);
+        BufferElement(ShaderDataType elementType, std::string elementName,
+                      bool isNormalized = false);
 
         [[nodiscard]] static uint32_t GetSizeOfType(ShaderDataType type);
         [[nodiscard]] uint8_t GetComponentCount() const;
@@ -68,11 +70,12 @@ namespace GEF::Renderer
         uint32_t stride_ = 0;
     };
 
-    inline BufferElement::BufferElement(ShaderDataType type, std::string name,
-                                        bool normalized)
-        : name(std::move(name)), type(type), size(GetSizeOfType(type)),
-          offset(0),
-          normalized(normalized)
+    inline BufferElement::BufferElement(ShaderDataType elementType,
+                                        std::string elementName,
+                                        bool isNormalized)
+        : name(std::move(elementName)), type(elementType),
+          size(GetSizeOfType(elementType)), offset(0),
+          normalized(isNormalized)
     {
     }
 
@@ -102,7 +105,7 @@ namespace GEF::Renderer
         case Int4:
             return 4 * 4;
         case Bool:
-            return 1;
+            return 4; // GLSL has no 1-byte bool: read as an int attribute
         default:
             GEF_ENGINE_ERROR("Unknown ShaderDataType");
             return 0;

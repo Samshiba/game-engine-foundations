@@ -13,6 +13,10 @@
 #include <deque>
 #include <unordered_map>
 
+#include <typeinfo>
+
+#include <Engine/Core/Log.hpp>
+
 #include "Event.hpp"
 
 
