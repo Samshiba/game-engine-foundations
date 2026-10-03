@@ -4,7 +4,10 @@ project(Glad)
 
 add_library(glad STATIC "src/glad.c")
 
-target_include_directories(glad PUBLIC "include")
+target_include_directories(glad SYSTEM PUBLIC "include")
+
+# The loader uses dlopen on POSIX
+target_link_libraries(glad PRIVATE ${CMAKE_DL_LIBS})
 
 if(MSVC)
     target_compile_options(glad PRIVATE /w)

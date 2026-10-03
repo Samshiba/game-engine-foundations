@@ -1,6 +1,6 @@
 //
 // Created by genin on 02/02/2026.
-// Path: Engine/src/Engine/Platform/Windows/WindowsWindow.hpp
+// Path: Engine/src/Engine/Platform/Glfw/GlfwWindow.hpp
 //
 
 #pragma once
@@ -14,7 +14,7 @@
 
 namespace GEF::Platform
 {
-    class WindowsWindow : public Window
+    class GlfwWindow : public Window
     {
     private:
         using EventCallbackFunction = std::function<void(Events::Event&)>;
@@ -33,9 +33,9 @@ namespace GEF::Platform
         };
 
     public:
-        WindowsWindow(const WindowProps& props,
+        GlfwWindow(const WindowProps& props,
                       Renderer::RendererBackend backend);
-        ~WindowsWindow();
+        ~GlfwWindow();
 
         void OnUpdate() override;
 
@@ -69,7 +69,6 @@ namespace GEF::Platform
                                    double yOffset);
 
     private:
-        unsigned int monitor_ = 0; // TODO SUPPORT MULTI MONITOR
         std::unique_ptr<Renderer::GraphicsContext> context_;
         GLFWwindow* window_ = nullptr;
         WindowData windowData_;

@@ -8,11 +8,9 @@
 #include "Application.hpp"
 #include "Log.hpp"
 
-#ifdef GEF_PLATFORM_WINDOWS
-
 extern GEF::Application* GEF::CreateApplication(ApplicationSpecification& spec);
 
-int main(int argc, char** argv)
+int main()
 {
     GEF::Log::Init();
 
@@ -23,5 +21,3 @@ int main(int argc, char** argv)
     delete app;
     return 0;
 }
-
-#endif

@@ -31,31 +31,17 @@ set(ENGINE_SOURCES
         "src/Engine/Platform/OpenGL/OpenGlVertexBuffer.cpp"
         "src/Engine/Platform/OpenGL/OpenGlVertexArray.hpp"
         "src/Engine/Platform/OpenGL/OpenGlVertexArray.cpp"
-        "src/Engine/Platform/OpenGL/OpenGlCommandList.hpp"
+        "src/Engine/Platform/OpenGL/OpenGLCommandList.hpp"
+
+        # GLFW handles the windowing on every desktop platform
+        "src/Engine/Platform/Glfw/GlfwWindow.hpp"
+        "src/Engine/Platform/Glfw/GlfwWindow.cpp"
 
         # Renderer
         "src/Engine/Renderer/GraphicsContext.hpp"
         "src/Engine/Renderer/GraphicsContext.cpp"
         "src/Engine/Renderer/GraphicsDevice.cpp"
-
 )
-
-if (WIN32)
-    list(APPEND ENGINE_SOURCES
-            "src/Engine/Platform/Windows/WindowsWindow.hpp"
-            "src/Engine/Platform/Windows/WindowsWindow.cpp"
-    )
-elseif (UNIX AND NOT APPLE)
-    list(APPEND ENGINE_SOURCES
-            #"src/Engine/Platform/Linux/LinuxWindow.hpp"
-            #"src/Engine/Platform/Linux/LinuxWindow.cpp"
-    )
-elseif (APPLE)
-    list(APPEND ENGINE_SOURCES
-            #"src/Engine/Platform/MacOS/MacOSWindow.hpp"
-            #"src/Engine/Platform/MacOS/MacOSWindow.cpp"
-    )
-endif ()
 
 set(ENGINE_HEADERS
         "include/Engine.hpp"
@@ -97,7 +83,6 @@ target_include_directories(Engine
 
         PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
-        "${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb_image"
 )
 
 target_link_libraries(Engine
@@ -110,24 +95,8 @@ target_link_libraries(Engine
         glad
 )
 
-# Compile Options
-target_compile_options(Engine PRIVATE
-        # --- MSVC Config ---
-        $<$<CXX_COMPILER_ID:MSVC>:
-        $<$<CONFIG:Debug>:/Od /Zi /RTC1 /MDd>
-        $<$<CONFIG:Profile>:/O2 /Zi /MD>
-        $<$<CONFIG:Release>:/O2 /MD>
-        /W4 /WX /MP /Zc:preprocessor
-        >
-
-        # --- GCC/Clang Config ---
-        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
-        $<$<CONFIG:Debug>:-O0 -g>
-        $<$<CONFIG:Profile>:-O3 -g>
-        $<$<CONFIG:Release>:-O3>
-        -Wall -Wextra -Werror -pedantic
-        >
-)
+# Compile Options (optimization flags come from the build type, see root CMakeLists)
+gef_set_warnings(Engine)
 
 # Compile Definitions
 target_compile_definitions(Engine PUBLIC
@@ -137,7 +106,6 @@ target_compile_definitions(Engine PUBLIC
         $<$<PLATFORM_ID:Darwin>:GEF_PLATFORM_MACOS>
 
         # Build Type
-        $<$<OR:$<CONFIG:Release>,$<CONFIG:Profile>>:NDEBUG>
         $<$<CONFIG:Debug>:GEF_DEBUG_BUILD GEF_ENABLE_ASSERTS GEF_ENABLE_LOGGING>
         $<$<CONFIG:Profile>:GEF_PROFILE_BUILD GEF_ENABLE_LOGGING>
         $<$<CONFIG:Release>:GEF_RELEASE_BUILD>

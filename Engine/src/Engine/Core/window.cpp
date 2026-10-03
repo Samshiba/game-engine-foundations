@@ -1,20 +1,23 @@
 //
 // Created by genin on 16/02/2026.
-// Path: Engine/src/Engine/Core/window.cpp
+// Path: Engine/src/Engine/Core/Window.cpp
 //
 
 #include <Engine/Core/Window.hpp>
 #include <Engine/Core/Application.hpp>
-#include <Engine/Platform/Windows/WindowsWindow.hpp>
+#include <Engine/Platform/Glfw/GlfwWindow.hpp>
 
 namespace GEF
 {
     Window* Window::Create(const ApplicationSpecification& spec)
     {
         // TODO IMPLEMENT WindowInitialPosition
-        auto props = WindowProps(spec.title, spec.width, spec.height, spec.mode,
-                                 spec.flags);
+        const WindowProps props{ .title = spec.title,
+                                 .width = spec.width,
+                                 .height = spec.height,
+                                 .mode = spec.mode,
+                                 .flags = spec.flags };
 
-        return new Platform::WindowsWindow(props, spec.backend);
+        return new Platform::GlfwWindow(props, spec.backend);
     }
 }
