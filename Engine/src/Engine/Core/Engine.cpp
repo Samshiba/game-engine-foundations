@@ -80,9 +80,11 @@ namespace GEF
 
     Engine::Engine(EngineSpecification spec)
         : spec_(std::move(spec)),
-          window_(Window::Create(spec_)),
-          graphics_device_(Renderer::GraphicsDevice::Create(spec_.backend))
+          window_(Window::Create(spec_))
     {
+        auto device = Renderer::GraphicsDevice::Create(spec_.backend);
+        GEF_CORE_ASSERT(device, "Failed to create graphics device");
+        graphics_device_ = std::move(device);
         window_->SetEventCallback([this](Events::Event& e) {
             OnEvent(e);
         });

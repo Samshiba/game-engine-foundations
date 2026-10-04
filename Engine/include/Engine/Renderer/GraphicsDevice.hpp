@@ -25,9 +25,8 @@ namespace GEF::Renderer
     struct BufferDesc
     {
         BufferType type;
-        uint32_t size;
-
-        const void* data;
+        uint32_t size = 0;
+        const void* data = nullptr;
     };
 
     // Vertex Array

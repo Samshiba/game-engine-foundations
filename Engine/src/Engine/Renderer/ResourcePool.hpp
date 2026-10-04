@@ -45,7 +45,7 @@ namespace GEF::Renderer
     {
         if (freeList_.empty())
         {
-            slots_.emplace_back(value, 0, true);
+            slots_.emplace_back(std::move(value), 0, true);
             return Handle<Tag>{ static_cast<uint32_t>(slots_.size() - 1), 0 };
         }
 
@@ -54,8 +54,7 @@ namespace GEF::Renderer
 
         uint32_t generation = slots_[index].generation;
 
-        slots_[index].value = value;
-        slots_[index].generation = generation;
+        slots_[index].value = std::move(value);
         slots_[index].alive = true;
 
         return Handle<Tag>(index, generation);

@@ -14,7 +14,7 @@ namespace GEF::Platform
     class OpenGLContext : public Renderer::GraphicsContext
     {
     public:
-        OpenGLContext(GLFWwindow* windowHandle);
+        explicit OpenGLContext(GLFWwindow* windowHandle);
 
         void Init() override;
         void SwapBuffers() override;
