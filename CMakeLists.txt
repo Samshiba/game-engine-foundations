@@ -60,3 +60,9 @@ FetchContent_MakeAvailable(glfw glm spdlog)
 # Projects
 add_subdirectory(Engine)
 add_subdirectory(Application)
+
+option(GEF_BUILD_TESTS "Build the unit tests" ${PROJECT_IS_TOP_LEVEL})
+if (GEF_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif ()

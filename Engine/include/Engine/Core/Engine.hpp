@@ -40,7 +40,7 @@ namespace GEF
     };
 
     // Any type with these member functions can be run by the Engine.
-    // OnInit(EngineContext&) is optional.
+    // OnInit(EngineContext&) and OnShutdown(EngineContext&) are optional.
     template <typename T>
     concept Game = requires(T game, EngineContext& ctx, float dt,
                             Renderer::CommandList& cmd)
@@ -106,6 +106,10 @@ namespace GEF
             game.OnRender(ctx, *frame_commands_);
             EndFrame();
         }
+
+        if constexpr (requires { game.OnShutdown(ctx); })
+            game.OnShutdown(ctx);
+
         return 0;
     }
 }

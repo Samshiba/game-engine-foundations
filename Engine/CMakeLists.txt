@@ -23,12 +23,6 @@ set(ENGINE_SOURCES
         "src/Engine/Platform/OpenGL/OpenGlContext.cpp"
         "src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp"
         "src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.cpp"
-        "src/Engine/Platform/OpenGL/OpenGlIndexBuffer.hpp"
-        "src/Engine/Platform/OpenGL/OpenGlIndexBuffer.cpp"
-        "src/Engine/Platform/OpenGL/OpenGlVertexBuffer.hpp"
-        "src/Engine/Platform/OpenGL/OpenGlVertexBuffer.cpp"
-        "src/Engine/Platform/OpenGL/OpenGlVertexArray.hpp"
-        "src/Engine/Platform/OpenGL/OpenGlVertexArray.cpp"
         "src/Engine/Platform/OpenGL/OpenGLCommandList.hpp"
 
         # GLFW handles the windowing on every desktop platform
@@ -39,6 +33,7 @@ set(ENGINE_SOURCES
         "src/Engine/Renderer/GraphicsContext.hpp"
         "src/Engine/Renderer/GraphicsContext.cpp"
         "src/Engine/Renderer/GraphicsDevice.cpp"
+        "src/Engine/Renderer/ResourcePool.hpp"
 )
 
 set(ENGINE_HEADERS
@@ -65,10 +60,8 @@ set(ENGINE_HEADERS
         "include/Engine/Renderer/RendererAPI.hpp"
         "include/Engine/Renderer/GraphicsDevice.hpp"
         "include/Engine/Renderer/Buffer.hpp"
-        "include/Engine/Renderer/IndexBuffer.hpp"
-        "include/Engine/Renderer/VertexBuffer.hpp"
-        "include/Engine/Renderer/VertexArray.hpp"
         "include/Engine/Renderer/CommandList.hpp"
+        "include/Engine/Renderer/Handle.hpp"
 )
 
 target_sources(Engine PRIVATE
