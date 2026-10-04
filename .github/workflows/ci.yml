@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+# checks: write is required by dorny/test-reporter to publish the test report
+permissions:
+  contents: read
+  checks: write
+
+# A new push on the same branch cancels the run still in progress
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.toolchain.name }} / ${{ matrix.config }}
+    runs-on: ${{ matrix.toolchain.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [ Debug, Release ]
+        toolchain:
+          - { name: MSVC, os: windows-latest, cc: cl, cxx: cl }
+          - { name: GCC 14, os: ubuntu-24.04, cc: gcc-14, cxx: g++-14 }
+          - { name: Clang 18, os: ubuntu-24.04, cc: clang-18, cxx: clang++-18 }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # GLFW 3.4 builds both its X11 and Wayland backends on Linux.
+      # Xvfb (virtual display) + Mesa (software OpenGL) run the GL tests.
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build xorg-dev libwayland-dev libxkbcommon-dev \
+                                  xvfb libgl1 libgl1-mesa-dri
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+          -DCMAKE_C_COMPILER=${{ matrix.toolchain.cc }}
+          -DCMAKE_CXX_COMPILER=${{ matrix.toolchain.cxx }}
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      # doctest's own JUnit reporter lists every test case
+      # (ctest --output-junit would only see one test: the whole executable).
+      # Linux: Mesa's software renderer (llvmpipe) gives a real OpenGL 4.5
+      # context inside a virtual display. Windows runners have no GL 4.5
+      # driver: the GL tests skip themselves.
+      # bash on every OS (Git Bash on Windows) so one script fits all. Not used
+      # for Configure/Build: Git Bash's own link.exe can shadow MSVC's linker
+      - name: Test
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a ./build/bin/GEF_Tests --reporters=junit --out=test-results.xml
+          else
+            ./build/bin/GEF_Tests --reporters=junit --out=test-results.xml
+          fi
+
+      - name: Publish test report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Tests (${{ matrix.toolchain.name }} / ${{ matrix.config }})
+          path: test-results.xml
+          reporter: java-junit
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.toolchain.name }}-${{ matrix.config }}
+          path: test-results.xml
+          if-no-files-found: warn
+          retention-days: 14
