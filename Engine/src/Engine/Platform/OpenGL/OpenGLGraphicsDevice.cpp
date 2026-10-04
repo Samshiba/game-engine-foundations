@@ -9,11 +9,6 @@
 
 namespace GEF::Platform
 {
-    OpenGLGraphicsDevice::OpenGLGraphicsDevice()
-    {
-        instance_ = this;
-    }
-
     std::shared_ptr<Renderer::IndexBuffer>
     OpenGLGraphicsDevice::CreateIndexBuffer(
         uint32_t* indices, uint32_t count)

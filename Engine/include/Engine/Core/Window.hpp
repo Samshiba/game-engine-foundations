@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 #include <Engine/Event/EventBus.hpp>
@@ -13,7 +14,7 @@
 
 namespace GEF
 {
-    struct ApplicationSpecification;
+    struct EngineSpecification;
 
     class Window
     {
@@ -79,6 +80,6 @@ namespace GEF
 
         [[nodiscard]] virtual void* GetNativeWindow() const = 0;
 
-        static Window* Create(const ApplicationSpecification& spec);
+        static std::unique_ptr<Window> Create(const EngineSpecification& spec);
     };
 }

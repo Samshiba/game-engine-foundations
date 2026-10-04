@@ -10,10 +10,8 @@ set(ENGINE_SOURCES
         "src/Commons.hpp"
 
         # Core
-        "src/Engine/Core/Application.cpp"
+        "src/Engine/Core/Engine.cpp"
         "src/Engine/Core/Log.cpp"
-        "src/Engine/Core/KeyCodes.hpp"
-        "src/Engine/Core/Input.hpp"
         "src/Engine/Core/Input.cpp"
         "src/Engine/Core/Window.cpp"
 
@@ -50,8 +48,9 @@ set(ENGINE_HEADERS
         "include/Engine/Utils/FNV-1a.hpp"
 
         # Core
-        "include/Engine/Core/Application.hpp"
-        "include/Engine/Core/EntryPoint.hpp"
+        "include/Engine/Core/Engine.hpp"
+        "include/Engine/Core/Input.hpp"
+        "include/Engine/Core/KeyCodes.hpp"
         "include/Engine/Core/Base.hpp"
         "include/Engine/Core/Log.hpp"
         "include/Engine/Core/Window.hpp"
@@ -108,7 +107,7 @@ target_compile_definitions(Engine PUBLIC
         # Build Type
         $<$<CONFIG:Debug>:GEF_DEBUG_BUILD GEF_ENABLE_ASSERTS GEF_ENABLE_LOGGING>
         $<$<CONFIG:Profile>:GEF_PROFILE_BUILD GEF_ENABLE_LOGGING>
-        $<$<CONFIG:Release>:GEF_RELEASE_BUILD>
+        $<$<CONFIG:Release>:GEF_RELEASE_BUILD GEF_ENABLE_LOGGING>
 
         # SPDLOG
         $<$<CONFIG:Debug>:SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE>

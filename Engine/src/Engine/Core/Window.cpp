@@ -4,12 +4,12 @@
 //
 
 #include <Engine/Core/Window.hpp>
-#include <Engine/Core/Application.hpp>
+#include <Engine/Core/Engine.hpp>
 #include <Engine/Platform/Glfw/GlfwWindow.hpp>
 
 namespace GEF
 {
-    Window* Window::Create(const ApplicationSpecification& spec)
+    std::unique_ptr<Window> Window::Create(const EngineSpecification& spec)
     {
         // TODO IMPLEMENT WindowInitialPosition
         const WindowProps props{ .title = spec.title,
@@ -18,6 +18,6 @@ namespace GEF
                                  .mode = spec.mode,
                                  .flags = spec.flags };
 
-        return new Platform::GlfwWindow(props, spec.backend);
+        return std::make_unique<Platform::GlfwWindow>(props, spec.backend);
     }
 }

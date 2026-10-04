@@ -16,8 +16,6 @@ namespace GEF::Platform
     class OpenGLGraphicsDevice : public Renderer::GraphicsDevice
     {
     public:
-        OpenGLGraphicsDevice();
-
         [[nodiscard]] std::shared_ptr<Renderer::IndexBuffer>
         CreateIndexBuffer(uint32_t* indices, uint32_t count) override;
         [[nodiscard]] std::shared_ptr<Renderer::VertexBuffer>

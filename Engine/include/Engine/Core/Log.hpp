@@ -7,9 +7,6 @@
 
 #ifdef GEF_ENABLE_LOGGING
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/pattern_formatter.h>
 #endif
 
 namespace GEF
@@ -20,29 +17,13 @@ namespace GEF
         static void Init();
 
 #ifdef GEF_ENABLE_LOGGING
-        static std::shared_ptr<spdlog::logger>& GetEngineLogger();
-        static std::shared_ptr<spdlog::logger>& GetClientLogger();
-#endif
-
-    private:
-#ifdef GEF_ENABLE_LOGGING
-        static std::shared_ptr<spdlog::logger> EngineLogger_;
-        static std::shared_ptr<spdlog::logger> ClientLogger_;
+        [[nodiscard]] static std::shared_ptr<spdlog::logger>& GetEngineLogger();
+        [[nodiscard]] static std::shared_ptr<spdlog::logger>& GetClientLogger();
 #endif
     };
 }
 
 #ifdef GEF_ENABLE_LOGGING
-
-inline std::shared_ptr<spdlog::logger>& GEF::Log::GetEngineLogger()
-{
-    return EngineLogger_;
-}
-
-inline std::shared_ptr<spdlog::logger>& GEF::Log::GetClientLogger()
-{
-    return ClientLogger_;
-}
 
 #define GEF_ENGINE_DEBUG(...)    SPDLOG_LOGGER_CALL(GEF::Log::GetEngineLogger(), spdlog::level::debug, __VA_ARGS__)
 #define GEF_ENGINE_INFO(...)     SPDLOG_LOGGER_CALL(GEF::Log::GetEngineLogger(), spdlog::level::info, __VA_ARGS__)
