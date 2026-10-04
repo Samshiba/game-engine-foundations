@@ -5,8 +5,7 @@
 
 #include <doctest.h>
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include "GLTestContext.hpp"
 
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
 
@@ -17,60 +16,6 @@ using namespace GEF;
 
 namespace
 {
-    // One hidden window with an OpenGL 4.5 context, shared by every test and
-    // destroyed at exit (after the devices, which are test-local).
-    // Machines without a 4.5 driver (e.g. GPU-less CI runners) skip the tests.
-    class GLTestContext
-    {
-    public:
-        static bool Available()
-        {
-            static GLTestContext context;
-            return context.available_;
-        }
-
-        GLTestContext(const GLTestContext&) = delete;
-        GLTestContext& operator=(const GLTestContext&) = delete;
-
-    private:
-        GLTestContext()
-        {
-            if (!glfwInit())
-                return;
-
-            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-            window_ = glfwCreateWindow(64, 64, "GEF_Tests", nullptr, nullptr);
-            if (!window_)
-                return;
-
-            glfwMakeContextCurrent(window_);
-            available_ = gladLoadGLLoader(
-                reinterpret_cast<GLADloadproc>(glfwGetProcAddress)) != 0;
-        }
-
-        ~GLTestContext()
-        {
-            if (window_)
-                glfwDestroyWindow(window_);
-            glfwTerminate();
-        }
-
-        GLFWwindow* window_ = nullptr;
-        bool available_ = false;
-    };
-
-    // Returns from the test case when no context can be created
-#define REQUIRE_GL_CONTEXT()                                                   \
-    if (!GLTestContext::Available())                                           \
-    {                                                                          \
-        MESSAGE("No OpenGL 4.5 context available: test skipped");             \
-        return;                                                                \
-    }
-
     constexpr std::array<float, 6> Vertices = { 0.f, 1.f, 2.f, 3.f, 4.f, 5.f };
 
     Renderer::BufferDesc VertexDesc()
@@ -80,9 +25,8 @@ namespace
     }
 }
 
-TEST_CASE("CreateBuffer returns a valid handle to a GL buffer")
+GL_TEST_CASE("CreateBuffer returns a valid handle to a GL buffer")
 {
-    REQUIRE_GL_CONTEXT();
     Platform::OpenGLGraphicsDevice device;
 
     const Renderer::BufferHandle handle = device.CreateBuffer(VertexDesc());
@@ -96,9 +40,8 @@ TEST_CASE("CreateBuffer returns a valid handle to a GL buffer")
     device.DestroyBuffer(handle);
 }
 
-TEST_CASE("CreateBuffer uploads the data to the GPU")
+GL_TEST_CASE("CreateBuffer uploads the data to the GPU")
 {
-    REQUIRE_GL_CONTEXT();
     Platform::OpenGLGraphicsDevice device;
 
     const Renderer::BufferHandle handle = device.CreateBuffer(VertexDesc());
@@ -115,9 +58,8 @@ TEST_CASE("CreateBuffer uploads the data to the GPU")
     device.DestroyBuffer(handle);
 }
 
-TEST_CASE("CreateBuffer accepts no data (allocation only)")
+GL_TEST_CASE("CreateBuffer accepts no data (allocation only)")
 {
-    REQUIRE_GL_CONTEXT();
     Platform::OpenGLGraphicsDevice device;
 
     const Renderer::BufferHandle handle =
@@ -131,9 +73,8 @@ TEST_CASE("CreateBuffer accepts no data (allocation only)")
     device.DestroyBuffer(handle);
 }
 
-TEST_CASE("DestroyBuffer deletes the GL buffer and invalidates the handle")
+GL_TEST_CASE("DestroyBuffer deletes the GL buffer and invalidates the handle")
 {
-    REQUIRE_GL_CONTEXT();
     Platform::OpenGLGraphicsDevice device;
 
     const Renderer::BufferHandle handle = device.CreateBuffer(VertexDesc());
@@ -145,9 +86,8 @@ TEST_CASE("DestroyBuffer deletes the GL buffer and invalidates the handle")
     CHECK(device.GetBuffer(handle) == nullptr);
 }
 
-TEST_CASE("A destroyed buffer's slot is reused with a new generation")
+GL_TEST_CASE("A destroyed buffer's slot is reused with a new generation")
 {
-    REQUIRE_GL_CONTEXT();
     Platform::OpenGLGraphicsDevice device;
 
     const Renderer::BufferHandle first = device.CreateBuffer(VertexDesc());
@@ -162,9 +102,8 @@ TEST_CASE("A destroyed buffer's slot is reused with a new generation")
     device.DestroyBuffer(second);
 }
 
-TEST_CASE("The device frees leaked buffers when destroyed")
+GL_TEST_CASE("The device frees leaked buffers when destroyed")
 {
-    REQUIRE_GL_CONTEXT();
     GLuint id = 0;
     {
         Platform::OpenGLGraphicsDevice device;
@@ -221,9 +160,8 @@ namespace
     }
 }
 
-TEST_CASE("CreateVertexArray returns a valid handle to a GL vertex array")
+GL_TEST_CASE("CreateVertexArray returns a valid handle to a GL vertex array")
 {
-    REQUIRE_GL_CONTEXT();
     Platform::OpenGLGraphicsDevice device;
     const TriangleBuffers buffers = CreateTriangleBuffers(device);
 
@@ -242,9 +180,8 @@ TEST_CASE("CreateVertexArray returns a valid handle to a GL vertex array")
     device.DestroyBuffer(buffers.vertices);
 }
 
-TEST_CASE("One binding: every attribute reads the same interleaved buffer")
+GL_TEST_CASE("One binding: every attribute reads the same interleaved buffer")
 {
-    REQUIRE_GL_CONTEXT();
     Platform::OpenGLGraphicsDevice device;
     const TriangleBuffers buffers = CreateTriangleBuffers(device);
 
@@ -279,9 +216,8 @@ TEST_CASE("One binding: every attribute reads the same interleaved buffer")
     device.DestroyBuffer(buffers.vertices);
 }
 
-TEST_CASE("Two bindings: per-instance attributes continue the numbering")
+GL_TEST_CASE("Two bindings: per-instance attributes continue the numbering")
 {
-    REQUIRE_GL_CONTEXT();
     Platform::OpenGLGraphicsDevice device;
     const TriangleBuffers buffers = CreateTriangleBuffers(device);
     // One mat4 (64 bytes) + one vec4 color per instance
@@ -326,9 +262,8 @@ TEST_CASE("Two bindings: per-instance attributes continue the numbering")
     device.DestroyBuffer(buffers.vertices);
 }
 
-TEST_CASE("DestroyVertexArray deletes the GL vertex array and invalidates the handle")
+GL_TEST_CASE("DestroyVertexArray deletes the GL vertex array and invalidates the handle")
 {
-    REQUIRE_GL_CONTEXT();
     Platform::OpenGLGraphicsDevice device;
     const TriangleBuffers buffers = CreateTriangleBuffers(device);
 
@@ -348,9 +283,8 @@ TEST_CASE("DestroyVertexArray deletes the GL vertex array and invalidates the ha
     device.DestroyBuffer(buffers.vertices);
 }
 
-TEST_CASE("The device frees leaked vertex arrays and their buffers")
+GL_TEST_CASE("The device frees leaked vertex arrays and their buffers")
 {
-    REQUIRE_GL_CONTEXT();
     GLuint vao = 0;
     GLuint vbo = 0;
     {
