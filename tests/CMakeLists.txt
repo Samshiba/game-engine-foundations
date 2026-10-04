@@ -3,6 +3,7 @@
 add_executable(GEF_Tests
         "main.cpp"
         "Renderer/ResourcePool.test.cpp"
+        "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"
 )
 
 target_include_directories(GEF_Tests
@@ -15,7 +16,7 @@ target_include_directories(GEF_Tests
         "${PROJECT_SOURCE_DIR}/Engine/src"
 )
 
-target_link_libraries(GEF_Tests PRIVATE Engine)
+target_link_libraries(GEF_Tests PRIVATE Engine glad)
 
 gef_set_warnings(GEF_Tests)
 
