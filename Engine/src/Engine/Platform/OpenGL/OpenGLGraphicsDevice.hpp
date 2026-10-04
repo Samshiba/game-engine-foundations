@@ -8,8 +8,6 @@
 #include <Engine/Renderer/GraphicsDevice.hpp>
 #include <Engine/Renderer/ResourcePool.hpp>
 
-#include "OpenGlVertexArray.hpp"
-
 #include <glad/glad.h>
 
 namespace GEF::Platform
@@ -32,11 +30,6 @@ namespace GEF::Platform
         OpenGLGraphicsDevice() = default;
         ~OpenGLGraphicsDevice() override;
 
-        [[nodiscard]] std::shared_ptr<Renderer::IndexBuffer>
-        CreateIndexBuffer(uint32_t* indices, uint32_t count) override;
-        [[nodiscard]] std::shared_ptr<Renderer::VertexBuffer>
-        CreateVertexBuffer(float* vertices, uint32_t size) override;
-
         [[nodiscard]] Renderer::BufferHandle CreateBuffer(
             const Renderer::BufferDesc& desc) override;
         void DestroyBuffer(Renderer::BufferHandle handle) override;
@@ -47,8 +40,6 @@ namespace GEF::Platform
         [[nodiscard]] const GLVertexArray* GetVertexArray(
             Renderer::VertexArrayHandle handle) const;
 
-        [[nodiscard]] std::shared_ptr<Renderer::VertexArray> CreateVertexArray()
-        override;
         [[nodiscard]] Renderer::VertexArrayHandle CreateVertexArray(
             const Renderer::VertexArrayDesc& desc) override;
         void DestroyVertexArray(Renderer::VertexArrayHandle handle) override;

@@ -5,8 +5,6 @@
 
 #include "OpenGLGraphicsDevice.hpp"
 #include "OpenGLCommandList.hpp"
-#include "OpenGlIndexBuffer.hpp"
-#include "OpenGlVertexBuffer.hpp"
 
 namespace GEF::Platform
 {
@@ -29,19 +27,6 @@ namespace GEF::Platform
             for (const auto& handle : buffers)
                 OpenGLGraphicsDevice::DestroyBuffer(handle);
         }
-    }
-
-    std::shared_ptr<Renderer::IndexBuffer>
-    OpenGLGraphicsDevice::CreateIndexBuffer(
-        uint32_t* indices, uint32_t count)
-    {
-        return std::make_shared<OpenGlIndexBuffer>(indices, count);
-    }
-
-    std::shared_ptr<Renderer::VertexBuffer> OpenGLGraphicsDevice::
-    CreateVertexBuffer(float* vertices, uint32_t size)
-    {
-        return std::make_shared<OpenGLVertexBuffer>(vertices, size);
     }
 
     Renderer::BufferHandle OpenGLGraphicsDevice::CreateBuffer(
@@ -75,12 +60,6 @@ namespace GEF::Platform
         return vertexArrays_.IsValid(handle)
             ? vertexArrays_.Get(handle)
             : nullptr;
-    }
-
-    std::shared_ptr<Renderer::VertexArray>
-    OpenGLGraphicsDevice::CreateVertexArray()
-    {
-        return std::make_shared<OpenGlVertexArray>();
     }
 
     Renderer::VertexArrayHandle OpenGLGraphicsDevice::CreateVertexArray(

@@ -21,8 +21,6 @@ namespace GEF::Platform
         void SetClearColor(float r, float g, float b, float a) override;
         void Clear() override;
 
-        void BindVertexArray(
-            const std::shared_ptr<Renderer::VertexArray>& vertexArray) override;
         void BindVertexArray(Renderer::VertexArrayHandle handle) override;
 
         void DrawIndexed(uint32_t indexCount) override;
@@ -46,12 +44,6 @@ namespace GEF::Platform
     inline void OpenGLCommandList::Clear()
     {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
-
-    inline void OpenGLCommandList::BindVertexArray(
-        const std::shared_ptr<Renderer::VertexArray>& vertexArray)
-    {
-        vertexArray->Bind();
     }
 
     inline void OpenGLCommandList::BindVertexArray(
