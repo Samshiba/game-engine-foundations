@@ -45,9 +45,10 @@ struct Sandbox
 
 int main()
 {
-    GEF::Log::Init();
-
     GEF::Engine engine({ .title = "Sandbox" });
     Sandbox game;
-    return engine.Run(game);
+    int status = engine.Run(game);
+
+    GEF_INFO("Sandbox finished with status: {}", status);
+    return 0;
 }
