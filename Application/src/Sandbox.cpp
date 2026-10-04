@@ -6,40 +6,58 @@
 #include <Engine/Core/Engine.hpp>
 #include <Engine/Core/Log.hpp>
 
+using namespace GEF::Renderer;
+
 struct Sandbox
 {
-    std::shared_ptr<GEF::Renderer::VertexArray> triangle;
+    BufferHandle vertexBuffer;
+    BufferHandle indexBuffer;
+    VertexArrayHandle triangle;
+    uint32_t indexCount = 0;
 
     void OnInit(GEF::EngineContext& ctx)
     {
-        float vertices[] = {
+        const float vertices[] = {
             // position          // color
             -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
             0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
             0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
         };
-        uint32_t indices[] = { 0, 1, 2 };
+        const uint32_t indices[] = { 0, 1, 2 };
 
-        auto vertexBuffer = ctx.device.CreateVertexBuffer(vertices,
-            sizeof(vertices));
-        vertexBuffer->SetLayout({
-            { GEF::Renderer::ShaderDataType::Float3, "a_Position" },
-            { GEF::Renderer::ShaderDataType::Float3, "a_Color" },
+        vertexBuffer = ctx.device.CreateBuffer(
+            { BufferType::Vertex, sizeof(vertices), vertices });
+        indexBuffer = ctx.device.CreateBuffer(
+            { BufferType::Index, sizeof(indices), indices });
+        indexCount = 3;
+
+        triangle = ctx.device.CreateVertexArray({
+            .vertexBuffers = {
+                { .buffer = vertexBuffer,
+                  .layout = { { ShaderDataType::Float3, "a_Position" },
+                              { ShaderDataType::Float3, "a_Color" } } },
+            },
+            .indexBuffer = indexBuffer,
         });
-
-        triangle = ctx.device.CreateVertexArray();
-        triangle->AddVertexBuffer(vertexBuffer);
-        triangle->SetIndexBuffer(ctx.device.CreateIndexBuffer(indices, 3));
     }
 
     void OnUpdate(GEF::EngineContext&, float)
     {
     }
 
-    void OnRender(GEF::EngineContext&, GEF::Renderer::CommandList& cmd)
+    void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
         cmd.BindVertexArray(triangle);
-        cmd.DrawIndexed(triangle->GetIndexBuffer()->GetCount());
+        cmd.DrawIndexed(indexCount);
+    }
+
+    void OnShutdown(GEF::EngineContext& ctx)
+    {
+        ctx.device.DestroyVertexArray(triangle);
+        ctx.device.DestroyBuffer(indexBuffer);
+
+        // Leaked buffer
+        // ctx.device.DestroyBuffer(vertexBuffer);
     }
 };
 
@@ -47,8 +65,8 @@ int main()
 {
     GEF::Engine engine({ .title = "Sandbox" });
     Sandbox game;
-    int status = engine.Run(game);
+    const int status = engine.Run(game);
 
     GEF_INFO("Sandbox finished with status: {}", status);
-    return 0;
+    return status;
 }

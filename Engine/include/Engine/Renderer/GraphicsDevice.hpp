@@ -10,13 +10,15 @@
 #include "VertexArray.hpp"
 #include "RendererAPI.hpp"
 #include "CommandList.hpp"
+#include "Buffer.hpp"
 #include "Handle.hpp"
 
 #include <memory>
-#include <variant>
+#include <vector>
 
 namespace GEF::Renderer
 {
+    // Buffer
     enum class BufferType
     {
         Index,
@@ -31,11 +33,26 @@ namespace GEF::Renderer
         const void* data;
     };
 
+    // Vertex Array
+    struct VertexBufferBinding
+    {
+        BufferHandle buffer;
+        BufferLayout layout;
+        uint32_t instanceDivisor = 0;
+    };
+
+    struct VertexArrayDesc
+    {
+        std::vector<VertexBufferBinding> vertexBuffers;
+        BufferHandle indexBuffer;
+    };
+
     class GraphicsDevice
     {
     public:
         virtual ~GraphicsDevice() = default;
 
+        // Buffer
         [[nodiscard]] virtual std::shared_ptr<IndexBuffer> CreateIndexBuffer(
             uint32_t* indices, uint32_t count) = 0;
         [[nodiscard]] virtual std::shared_ptr<VertexBuffer>
@@ -46,8 +63,12 @@ namespace GEF::Renderer
         virtual void DestroyBuffer(BufferHandle handle) = 0;
 
 
+        // Vertex Array
         [[nodiscard]] virtual std::shared_ptr<VertexArray> CreateVertexArray() =
         0;
+        [[nodiscard]] virtual VertexArrayHandle CreateVertexArray(
+            const VertexArrayDesc& desc) = 0;
+        virtual void DestroyVertexArray(VertexArrayHandle handle) = 0;
 
         static std::unique_ptr<GraphicsDevice> Create(RendererBackend backend);
 

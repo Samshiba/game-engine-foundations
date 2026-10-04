@@ -21,6 +21,11 @@ namespace GEF::Platform
         Renderer::BufferType type;
     };
 
+    struct GLVertexArray
+    {
+        GLuint id;
+    };
+
     class OpenGLGraphicsDevice : public Renderer::GraphicsDevice
     {
     public:
@@ -39,9 +44,14 @@ namespace GEF::Platform
         // Backend-side lookup (command list execution, tests), nullptr if stale
         [[nodiscard]] const GLBuffer* GetBuffer(
             Renderer::BufferHandle handle) const;
+        [[nodiscard]] const GLVertexArray* GetVertexArray(
+            Renderer::VertexArrayHandle handle) const;
 
         [[nodiscard]] std::shared_ptr<Renderer::VertexArray> CreateVertexArray()
         override;
+        [[nodiscard]] Renderer::VertexArrayHandle CreateVertexArray(
+            const Renderer::VertexArrayDesc& desc) override;
+        void DestroyVertexArray(Renderer::VertexArrayHandle handle) override;
 
         std::shared_ptr<Renderer::CommandList> BeginCommandList() override;
         void SubmitCommandList(
@@ -49,5 +59,7 @@ namespace GEF::Platform
 
     private:
         Renderer::ResourcePool<GLBuffer, Renderer::BufferTag> buffers_;
+        Renderer::ResourcePool<GLVertexArray, Renderer::VertexArrayTag>
+        vertexArrays_;
     };
 }

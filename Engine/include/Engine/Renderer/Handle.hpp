@@ -22,9 +22,12 @@ namespace GEF::Renderer
         }
     };
 
+    // Empty struct, used to diff different handle types
     struct BufferTag;
     struct TextureTag;
+    struct VertexArrayTag;
 
     using BufferHandle = Handle<BufferTag>;
     using TextureHandle = Handle<TextureTag>;
+    using VertexArrayHandle = Handle<VertexArrayTag>;
 }
