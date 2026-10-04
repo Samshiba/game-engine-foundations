@@ -12,6 +12,7 @@
 
 #include <memory>
 #include <vector>
+#include <string_view>
 
 namespace GEF::Renderer
 {
@@ -43,18 +44,32 @@ namespace GEF::Renderer
         BufferHandle indexBuffer;
     };
 
+    // Shader
+    struct ShaderDesc
+    {
+        std::string_view vertexSource;
+        std::string_view fragmentSource;
+    };
+
     class GraphicsDevice
     {
     public:
         virtual ~GraphicsDevice() = default;
 
+        // Buffer
         [[nodiscard]] virtual BufferHandle CreateBuffer(const BufferDesc& desc)
         = 0;
         virtual void DestroyBuffer(BufferHandle handle) = 0;
 
+        // vertex Array
         [[nodiscard]] virtual VertexArrayHandle CreateVertexArray(
             const VertexArrayDesc& desc) = 0;
         virtual void DestroyVertexArray(VertexArrayHandle handle) = 0;
+
+        // Shader
+        [[nodiscard]] virtual ShaderHandle CreateShader(const ShaderDesc& desc)
+        = 0;
+        virtual void DestroyShader(ShaderHandle handle) = 0;
 
         static std::unique_ptr<GraphicsDevice> Create(RendererBackend backend);
 
