@@ -39,6 +39,7 @@ set(ENGINE_SOURCES
         "src/Engine/Renderer/GraphicsContext.hpp"
         "src/Engine/Renderer/GraphicsContext.cpp"
         "src/Engine/Renderer/GraphicsDevice.cpp"
+        "src/Engine/Renderer/ResourcePool.hpp"
 )
 
 set(ENGINE_HEADERS
@@ -69,6 +70,7 @@ set(ENGINE_HEADERS
         "include/Engine/Renderer/VertexBuffer.hpp"
         "include/Engine/Renderer/VertexArray.hpp"
         "include/Engine/Renderer/CommandList.hpp"
+        "include/Engine/Renderer/Handle.hpp"
 )
 
 target_sources(Engine PRIVATE
