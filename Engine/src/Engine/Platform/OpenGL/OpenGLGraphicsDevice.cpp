@@ -77,6 +77,8 @@ namespace GEF::Platform
             const auto& binding = desc.vertexBuffers[b];
             const GLBuffer* buffer = GetBuffer(binding.buffer);
             GEF_CORE_ASSERT(buffer, "Invalid vertex buffer handle");
+            GEF_CORE_ASSERT(buffer->type == Renderer::BufferType::Vertex,
+                            "Buffer is not a vertex buffer");
 
             glVertexArrayVertexBuffer(vao, b, buffer->id, 0,
                                       static_cast<GLsizei>(
@@ -134,6 +136,8 @@ namespace GEF::Platform
 
         const GLBuffer* indexBuffer = GetBuffer(desc.indexBuffer);
         GEF_CORE_ASSERT(indexBuffer, "Invalid index buffer handle");
+        GEF_CORE_ASSERT(indexBuffer->type == Renderer::BufferType::Index,
+                        "Buffer is not an index buffer");
         glVertexArrayElementBuffer(vao, indexBuffer->id);
 
         return vertexArrays_.Insert(GLVertexArray{ vao });
