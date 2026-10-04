@@ -13,8 +13,6 @@
 
 namespace GEF::Renderer
 {
-    static constexpr std::uint32_t NULL_INDEX = UINT32_MAX;
-
     template <typename T, typename Tag>
     class ResourcePool
     {
