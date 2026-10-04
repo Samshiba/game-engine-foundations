@@ -8,8 +8,6 @@
 #include "OpenGlIndexBuffer.hpp"
 #include "OpenGlVertexBuffer.hpp"
 
-#include <variant>
-
 namespace GEF::Platform
 {
     OpenGLGraphicsDevice::~OpenGLGraphicsDevice()
