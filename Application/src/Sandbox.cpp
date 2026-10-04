@@ -55,9 +55,7 @@ struct Sandbox
     {
         ctx.device.DestroyVertexArray(triangle);
         ctx.device.DestroyBuffer(indexBuffer);
-
-        // Leaked buffer
-        // ctx.device.DestroyBuffer(vertexBuffer);
+        ctx.device.DestroyBuffer(vertexBuffer);
     }
 };
 
