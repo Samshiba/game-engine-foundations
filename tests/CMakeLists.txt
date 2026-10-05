@@ -3,6 +3,7 @@
 add_executable(GEF_Tests
         "main.cpp"
         "Core/FileSystem.test.cpp"
+        "Renderer/Camera.test.cpp"
         "Renderer/ResourcePool.test.cpp"
         "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"
         "Platform/OpenGL/OpenGLShader.test.cpp"
