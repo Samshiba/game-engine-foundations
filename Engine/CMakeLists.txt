@@ -89,6 +89,7 @@ target_link_libraries(Engine
 
         PRIVATE
         glad
+        tinyobjloader
 )
 
 # Compile Options (optimization flags come from the build type, see root CMakeLists)
