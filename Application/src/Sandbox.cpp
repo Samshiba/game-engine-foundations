@@ -12,6 +12,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <iterator>
+
 #include "FreeFlyController.hpp"
 
 using namespace GEF::Renderer;
@@ -25,6 +27,59 @@ struct FrameData
 
 static_assert(sizeof(FrameData) == 128, "Must match the std140 block size");
 
+namespace
+{
+    // A unit cube with one color per face. 24 vertices, not 8: a corner is
+    // shared by 3 faces of different colors (and later different normals).
+    // Every face is counter-clockwise seen from outside, which is what
+    // CullMode::Back expects (OpenGL's default front face is CCW).
+    // clang-format off
+    constexpr float CubeVertices[] = {
+        // position             // color
+        // +Z (front, red)
+        -0.5f, -0.5f,  0.5f,    0.9f, 0.2f, 0.2f,
+         0.5f, -0.5f,  0.5f,    0.9f, 0.2f, 0.2f,
+         0.5f,  0.5f,  0.5f,    0.9f, 0.2f, 0.2f,
+        -0.5f,  0.5f,  0.5f,    0.9f, 0.2f, 0.2f,
+        // -Z (back, cyan)
+         0.5f, -0.5f, -0.5f,    0.2f, 0.8f, 0.9f,
+        -0.5f, -0.5f, -0.5f,    0.2f, 0.8f, 0.9f,
+        -0.5f,  0.5f, -0.5f,    0.2f, 0.8f, 0.9f,
+         0.5f,  0.5f, -0.5f,    0.2f, 0.8f, 0.9f,
+        // +X (right, green)
+         0.5f, -0.5f,  0.5f,    0.2f, 0.8f, 0.3f,
+         0.5f, -0.5f, -0.5f,    0.2f, 0.8f, 0.3f,
+         0.5f,  0.5f, -0.5f,    0.2f, 0.8f, 0.3f,
+         0.5f,  0.5f,  0.5f,    0.2f, 0.8f, 0.3f,
+        // -X (left, magenta)
+        -0.5f, -0.5f, -0.5f,    0.8f, 0.3f, 0.8f,
+        -0.5f, -0.5f,  0.5f,    0.8f, 0.3f, 0.8f,
+        -0.5f,  0.5f,  0.5f,    0.8f, 0.3f, 0.8f,
+        -0.5f,  0.5f, -0.5f,    0.8f, 0.3f, 0.8f,
+        // +Y (top, blue)
+        -0.5f,  0.5f,  0.5f,    0.3f, 0.4f, 0.9f,
+         0.5f,  0.5f,  0.5f,    0.3f, 0.4f, 0.9f,
+         0.5f,  0.5f, -0.5f,    0.3f, 0.4f, 0.9f,
+        -0.5f,  0.5f, -0.5f,    0.3f, 0.4f, 0.9f,
+        // -Y (bottom, yellow)
+        -0.5f, -0.5f, -0.5f,    0.9f, 0.8f, 0.2f,
+         0.5f, -0.5f, -0.5f,    0.9f, 0.8f, 0.2f,
+         0.5f, -0.5f,  0.5f,    0.9f, 0.8f, 0.2f,
+        -0.5f, -0.5f,  0.5f,    0.9f, 0.8f, 0.2f,
+    };
+
+    // Two triangles per face: (0, 1, 2) and (0, 2, 3), offset by 4 per face
+    constexpr uint32_t CubeIndices[] = {
+         0,  1,  2,   0,  2,  3,
+         4,  5,  6,   4,  6,  7,
+         8,  9, 10,   8, 10, 11,
+        12, 13, 14,  12, 14, 15,
+        16, 17, 18,  16, 18, 19,
+        20, 21, 22,  20, 22, 23,
+    };
+    // clang-format on
+}
+
 struct Sandbox
 {
     float time = 0.0f;
@@ -36,8 +91,9 @@ struct Sandbox
     BufferHandle vertexBuffer;
     BufferHandle indexBuffer;
     BufferHandle uniformBuffer;
-    VertexArrayHandle triangle;
+    VertexArrayHandle cube;
     ShaderHandle shader;
+    PipelineHandle pipeline;
     uint32_t indexCount = 0;
 
     void OnInit(GEF::EngineContext& ctx)
@@ -56,27 +112,19 @@ struct Sandbox
                     resize.GetHeight());
             });
 
-        const float vertices[] = {
-            // position          // color
-            -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-            0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
-        };
-        const uint32_t indices[] = { 0, 1, 2 };
-
         vertexBuffer = ctx.device.CreateBuffer(
         { .type = BufferType::Vertex,
           .usage = BufferUsage::Static,
-          .size = sizeof(vertices),
-          .data = vertices });
+          .size = sizeof(CubeVertices),
+          .data = CubeVertices });
         indexBuffer = ctx.device.CreateBuffer(
         { .type = BufferType::Index,
           .usage = BufferUsage::Static,
-          .size = sizeof(indices),
-          .data = indices });
-        indexCount = 3;
+          .size = sizeof(CubeIndices),
+          .data = CubeIndices });
+        indexCount = static_cast<uint32_t>(std::size(CubeIndices));
 
-        triangle = ctx.device.CreateVertexArray({
+        cube = ctx.device.CreateVertexArray({
             .vertexBuffers = {
                 { .buffer = vertexBuffer,
                   .layout = { { ShaderDataType::Float3, "a_Position" },
@@ -93,9 +141,16 @@ struct Sandbox
         shader = ctx.device.CreateShader({ vs.value_or(""),
                                            fs.value_or("") });
 
+        // Depth test + back-face culling: the faces behind are hidden
+        pipeline = ctx.device.CreatePipeline({ .shader = shader,
+                                               .depth = { .test = true,
+                                                   .write = true },
+                                               .cull = CullMode::Back });
+
         uniformBuffer = ctx.device.CreateBuffer(
-        { BufferType::Uniform, BufferUsage::Dynamic, sizeof(FrameData),
-          nullptr });
+        { .type = BufferType::Uniform,
+          .usage = BufferUsage::Dynamic,
+          .size = sizeof(FrameData) });
     }
 
     void OnUpdate(GEF::EngineContext& ctx, float dt)
@@ -105,17 +160,19 @@ struct Sandbox
         freeFlyController.Update(camera, ctx.input, ctx.window, dt);
 
         const FrameData frameData{ .viewProjection = camera.GetViewProjection(),
+                                   // A tilted axis shows 3 faces at once
                                    .model = glm::rotate(
                                        glm::mat4(1.0f), time,
-                                       glm::vec3(0.0f, 0.0f, 1.0f)) };
+                                       glm::normalize(
+                                           glm::vec3(1.0f, 1.0f, 0.0f))) };
         ctx.device.UpdateBuffer(uniformBuffer, 0, &frameData,
                                 sizeof(frameData));
     }
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
-        cmd.BindShader(shader);
-        cmd.BindVertexArray(triangle);
+        cmd.BindPipeline(pipeline);
+        cmd.BindVertexArray(cube);
         cmd.BindUniformBuffer(0, uniformBuffer);
         cmd.DrawIndexed(indexCount);
     }
@@ -126,7 +183,8 @@ struct Sandbox
             GEF::Events::WindowResizeEvent::GetStaticEventType(),
             resizeSubscription);
 
-        ctx.device.DestroyVertexArray(triangle);
+        ctx.device.DestroyPipeline(pipeline);
+        ctx.device.DestroyVertexArray(cube);
         ctx.device.DestroyBuffer(indexBuffer);
         ctx.device.DestroyBuffer(vertexBuffer);
         ctx.device.DestroyBuffer(uniformBuffer);
