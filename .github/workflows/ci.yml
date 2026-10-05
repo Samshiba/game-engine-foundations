@@ -63,14 +63,41 @@ jobs:
       # driver: the GL tests skip themselves.
       # bash on every OS (Git Bash on Windows) so one script fits all. Not used
       # for Configure/Build: Git Bash's own link.exe can shadow MSVC's linker
+      #
+      # doctest's JUnit reporter drops skipped test cases from the XML, so the
+      # GL tests would just vanish from the Windows report. The console run's
+      # totals ("N passed | M skipped") go to the job summary to keep the
+      # skips visible. The tests take about a second: running twice is cheap.
       - name: Test
         shell: bash
         run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run -a ./build/bin/GEF_Tests --reporters=junit --out=test-results.xml
-          else
-            ./build/bin/GEF_Tests --reporters=junit --out=test-results.xml
-          fi
+          run_tests() {
+            if [ "$RUNNER_OS" = "Linux" ]; then
+              xvfb-run -a ./build/bin/GEF_Tests "$@"
+            else
+              ./build/bin/GEF_Tests "$@"
+            fi
+          }
+
+          # "shell: bash" runs with -e: capture the status instead of stopping,
+          # so the summary is written even when a test fails
+          status=0
+          run_tests --reporters=junit --out=test-results.xml || status=$?
+
+          run_tests --reporters=console --no-colors=true > test-console.txt 2>&1 || true
+          {
+            echo "## Tests (${{ matrix.toolchain.name }} / ${{ matrix.config }})"
+            echo
+            echo '```'
+            grep -a -E '^\[doctest\] (test cases|assertions|Status)' test-console.txt || true
+            echo '```'
+            if grep -a -q -E 'test cases:.*\| *[1-9][0-9]* skipped' test-console.txt; then
+              echo
+              echo "> Skipped: OpenGL tests need a GL 4.5 context, which this runner does not provide."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit $status
 
       - name: Publish test report
         uses: dorny/test-reporter@v1
@@ -85,6 +112,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: results-${{ matrix.toolchain.name }}-${{ matrix.config }}
-          path: test-results.xml
+          path: |
+            test-results.xml
+            test-console.txt
           if-no-files-found: warn
           retention-days: 14
