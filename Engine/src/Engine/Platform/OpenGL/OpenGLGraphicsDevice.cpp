@@ -35,6 +35,15 @@ namespace GEF::Platform
             for (const auto& handle : shaders)
                 OpenGLGraphicsDevice::DestroyShader(handle);
         }
+
+        const auto pipelines = pipelines_.GetAliveHandles();
+        if (!pipelines.empty())
+        {
+            GEF_ENGINE_WARN("{} pipelines leaked! Destroy them!",
+                            pipelines.size());
+            for (const auto& handle : pipelines)
+                OpenGLGraphicsDevice::DestroyPipeline(handle);
+        }
     }
 
     Renderer::BufferHandle OpenGLGraphicsDevice::CreateBuffer(
@@ -259,6 +268,23 @@ namespace GEF::Platform
         }
     }
 
+    Renderer::PipelineHandle OpenGLGraphicsDevice::CreatePipeline(
+        const Renderer::PipelineDesc& desc)
+    {
+        GEF_CORE_ASSERT(desc.shader.IsValid(), "Pipeline needs a valid shader");
+
+        if (!GetShader(desc.shader))
+            return Renderer::PipelineHandle{};
+
+        return pipelines_.Insert(
+            GLPipeline{ desc.shader, desc.depth, desc.cull });
+    }
+
+    void OpenGLGraphicsDevice::DestroyPipeline(Renderer::PipelineHandle handle)
+    {
+        pipelines_.Remove(handle);
+    }
+
     const GLBuffer* OpenGLGraphicsDevice::GetBuffer(
         Renderer::BufferHandle handle) const
     {
@@ -277,6 +303,12 @@ namespace GEF::Platform
         Renderer::ShaderHandle handle) const
     {
         return shaders_.IsValid(handle) ? shaders_.Get(handle) : nullptr;
+    }
+
+    const GLPipeline* OpenGLGraphicsDevice::GetPipeline(
+        Renderer::PipelineHandle handle) const
+    {
+        return pipelines_.IsValid(handle) ? pipelines_.Get(handle) : nullptr;
     }
 
     std::shared_ptr<Renderer::CommandList> OpenGLGraphicsDevice::

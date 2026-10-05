@@ -29,6 +29,13 @@ namespace GEF::Platform
         GLuint program;
     };
 
+    struct GLPipeline
+    {
+        Renderer::ShaderHandle shader;
+        Renderer::DepthState depth;
+        Renderer::CullMode cull;
+    };
+
     class OpenGLGraphicsDevice : public Renderer::GraphicsDevice
     {
     public:
@@ -52,6 +59,11 @@ namespace GEF::Platform
             const Renderer::ShaderDesc& desc) override;
         void DestroyShader(Renderer::ShaderHandle handle) override;
 
+        // Pipeline
+        [[nodiscard]] Renderer::PipelineHandle CreatePipeline(
+            const Renderer::PipelineDesc& desc) override;
+        void DestroyPipeline(Renderer::PipelineHandle handle) override;
+
         // Backend-side lookup (command list execution, tests), nullptr if stale
         [[nodiscard]] const GLBuffer* GetBuffer(
             Renderer::BufferHandle handle) const;
@@ -59,6 +71,8 @@ namespace GEF::Platform
             Renderer::VertexArrayHandle handle) const;
         [[nodiscard]] const GLShader* GetShader(
             Renderer::ShaderHandle handle) const;
+        [[nodiscard]] const GLPipeline* GetPipeline(
+            Renderer::PipelineHandle handle) const;
 
         std::shared_ptr<Renderer::CommandList> BeginCommandList() override;
         void SubmitCommandList(
@@ -69,5 +83,6 @@ namespace GEF::Platform
         Renderer::ResourcePool<GLVertexArray, Renderer::VertexArrayTag>
         vertexArrays_;
         Renderer::ResourcePool<GLShader, Renderer::ShaderTag> shaders_;
+        Renderer::ResourcePool<GLPipeline, Renderer::PipelineTag> pipelines_;
     };
 }
