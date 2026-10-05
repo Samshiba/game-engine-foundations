@@ -6,6 +6,7 @@ add_executable(GEF_Tests
         "Renderer/Camera.test.cpp"
         "Renderer/ResourcePool.test.cpp"
         "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"
+        "Platform/OpenGL/OpenGLPipeline.test.cpp"
         "Platform/OpenGL/OpenGLShader.test.cpp"
         "Platform/OpenGL/OpenGLUniformBuffer.test.cpp"
 )
