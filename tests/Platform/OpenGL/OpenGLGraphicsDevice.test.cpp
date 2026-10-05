@@ -20,8 +20,10 @@ namespace
 
     Renderer::BufferDesc VertexDesc()
     {
-        return { Renderer::BufferType::Vertex,
-                 static_cast<uint32_t>(sizeof(Vertices)), Vertices.data() };
+        return { .type = Renderer::BufferType::Vertex,
+                 .usage = Renderer::BufferUsage::Static,
+                 .size = static_cast<uint32_t>(sizeof(Vertices)),
+                 .data = Vertices.data() };
     }
 }
 
@@ -63,7 +65,9 @@ GL_TEST_CASE("CreateBuffer accepts no data (allocation only)")
     Platform::OpenGLGraphicsDevice device;
 
     const Renderer::BufferHandle handle =
-        device.CreateBuffer({ Renderer::BufferType::Vertex, 256, nullptr });
+        device.CreateBuffer({ .type = Renderer::BufferType::Vertex,
+                              .usage = Renderer::BufferUsage::Static,
+                              .size = 256 });
 
     GLint gpuSize = 0;
     glGetNamedBufferParameteriv(device.GetBuffer(handle)->id, GL_BUFFER_SIZE,
@@ -147,9 +151,11 @@ namespace
     {
         static constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
         return { device.CreateBuffer(VertexDesc()),
-                 device.CreateBuffer({ Renderer::BufferType::Index,
-                                       static_cast<uint32_t>(sizeof(Indices)),
-                                       Indices.data() }) };
+                 device.CreateBuffer(
+                     { .type = Renderer::BufferType::Index,
+                       .usage = Renderer::BufferUsage::Static,
+                       .size = static_cast<uint32_t>(sizeof(Indices)),
+                       .data = Indices.data() }) };
     }
 
     // position (Float3) + color (Float3), interleaved in one buffer
@@ -222,7 +228,9 @@ GL_TEST_CASE("Two bindings: per-instance attributes continue the numbering")
     const TriangleBuffers buffers = CreateTriangleBuffers(device);
     // One mat4 (64 bytes) + one vec4 color per instance
     const Renderer::BufferHandle instances = device.CreateBuffer(
-        { Renderer::BufferType::Vertex, 2 * 80, nullptr });
+        { .type = Renderer::BufferType::Vertex,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = 2 * 80 });
 
     const Renderer::VertexArrayHandle handle = device.CreateVertexArray({
         .vertexBuffers = {

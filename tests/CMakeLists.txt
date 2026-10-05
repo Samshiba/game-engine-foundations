@@ -6,8 +6,7 @@ add_executable(GEF_Tests
         "Renderer/ResourcePool.test.cpp"
         "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"
         "Platform/OpenGL/OpenGLShader.test.cpp"
-        # TODO(GEF-32): enable once UpdateBuffer / BindUniformBuffer exist
-        # "Platform/OpenGL/OpenGLUniformBuffer.test.cpp"
+        "Platform/OpenGL/OpenGLUniformBuffer.test.cpp"
 )
 
 target_include_directories(GEF_Tests

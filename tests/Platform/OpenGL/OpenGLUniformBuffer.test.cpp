@@ -34,8 +34,9 @@ namespace
     Renderer::BufferHandle CreateUniformBuffer(
         Platform::OpenGLGraphicsDevice& device, uint32_t size)
     {
-        return device.CreateBuffer(
-            { Renderer::BufferType::Uniform, size, nullptr });
+        return device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
+                                     .usage = Renderer::BufferUsage::Dynamic,
+                                     .size = size });
     }
 
     template <typename T>
