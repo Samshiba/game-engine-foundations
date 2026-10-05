@@ -5,6 +5,7 @@
 
 #include <Engine/Core/Engine.hpp>
 #include <Engine/Event/ApplicationEvent.hpp>
+#include <Engine/Core/FileSystem.hpp>
 
 #include "Commons.hpp"
 
@@ -22,6 +23,11 @@ namespace GEF
         window_->SetEventCallback([this](Events::Event& e) {
             OnEvent(e);
         });
+
+        if (!std::filesystem::is_directory(FileSystem::AssetsDirectory()))
+            GEF_ENGINE_ERROR("Assets directory not found: {}",
+                         FileSystem::AssetsDirectory().string());
+
         GEF_ENGINE_INFO("Engine created");
     }
 
