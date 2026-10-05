@@ -15,7 +15,8 @@ namespace GEF
         const WindowProps props{ .title = spec.title,
                                  .width = spec.width,
                                  .height = spec.height,
-                                 .mode = spec.mode,
+                                 .windowMode = spec.windowMode,
+                                 .cursorMode = spec.cursorMode,
                                  .flags = spec.flags };
 
         return std::make_unique<Platform::GlfwWindow>(props, spec.backend);

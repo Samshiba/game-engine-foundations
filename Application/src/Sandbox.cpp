@@ -6,23 +6,32 @@
 #include <Engine/Core/Engine.hpp>
 #include <Engine/Core/Log.hpp>
 #include <Engine/Core/FileSystem.hpp>
+#include <Engine/Event/ApplicationEvent.hpp>
+#include <Engine/Renderer/Camera.hpp>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include "FreeFlyController.hpp"
 
 using namespace GEF::Renderer;
 
 // Mirrors the std140 block "Frame" in basic.vert
 struct FrameData
 {
-    glm::mat4 transform;
+    glm::mat4 viewProjection;
+    glm::mat4 model;
 };
 
-static_assert(sizeof(FrameData) == 64, "Must match the std140 block size");
+static_assert(sizeof(FrameData) == 128, "Must match the std140 block size");
 
 struct Sandbox
 {
     float time = 0.0f;
+
+    Camera camera;
+    FreeFlyController freeFlyController;
+    GEF::Events::EventBus::SubscriberID resizeSubscription;
 
     BufferHandle vertexBuffer;
     BufferHandle indexBuffer;
@@ -33,6 +42,20 @@ struct Sandbox
 
     void OnInit(GEF::EngineContext& ctx)
     {
+        camera.aspectRatio = float(ctx.window.GetWidth()) / float(
+            ctx.window.GetHeight());
+
+        resizeSubscription = ctx.events.Subscribe(
+            GEF::Events::WindowResizeEvent::GetStaticEventType(),
+            [this](GEF::Events::Event const& e) {
+                const auto& resize = static_cast<GEF::Events::WindowResizeEvent
+                    const&>(e);
+                if (resize.GetHeight() == 0)
+                    return;
+                camera.aspectRatio = float(resize.GetWidth()) / float(
+                    resize.GetHeight());
+            });
+
         const float vertices[] = {
             // position          // color
             -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
@@ -42,11 +65,15 @@ struct Sandbox
         const uint32_t indices[] = { 0, 1, 2 };
 
         vertexBuffer = ctx.device.CreateBuffer(
-        { BufferType::Vertex, BufferUsage::Static, sizeof(vertices),
-          vertices });
+        { .type = BufferType::Vertex,
+          .usage = BufferUsage::Static,
+          .size = sizeof(vertices),
+          .data = vertices });
         indexBuffer = ctx.device.CreateBuffer(
-        { BufferType::Index, BufferUsage::Static, sizeof(indices),
-          indices });
+        { .type = BufferType::Index,
+          .usage = BufferUsage::Static,
+          .size = sizeof(indices),
+          .data = indices });
         indexCount = 3;
 
         triangle = ctx.device.CreateVertexArray({
@@ -74,8 +101,13 @@ struct Sandbox
     void OnUpdate(GEF::EngineContext& ctx, float dt)
     {
         time += dt;
-        const FrameData frameData{ glm::rotate(glm::mat4(1.0f), time,
-                                               glm::vec3(0.0f, 0.0f, 1.0f)) };
+
+        freeFlyController.Update(camera, ctx.input, ctx.window, dt);
+
+        const FrameData frameData{ .viewProjection = camera.GetViewProjection(),
+                                   .model = glm::rotate(
+                                       glm::mat4(1.0f), time,
+                                       glm::vec3(0.0f, 0.0f, 1.0f)) };
         ctx.device.UpdateBuffer(uniformBuffer, 0, &frameData,
                                 sizeof(frameData));
     }
@@ -90,6 +122,10 @@ struct Sandbox
 
     void OnShutdown(GEF::EngineContext& ctx)
     {
+        ctx.events.Unsubscribe(
+            GEF::Events::WindowResizeEvent::GetStaticEventType(),
+            resizeSubscription);
+
         ctx.device.DestroyVertexArray(triangle);
         ctx.device.DestroyBuffer(indexBuffer);
         ctx.device.DestroyBuffer(vertexBuffer);

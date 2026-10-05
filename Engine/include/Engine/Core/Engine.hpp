@@ -23,7 +23,8 @@ namespace GEF
         std::string title = "GEF Engine";
         uint32_t width = 1280;
         uint32_t height = 720;
-        Window::WindowMode mode = Window::WindowMode::WINDOWED;
+        Window::WindowMode windowMode = Window::WindowMode::WINDOWED;
+        Window::CursorMode cursorMode = Window::CursorMode::NORMAL;
         Renderer::RendererBackend backend = Renderer::RendererBackend::OpenGL;
         Window::WindowInitialPosition position =
             Window::WindowInitialPosition::CENTER_PRIMARY_SCREEN;

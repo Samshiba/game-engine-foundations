@@ -26,7 +26,9 @@ namespace GEF::Platform
             uint32_t height;
             bool VSync;
 
-            WindowMode mode;
+            WindowMode windowMode;
+            CursorMode cursorMode;
+
             uint32_t flags;
 
             EventCallbackFunction eventCallback;
@@ -34,7 +36,7 @@ namespace GEF::Platform
 
     public:
         GlfwWindow(const WindowProps& props,
-                      Renderer::RendererBackend backend);
+                   Renderer::RendererBackend backend);
         ~GlfwWindow();
 
         void OnUpdate() override;
@@ -47,6 +49,8 @@ namespace GEF::Platform
 
         void SetVSync(bool enabled) override;
         [[nodiscard]] bool IsVSync() const override;
+
+        void SetCursorMode(CursorMode mode) override;
 
         void SetEventCallback(const EventCallbackFunction& callback) override;
         [[nodiscard]] void* GetNativeWindow() const override;

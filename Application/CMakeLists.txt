@@ -2,7 +2,7 @@
 
 project(Application)
 
-add_executable(Application "src/Sandbox.cpp")
+add_executable(Application "src/Sandbox.cpp" "src/FreeFlyController.cpp")
 
 target_link_libraries(Application PRIVATE Engine)
 
