@@ -12,7 +12,7 @@
 namespace GEF::Platform
 {
     GlfwWindow::GlfwWindow(const WindowProps& props,
-                                 Renderer::RendererBackend backend)
+                           Renderer::RendererBackend backend)
     {
         Init(props, backend);
     }
@@ -65,6 +65,33 @@ namespace GEF::Platform
         return windowData_.VSync;
     }
 
+    void GlfwWindow::SetCursorMode(CursorMode mode)
+    {
+        windowData_.cursorMode = mode;
+        switch (mode)
+        {
+        case CursorMode::NORMAL:
+            glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            GEF_ENGINE_DEBUG("Cursor mode set to NORMAL");
+            break;
+        case CursorMode::HIDDEN:
+            glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+            GEF_ENGINE_DEBUG("Cursor mode set to HIDDEN");
+            break;
+        case CursorMode::DISABLED:
+            glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            if (glfwRawMouseMotionSupported())
+            {
+                glfwSetInputMode(window_, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+            }
+            GEF_ENGINE_DEBUG("Cursor mode set to DISABLED");
+            break;
+        default:
+            GEF_ENGINE_DEBUG("Cursor mode set to NORMAL");
+            glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+    }
+
     void GlfwWindow::SetEventCallback(const EventCallbackFunction& callback)
     {
         windowData_.eventCallback = callback;
@@ -76,7 +103,7 @@ namespace GEF::Platform
     }
 
     void GlfwWindow::Init(const WindowProps& props,
-                             Renderer::RendererBackend backend)
+                          Renderer::RendererBackend backend)
     {
         GEF_ENGINE_INFO("Creating window : {} ({} x {})", props.title,
                         props.width, props.height);
@@ -84,7 +111,8 @@ namespace GEF::Platform
         windowData_.title = props.title;
         windowData_.width = props.width;
         windowData_.height = props.height;
-        windowData_.mode = props.mode;
+        windowData_.windowMode = props.windowMode;
+        windowData_.cursorMode = props.cursorMode;
         windowData_.flags = props.flags;
         windowData_.VSync = true;
 
@@ -111,7 +139,7 @@ namespace GEF::Platform
 #endif
 
         GLFWmonitor* monitor = nullptr;
-        if (windowData_.mode == WindowMode::FULLSCREEN)
+        if (windowData_.windowMode == WindowMode::FULLSCREEN)
         {
             monitor = glfwGetPrimaryMonitor();
         }
@@ -141,6 +169,7 @@ namespace GEF::Platform
 
         glfwSetWindowUserPointer(window_, &windowData_);
         SetVSync(true);
+        SetCursorMode(windowData_.cursorMode);
 
         glfwSetWindowSizeCallback(window_, WindowResizeCallback);
         glfwSetWindowCloseCallback(window_, WindowCloseCallback);
@@ -165,7 +194,7 @@ namespace GEF::Platform
     }
 
     void GlfwWindow::WindowResizeCallback(GLFWwindow* window, int width,
-                                             int height)
+                                          int height)
     {
         auto& data = *static_cast<WindowData*>(
             glfwGetWindowUserPointer(window));
@@ -187,8 +216,8 @@ namespace GEF::Platform
     }
 
     void GlfwWindow::KeyCallback(GLFWwindow* window, int key,
-                                    [[maybe_unused]] int scancode,
-                                    int action, [[maybe_unused]] int mods)
+                                 [[maybe_unused]] int scancode,
+                                 int action, [[maybe_unused]] int mods)
     {
         // TODO SUPPORT MODS AND SCANCODE
         (void)scancode;
@@ -221,8 +250,8 @@ namespace GEF::Platform
     }
 
     void GlfwWindow::MouseButtonCallback(GLFWwindow* window, int button,
-                                            int action,
-                                            [[maybe_unused]] int mods)
+                                         int action,
+                                         [[maybe_unused]] int mods)
     {
         // TODO SUPPORT MODS
         (void)mods;
@@ -250,7 +279,7 @@ namespace GEF::Platform
     }
 
     void GlfwWindow::CursorPositionCallback(GLFWwindow* window, double xPos,
-                                               double yPos)
+                                            double yPos)
     {
         auto const& data = *static_cast<WindowData*>(
             glfwGetWindowUserPointer(window));
@@ -260,7 +289,7 @@ namespace GEF::Platform
     }
 
     void GlfwWindow::ScrollCallback(GLFWwindow* window, double xOffset,
-                                       double yOffset)
+                                    double yOffset)
     {
         auto const& data = *static_cast<WindowData*>(
             glfwGetWindowUserPointer(window));

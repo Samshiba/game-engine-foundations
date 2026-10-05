@@ -33,7 +33,7 @@ namespace GEF
             NONE = 0,
             FLAGS_MINIMIZED_DISABLED = 1 << 0,
             FLAGS_MAXIMIZED_DISABLED = 1 << 1,
-            FLAG_RESIZE_DISABLED = 1 << 2,
+            FLAGS_RESIZE_DISABLED = 1 << 2,
             FLAGS_BORDERLESS = 1 << 3,
             FLAGS_ALWAYS_ON_TOP = 1 << 4,
             FLAGS_TRANSPARENT = 1 << 5,
@@ -50,12 +50,20 @@ namespace GEF
             CENTER_MONITOR_INDEX,
         };
 
+        enum class CursorMode : uint8_t
+        {
+            NORMAL,
+            HIDDEN,
+            DISABLED
+        };
+
         struct WindowProps
         {
             std::string title;
             uint32_t width;
             uint32_t height;
-            WindowMode mode;
+            WindowMode windowMode;
+            CursorMode cursorMode;
             uint32_t flags;
         };
 
@@ -74,6 +82,8 @@ namespace GEF
 
         virtual void SetVSync(bool enabled) = 0;
         [[nodiscard]] virtual bool IsVSync() const = 0;
+
+        virtual void SetCursorMode(CursorMode mode) = 0;
 
         virtual void SetEventCallback(const EventCallbackFunction& callback) =
         0;

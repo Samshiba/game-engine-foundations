@@ -35,6 +35,7 @@ set(ENGINE_SOURCES
         "src/Engine/Renderer/GraphicsContext.cpp"
         "src/Engine/Renderer/GraphicsDevice.cpp"
         "src/Engine/Renderer/ResourcePool.hpp"
+        "src/Engine/Renderer/Camera.cpp"
 )
 
 set(ENGINE_HEADERS
@@ -64,6 +65,7 @@ set(ENGINE_HEADERS
         "include/Engine/Renderer/Buffer.hpp"
         "include/Engine/Renderer/CommandList.hpp"
         "include/Engine/Renderer/Handle.hpp"
+        "include/Engine/Renderer/Camera.hpp"
 )
 
 target_sources(Engine PRIVATE
