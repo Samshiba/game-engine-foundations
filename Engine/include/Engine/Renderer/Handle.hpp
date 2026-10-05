@@ -26,8 +26,11 @@ namespace GEF::Renderer
     struct BufferTag;
     struct TextureTag;
     struct VertexArrayTag;
+    struct ShaderTag;
+
 
     using BufferHandle = Handle<BufferTag>;
     using TextureHandle = Handle<TextureTag>;
     using VertexArrayHandle = Handle<VertexArrayTag>;
+    using ShaderHandle = Handle<ShaderTag>;
 }

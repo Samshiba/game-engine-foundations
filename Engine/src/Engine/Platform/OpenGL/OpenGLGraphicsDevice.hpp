@@ -24,25 +24,41 @@ namespace GEF::Platform
         GLuint id;
     };
 
+    struct GLShader
+    {
+        GLuint program;
+    };
+
     class OpenGLGraphicsDevice : public Renderer::GraphicsDevice
     {
     public:
         OpenGLGraphicsDevice() = default;
         ~OpenGLGraphicsDevice() override;
 
+        // Buffer
         [[nodiscard]] Renderer::BufferHandle CreateBuffer(
             const Renderer::BufferDesc& desc) override;
         void DestroyBuffer(Renderer::BufferHandle handle) override;
+        bool UpdateBuffer(Renderer::BufferHandle handle, uint32_t offset,
+                          const void* data, uint32_t size) override;
+
+        // Vertex Array
+        [[nodiscard]] Renderer::VertexArrayHandle CreateVertexArray(
+            const Renderer::VertexArrayDesc& desc) override;
+        void DestroyVertexArray(Renderer::VertexArrayHandle handle) override;
+
+        // Shader
+        [[nodiscard]] Renderer::ShaderHandle CreateShader(
+            const Renderer::ShaderDesc& desc) override;
+        void DestroyShader(Renderer::ShaderHandle handle) override;
 
         // Backend-side lookup (command list execution, tests), nullptr if stale
         [[nodiscard]] const GLBuffer* GetBuffer(
             Renderer::BufferHandle handle) const;
         [[nodiscard]] const GLVertexArray* GetVertexArray(
             Renderer::VertexArrayHandle handle) const;
-
-        [[nodiscard]] Renderer::VertexArrayHandle CreateVertexArray(
-            const Renderer::VertexArrayDesc& desc) override;
-        void DestroyVertexArray(Renderer::VertexArrayHandle handle) override;
+        [[nodiscard]] const GLShader* GetShader(
+            Renderer::ShaderHandle handle) const;
 
         std::shared_ptr<Renderer::CommandList> BeginCommandList() override;
         void SubmitCommandList(
@@ -52,5 +68,6 @@ namespace GEF::Platform
         Renderer::ResourcePool<GLBuffer, Renderer::BufferTag> buffers_;
         Renderer::ResourcePool<GLVertexArray, Renderer::VertexArrayTag>
         vertexArrays_;
+        Renderer::ResourcePool<GLShader, Renderer::ShaderTag> shaders_;
     };
 }

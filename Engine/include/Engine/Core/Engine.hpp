@@ -77,7 +77,6 @@ namespace GEF
         Events::EventBus event_bus_;
 
         std::shared_ptr<Renderer::CommandList> frame_commands_;
-        uint32_t debug_shader_ = 0; // TODO(GEF-32): created by the game
         bool is_running_ = true;
     };
 

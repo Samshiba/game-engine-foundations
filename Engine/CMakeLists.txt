@@ -14,6 +14,7 @@ set(ENGINE_SOURCES
         "src/Engine/Core/Log.cpp"
         "src/Engine/Core/Input.cpp"
         "src/Engine/Core/Window.cpp"
+        "src/Engine/Core/FileSystem.cpp"
 
         # Event
         "src/Engine/Event/EventBus.cpp"
@@ -50,6 +51,7 @@ set(ENGINE_HEADERS
         "include/Engine/Core/Log.hpp"
         "include/Engine/Core/Window.hpp"
         "include/Engine/Core/Assert.hpp"
+        "include/Engine/Core/FileSystem.hpp"
 
         # Event
         "include/Engine/Event/Event.hpp"

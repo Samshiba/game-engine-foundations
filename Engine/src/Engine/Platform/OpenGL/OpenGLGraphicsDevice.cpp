@@ -27,6 +27,14 @@ namespace GEF::Platform
             for (const auto& handle : buffers)
                 OpenGLGraphicsDevice::DestroyBuffer(handle);
         }
+
+        const auto shaders = shaders_.GetAliveHandles();
+        if (!shaders.empty())
+        {
+            GEF_ENGINE_WARN("{} shaders leaked! Destroy them!", shaders.size());
+            for (const auto& handle : shaders)
+                OpenGLGraphicsDevice::DestroyShader(handle);
+        }
     }
 
     Renderer::BufferHandle OpenGLGraphicsDevice::CreateBuffer(
@@ -34,7 +42,22 @@ namespace GEF::Platform
     {
         GLuint id = 0;
         glCreateBuffers(1, &id);
-        glNamedBufferData(id, desc.size, desc.data, GL_STATIC_DRAW);
+
+        switch (desc.usage)
+        {
+        case Renderer::BufferUsage::Static:
+            glNamedBufferData(id, desc.size, desc.data, GL_STATIC_DRAW);
+            break;
+        case Renderer::BufferUsage::Dynamic:
+            glNamedBufferData(id, desc.size, desc.data, GL_DYNAMIC_DRAW);
+            break;
+        case Renderer::BufferUsage::Stream:
+            glNamedBufferData(id, desc.size, desc.data, GL_STREAM_DRAW);
+            break;
+        default:
+            GEF_CORE_ASSERT(false, "Invalid buffer usage");
+        }
+
         return buffers_.Insert(GLBuffer{ id, desc.size, desc.type });
     }
 
@@ -48,18 +71,19 @@ namespace GEF::Platform
         }
     }
 
-    const GLBuffer* OpenGLGraphicsDevice::GetBuffer(
-        Renderer::BufferHandle handle) const
+    bool OpenGLGraphicsDevice::UpdateBuffer(Renderer::BufferHandle handle,
+                                            uint32_t offset, const void* data,
+                                            uint32_t size)
     {
-        return buffers_.IsValid(handle) ? buffers_.Get(handle) : nullptr;
-    }
+        auto buffer = buffers_.Get(handle);
+        if (!buffer)
+            return false;
 
-    const GLVertexArray* OpenGLGraphicsDevice::GetVertexArray(
-        Renderer::VertexArrayHandle handle) const
-    {
-        return vertexArrays_.IsValid(handle)
-            ? vertexArrays_.Get(handle)
-            : nullptr;
+        GEF_CORE_ASSERT(offset + size <= buffer->size,
+                        "UpdateBuffer out of range");
+
+        glNamedBufferSubData(buffer->id, offset, size, data);
+        return true;
     }
 
     Renderer::VertexArrayHandle OpenGLGraphicsDevice::CreateVertexArray(
@@ -152,6 +176,107 @@ namespace GEF::Platform
             glDeleteVertexArrays(1, &vertexArray->id);
             vertexArrays_.Remove(handle);
         }
+    }
+
+    namespace
+    {
+        GLuint CompileStage(GLenum stage, const std::string_view source)
+        {
+            const char* data = source.data();
+            const auto length = static_cast<GLint>(source.size());
+            const GLuint shader = glCreateShader(stage);
+            glShaderSource(shader, 1, &data, &length);
+            glCompileShader(shader);
+
+            GLint success = 0;
+            glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+            if (!success)
+            {
+                GLint maxLength = 0;
+                glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+
+                std::string infoLog(maxLength, '\0');
+                glGetShaderInfoLog(shader, maxLength, nullptr, infoLog.data());
+                GEF_ENGINE_ERROR("Shader compilation failed: {}", infoLog);
+
+                glDeleteShader(shader);
+                return 0;
+            }
+            return shader;
+        }
+    }
+
+    Renderer::ShaderHandle OpenGLGraphicsDevice::CreateShader(
+        const Renderer::ShaderDesc& desc)
+    {
+        const GLuint vs = CompileStage(
+            GL_VERTEX_SHADER, desc.vertexSource);
+        if (!vs)
+            return Renderer::ShaderHandle{};
+        const GLuint fs = CompileStage(
+            GL_FRAGMENT_SHADER, desc.fragmentSource);
+        if (!fs)
+        {
+            glDeleteShader(vs);
+            return Renderer::ShaderHandle{};
+        }
+
+        const GLuint program = glCreateProgram();
+        glAttachShader(program, vs);
+        glAttachShader(program, fs);
+        glLinkProgram(program);
+
+        GLint success = 0;
+        glGetProgramiv(program, GL_LINK_STATUS, &success);
+        if (!success)
+        {
+            GLint maxLength = 0;
+            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
+
+            std::string log(maxLength, '\0');
+            glGetProgramInfoLog(program, maxLength, nullptr, log.data());
+            GEF_ENGINE_ERROR("Shader link failed: {}", log);
+
+            glDeleteShader(vs);
+            glDeleteShader(fs);
+            glDeleteProgram(program);
+
+            return Renderer::ShaderHandle{};
+        }
+        glDeleteShader(vs);
+        glDeleteShader(fs);
+
+        return shaders_.Insert(GLShader{ program });
+    }
+
+    void OpenGLGraphicsDevice::DestroyShader(Renderer::ShaderHandle handle)
+    {
+        auto shader = shaders_.Get(handle);
+        if (shader)
+        {
+            glDeleteProgram(shader->program);
+            shaders_.Remove(handle);
+        }
+    }
+
+    const GLBuffer* OpenGLGraphicsDevice::GetBuffer(
+        Renderer::BufferHandle handle) const
+    {
+        return buffers_.IsValid(handle) ? buffers_.Get(handle) : nullptr;
+    }
+
+    const GLVertexArray* OpenGLGraphicsDevice::GetVertexArray(
+        Renderer::VertexArrayHandle handle) const
+    {
+        return vertexArrays_.IsValid(handle)
+            ? vertexArrays_.Get(handle)
+            : nullptr;
+    }
+
+    const GLShader* OpenGLGraphicsDevice::GetShader(
+        Renderer::ShaderHandle handle) const
+    {
+        return shaders_.IsValid(handle) ? shaders_.Get(handle) : nullptr;
     }
 
     std::shared_ptr<Renderer::CommandList> OpenGLGraphicsDevice::

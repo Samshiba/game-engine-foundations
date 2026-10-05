@@ -21,6 +21,9 @@ namespace GEF::Renderer
         virtual void Clear() = 0;
 
         virtual void BindVertexArray(VertexArrayHandle handle) = 0;
+        virtual void BindShader(ShaderHandle handle) = 0;
+        virtual void BindUniformBuffer(uint32_t bindingPoint,
+                                       BufferHandle handle) = 0;
 
         virtual void DrawIndexed(uint32_t indexCount) = 0;
     };

@@ -6,10 +6,9 @@
 #pragma once
 
 #include <Engine/Renderer/CommandList.hpp>
+#include <glad/glad.h>
 
 #include "OpenGLGraphicsDevice.hpp"
-
-#include <glad/glad.h>
 
 namespace GEF::Platform
 {
@@ -22,6 +21,9 @@ namespace GEF::Platform
         void Clear() override;
 
         void BindVertexArray(Renderer::VertexArrayHandle handle) override;
+        void BindShader(Renderer::ShaderHandle handle) override;
+        void BindUniformBuffer(uint32_t bindingPoint,
+                               Renderer::BufferHandle handle) override;
 
         void DrawIndexed(uint32_t indexCount) override;
 
@@ -46,12 +48,29 @@ namespace GEF::Platform
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    inline void OpenGLCommandList::BindVertexArray(
-        Renderer::VertexArrayHandle handle)
+    inline void
+    OpenGLCommandList::BindVertexArray(Renderer::VertexArrayHandle handle)
     {
         const GLVertexArray* vertexArray = device_.GetVertexArray(handle);
         GEF_CORE_ASSERT(vertexArray, "Invalid vertex array handle");
         glBindVertexArray(vertexArray->id);
+    }
+
+    inline void OpenGLCommandList::BindShader(Renderer::ShaderHandle handle)
+    {
+        const GLShader* shader = device_.GetShader(handle);
+        GEF_CORE_ASSERT(shader, "Invalid shader handle");
+        glUseProgram(shader->program);
+    }
+
+    inline void OpenGLCommandList::BindUniformBuffer(uint32_t bindingPoint,
+        Renderer::BufferHandle handle)
+    {
+        const GLBuffer* buffer = device_.GetBuffer(handle);
+        GEF_CORE_ASSERT(buffer, "Invalid buffer handle");
+        GEF_CORE_ASSERT(buffer->type == Renderer::BufferType::Uniform,
+                        "Buffer is not a uniform buffer");
+        glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, buffer->id);
     }
 
     inline void OpenGLCommandList::DrawIndexed(uint32_t indexCount)
@@ -59,4 +78,4 @@ namespace GEF::Platform
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount),
                        GL_UNSIGNED_INT, nullptr);
     }
-}
+} // namespace GEF::Platform
