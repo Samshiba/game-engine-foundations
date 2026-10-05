@@ -7,12 +7,26 @@
 #include <Engine/Core/Log.hpp>
 #include <Engine/Core/FileSystem.hpp>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 using namespace GEF::Renderer;
+
+// Mirrors the std140 block "Frame" in basic.vert
+struct FrameData
+{
+    glm::mat4 transform;
+};
+
+static_assert(sizeof(FrameData) == 64, "Must match the std140 block size");
 
 struct Sandbox
 {
+    float time = 0.0f;
+
     BufferHandle vertexBuffer;
     BufferHandle indexBuffer;
+    BufferHandle uniformBuffer;
     VertexArrayHandle triangle;
     ShaderHandle shader;
     uint32_t indexCount = 0;
@@ -28,9 +42,11 @@ struct Sandbox
         const uint32_t indices[] = { 0, 1, 2 };
 
         vertexBuffer = ctx.device.CreateBuffer(
-            { BufferType::Vertex, sizeof(vertices), vertices });
+        { BufferType::Vertex, BufferUsage::Static, sizeof(vertices),
+          vertices });
         indexBuffer = ctx.device.CreateBuffer(
-            { BufferType::Index, sizeof(indices), indices });
+        { BufferType::Index, BufferUsage::Static, sizeof(indices),
+          indices });
         indexCount = 3;
 
         triangle = ctx.device.CreateVertexArray({
@@ -49,16 +65,26 @@ struct Sandbox
 
         shader = ctx.device.CreateShader({ vs.value_or(""),
                                            fs.value_or("") });
+
+        uniformBuffer = ctx.device.CreateBuffer(
+        { BufferType::Uniform, BufferUsage::Dynamic, sizeof(FrameData),
+          nullptr });
     }
 
-    void OnUpdate(GEF::EngineContext&, float)
+    void OnUpdate(GEF::EngineContext& ctx, float dt)
     {
+        time += dt;
+        const FrameData frameData{ glm::rotate(glm::mat4(1.0f), time,
+                                               glm::vec3(0.0f, 0.0f, 1.0f)) };
+        ctx.device.UpdateBuffer(uniformBuffer, 0, &frameData,
+                                sizeof(frameData));
     }
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
         cmd.BindShader(shader);
         cmd.BindVertexArray(triangle);
+        cmd.BindUniformBuffer(0, uniformBuffer);
         cmd.DrawIndexed(indexCount);
     }
 
@@ -67,6 +93,7 @@ struct Sandbox
         ctx.device.DestroyVertexArray(triangle);
         ctx.device.DestroyBuffer(indexBuffer);
         ctx.device.DestroyBuffer(vertexBuffer);
+        ctx.device.DestroyBuffer(uniformBuffer);
         ctx.device.DestroyShader(shader);
     }
 };

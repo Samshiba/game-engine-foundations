@@ -22,6 +22,8 @@ namespace GEF::Platform
 
         void BindVertexArray(Renderer::VertexArrayHandle handle) override;
         void BindShader(Renderer::ShaderHandle handle) override;
+        void BindUniformBuffer(uint32_t bindingPoint,
+                               Renderer::BufferHandle handle) override;
 
         void DrawIndexed(uint32_t indexCount) override;
 
@@ -59,6 +61,16 @@ namespace GEF::Platform
         const GLShader* shader = device_.GetShader(handle);
         GEF_CORE_ASSERT(shader, "Invalid shader handle");
         glUseProgram(shader->program);
+    }
+
+    inline void OpenGLCommandList::BindUniformBuffer(uint32_t bindingPoint,
+        Renderer::BufferHandle handle)
+    {
+        const GLBuffer* buffer = device_.GetBuffer(handle);
+        GEF_CORE_ASSERT(buffer, "Invalid buffer handle");
+        GEF_CORE_ASSERT(buffer->type == Renderer::BufferType::Uniform,
+                        "Buffer is not a uniform buffer");
+        glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, buffer->id);
     }
 
     inline void OpenGLCommandList::DrawIndexed(uint32_t indexCount)

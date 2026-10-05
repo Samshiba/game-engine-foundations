@@ -39,6 +39,8 @@ namespace GEF::Platform
         [[nodiscard]] Renderer::BufferHandle CreateBuffer(
             const Renderer::BufferDesc& desc) override;
         void DestroyBuffer(Renderer::BufferHandle handle) override;
+        bool UpdateBuffer(Renderer::BufferHandle handle, uint32_t offset,
+                          const void* data, uint32_t size) override;
 
         // Vertex Array
         [[nodiscard]] Renderer::VertexArrayHandle CreateVertexArray(

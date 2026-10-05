@@ -42,7 +42,22 @@ namespace GEF::Platform
     {
         GLuint id = 0;
         glCreateBuffers(1, &id);
-        glNamedBufferData(id, desc.size, desc.data, GL_STATIC_DRAW);
+
+        switch (desc.usage)
+        {
+        case Renderer::BufferUsage::Static:
+            glNamedBufferData(id, desc.size, desc.data, GL_STATIC_DRAW);
+            break;
+        case Renderer::BufferUsage::Dynamic:
+            glNamedBufferData(id, desc.size, desc.data, GL_DYNAMIC_DRAW);
+            break;
+        case Renderer::BufferUsage::Stream:
+            glNamedBufferData(id, desc.size, desc.data, GL_STREAM_DRAW);
+            break;
+        default:
+            GEF_CORE_ASSERT(false, "Invalid buffer usage");
+        }
+
         return buffers_.Insert(GLBuffer{ id, desc.size, desc.type });
     }
 
@@ -54,6 +69,21 @@ namespace GEF::Platform
             glDeleteBuffers(1, &buffer->id);
             buffers_.Remove(handle);
         }
+    }
+
+    bool OpenGLGraphicsDevice::UpdateBuffer(Renderer::BufferHandle handle,
+                                            uint32_t offset, const void* data,
+                                            uint32_t size)
+    {
+        auto buffer = buffers_.Get(handle);
+        if (!buffer)
+            return false;
+
+        GEF_CORE_ASSERT(offset + size <= buffer->size,
+                        "UpdateBuffer out of range");
+
+        glNamedBufferSubData(buffer->id, offset, size, data);
+        return true;
     }
 
     Renderer::VertexArrayHandle OpenGLGraphicsDevice::CreateVertexArray(
