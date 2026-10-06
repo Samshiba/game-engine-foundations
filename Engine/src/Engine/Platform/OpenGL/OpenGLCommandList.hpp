@@ -21,7 +21,7 @@ namespace GEF::Platform
         void Clear() override;
 
         void BindVertexArray(Renderer::VertexArrayHandle handle) override;
-        void BindShader(Renderer::ShaderHandle handle) override;
+        void BindPipeline(Renderer::PipelineHandle handle) override;
         void BindUniformBuffer(uint32_t bindingPoint,
                                Renderer::BufferHandle handle) override;
 
@@ -45,6 +45,7 @@ namespace GEF::Platform
 
     inline void OpenGLCommandList::Clear()
     {
+        glDepthMask(GL_TRUE);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
@@ -56,11 +57,44 @@ namespace GEF::Platform
         glBindVertexArray(vertexArray->id);
     }
 
-    inline void OpenGLCommandList::BindShader(Renderer::ShaderHandle handle)
+    inline void OpenGLCommandList::BindPipeline(Renderer::PipelineHandle handle)
     {
-        const GLShader* shader = device_.GetShader(handle);
+        const GLPipeline* pipeline = device_.GetPipeline(handle);
+        GEF_CORE_ASSERT(pipeline, "Invalid pipeline handle");
+
+        auto shader = device_.GetShader(pipeline->shader);
         GEF_CORE_ASSERT(shader, "Invalid shader handle");
+
+        if (!shader)
+            return;
+
         glUseProgram(shader->program);
+        if (pipeline->depth.test)
+        {
+            glEnable(GL_DEPTH_TEST);
+        }
+        else
+        {
+            glDisable(GL_DEPTH_TEST);
+        }
+        glDepthMask(pipeline->depth.write);
+
+        switch (pipeline->cull)
+        {
+        case Renderer::CullMode::None:
+            glDisable(GL_CULL_FACE);
+            break;
+        case Renderer::CullMode::Front:
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_FRONT);
+            break;
+        case Renderer::CullMode::Back:
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+            break;
+        default:
+            glDisable(GL_CULL_FACE);
+        }
     }
 
     inline void OpenGLCommandList::BindUniformBuffer(uint32_t bindingPoint,

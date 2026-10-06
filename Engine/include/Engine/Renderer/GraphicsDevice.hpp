@@ -34,7 +34,7 @@ namespace GEF::Renderer
     struct BufferDesc
     {
         BufferType type;
-        BufferUsage usage;
+        BufferUsage usage = BufferUsage::Static;
         uint32_t size = 0;
         const void* data = nullptr;
     };
@@ -60,6 +60,27 @@ namespace GEF::Renderer
         std::string_view fragmentSource;
     };
 
+    // Pipeline
+    enum class CullMode
+    {
+        None,
+        Back,
+        Front,
+    };
+
+    struct DepthState
+    {
+        bool test = true;
+        bool write = true;
+    };
+
+    struct PipelineDesc
+    {
+        ShaderHandle shader;
+        DepthState depth;
+        CullMode cull = CullMode::Back;
+    };
+
     class GraphicsDevice
     {
     public:
@@ -82,6 +103,11 @@ namespace GEF::Renderer
         [[nodiscard]] virtual ShaderHandle CreateShader(const ShaderDesc& desc)
         = 0;
         virtual void DestroyShader(ShaderHandle handle) = 0;
+
+        // Pipeline
+        [[nodiscard]] virtual PipelineHandle CreatePipeline(
+            const PipelineDesc& desc) = 0;
+        virtual void DestroyPipeline(PipelineHandle handle) = 0;
 
         static std::unique_ptr<GraphicsDevice> Create(RendererBackend backend);
 

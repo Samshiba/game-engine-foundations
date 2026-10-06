@@ -8,15 +8,21 @@
 #include <Engine/Core/FileSystem.hpp>
 #include <Engine/Event/ApplicationEvent.hpp>
 #include <Engine/Renderer/Camera.hpp>
+#include <Engine/Assets/ObjLoader.hpp>
+#include <Engine/Renderer/Mesh.hpp>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+#include <optional>
+#include <string>
+#include <string_view>
 
 #include "FreeFlyController.hpp"
 
 using namespace GEF::Renderer;
 
-// Mirrors the std140 block "Frame" in basic.vert
+// Mirrors the std140 block "Frame" in mesh.vert
 struct FrameData
 {
     glm::mat4 viewProjection;
@@ -25,20 +31,39 @@ struct FrameData
 
 static_assert(sizeof(FrameData) == 128, "Must match the std140 block size");
 
+namespace
+{
+    std::optional<ShaderHandle> LoadShader(GraphicsDevice& device,
+                                           std::string_view name)
+    {
+        using GEF::FileSystem::AssetPath;
+        using GEF::FileSystem::ReadTextFile;
+
+        const std::string base = "shaders/" + std::string(name);
+        const auto vs = ReadTextFile(AssetPath(base + ".vert"));
+        const auto fs = ReadTextFile(AssetPath(base + ".frag"));
+        if (!vs || !fs)
+            return std::nullopt;
+
+        const ShaderHandle shader = device.CreateShader({ *vs, *fs });
+        if (!shader.IsValid())
+            return std::nullopt;
+        return shader;
+    }
+}
+
 struct Sandbox
 {
     float time = 0.0f;
 
     Camera camera;
     FreeFlyController freeFlyController;
-    GEF::Events::EventBus::SubscriberID resizeSubscription;
+    GEF::Events::EventBus::SubscriberID resizeSubscription{};
 
-    BufferHandle vertexBuffer;
-    BufferHandle indexBuffer;
     BufferHandle uniformBuffer;
-    VertexArrayHandle triangle;
-    ShaderHandle shader;
-    uint32_t indexCount = 0;
+    ShaderHandle meshShader;
+    PipelineHandle meshPipeline;
+    Mesh mesh;
 
     void OnInit(GEF::EngineContext& ctx)
     {
@@ -56,46 +81,28 @@ struct Sandbox
                     resize.GetHeight());
             });
 
-        const float vertices[] = {
-            // position          // color
-            -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-            0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-            0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f,
-        };
-        const uint32_t indices[] = { 0, 1, 2 };
-
-        vertexBuffer = ctx.device.CreateBuffer(
-        { .type = BufferType::Vertex,
-          .usage = BufferUsage::Static,
-          .size = sizeof(vertices),
-          .data = vertices });
-        indexBuffer = ctx.device.CreateBuffer(
-        { .type = BufferType::Index,
-          .usage = BufferUsage::Static,
-          .size = sizeof(indices),
-          .data = indices });
-        indexCount = 3;
-
-        triangle = ctx.device.CreateVertexArray({
-            .vertexBuffers = {
-                { .buffer = vertexBuffer,
-                  .layout = { { ShaderDataType::Float3, "a_Position" },
-                              { ShaderDataType::Float3, "a_Color" } } },
-            },
-            .indexBuffer = indexBuffer,
-        });
-
-        const auto vs = GEF::FileSystem::ReadTextFile(
-            GEF::FileSystem::AssetPath("shaders/basic.vert"));
-        const auto fs = GEF::FileSystem::ReadTextFile(
-            GEF::FileSystem::AssetPath("shaders/basic.frag"));
-
-        shader = ctx.device.CreateShader({ vs.value_or(""),
-                                           fs.value_or("") });
-
         uniformBuffer = ctx.device.CreateBuffer(
-        { BufferType::Uniform, BufferUsage::Dynamic, sizeof(FrameData),
-          nullptr });
+        { .type = BufferType::Uniform,
+          .usage = BufferUsage::Dynamic,
+          .size = sizeof(FrameData) });
+
+        // Normals shown as colors: the debug view until lighting (GEF-41)
+        if (const auto shader = LoadShader(ctx.device, "mesh"))
+        {
+            meshShader = *shader;
+            // Depth test + back-face culling: the faces behind are hidden
+            meshPipeline = ctx.device.CreatePipeline(
+            { .shader = meshShader,
+              .depth = { .test = true, .write = true },
+              .cull = CullMode::Back });
+        }
+
+        const auto path = GEF::FileSystem::AssetPath(
+            "models/stanford-bunny.obj");
+        if (const auto data = GEF::Assets::LoadObj(path))
+            mesh = UploadMesh(ctx.device, *data);
+        else
+            GEF_ERROR("Failed to load mesh: {}", path.string());
     }
 
     void OnUpdate(GEF::EngineContext& ctx, float dt)
@@ -105,19 +112,24 @@ struct Sandbox
         freeFlyController.Update(camera, ctx.input, ctx.window, dt);
 
         const FrameData frameData{ .viewProjection = camera.GetViewProjection(),
+                                   // A tilted axis shows 3 faces at once
                                    .model = glm::rotate(
                                        glm::mat4(1.0f), time,
-                                       glm::vec3(0.0f, 0.0f, 1.0f)) };
+                                       glm::normalize(
+                                           glm::vec3(1.0f, 1.0f, 0.0f))) };
         ctx.device.UpdateBuffer(uniformBuffer, 0, &frameData,
                                 sizeof(frameData));
     }
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
-        cmd.BindShader(shader);
-        cmd.BindVertexArray(triangle);
+        if (!meshPipeline.IsValid() || mesh.indexCount == 0)
+            return;
+
+        cmd.BindPipeline(meshPipeline);
         cmd.BindUniformBuffer(0, uniformBuffer);
-        cmd.DrawIndexed(indexCount);
+        cmd.BindVertexArray(mesh.vertexArray);
+        cmd.DrawIndexed(mesh.indexCount);
     }
 
     void OnShutdown(GEF::EngineContext& ctx)
@@ -126,11 +138,13 @@ struct Sandbox
             GEF::Events::WindowResizeEvent::GetStaticEventType(),
             resizeSubscription);
 
-        ctx.device.DestroyVertexArray(triangle);
-        ctx.device.DestroyBuffer(indexBuffer);
-        ctx.device.DestroyBuffer(vertexBuffer);
+        if (mesh.indexCount != 0)
+            DestroyMesh(ctx.device, mesh);
+        if (meshPipeline.IsValid())
+            ctx.device.DestroyPipeline(meshPipeline);
+        if (meshShader.IsValid())
+            ctx.device.DestroyShader(meshShader);
         ctx.device.DestroyBuffer(uniformBuffer);
-        ctx.device.DestroyShader(shader);
     }
 };
 

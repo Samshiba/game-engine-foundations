@@ -2,10 +2,14 @@
 
 add_executable(GEF_Tests
         "main.cpp"
+        "Assets/ObjLoader.test.cpp"
         "Core/FileSystem.test.cpp"
+        "Core/PublicApi.test.cpp"
         "Renderer/Camera.test.cpp"
         "Renderer/ResourcePool.test.cpp"
         "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"
+        "Platform/OpenGL/OpenGLMesh.test.cpp"
+        "Platform/OpenGL/OpenGLPipeline.test.cpp"
         "Platform/OpenGL/OpenGLShader.test.cpp"
         "Platform/OpenGL/OpenGLUniformBuffer.test.cpp"
 )
@@ -20,7 +24,7 @@ target_include_directories(GEF_Tests
         "${PROJECT_SOURCE_DIR}/Engine/src"
 )
 
-target_link_libraries(GEF_Tests PRIVATE Engine glad)
+target_link_libraries(GEF_Tests PRIVATE Engine glad glfw)
 
 gef_set_warnings(GEF_Tests)
 
