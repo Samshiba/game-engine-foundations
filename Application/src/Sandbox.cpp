@@ -19,17 +19,9 @@
 #include <string_view>
 
 #include "FreeFlyController.hpp"
+#include "Engine/Renderer/LightingData.hpp"
 
 using namespace GEF::Renderer;
-
-// Mirrors the std140 block "Frame" in mesh.vert
-struct FrameData
-{
-    glm::mat4 viewProjection;
-    glm::mat4 model;
-};
-
-static_assert(sizeof(FrameData) == 128, "Must match the std140 block size");
 
 namespace
 {
@@ -60,7 +52,11 @@ struct Sandbox
     FreeFlyController freeFlyController;
     GEF::Events::EventBus::SubscriberID resizeSubscription{};
 
-    BufferHandle uniformBuffer;
+    BufferHandle FrameUBO;
+    BufferHandle ObjectUBO;
+    BufferHandle LightUBO;
+    BufferHandle MaterialUBO;
+
     ShaderHandle meshShader;
     PipelineHandle meshPipeline;
     Mesh mesh;
@@ -81,13 +77,27 @@ struct Sandbox
                     resize.GetHeight());
             });
 
-        uniformBuffer = ctx.device.CreateBuffer(
+        FrameUBO = ctx.device.CreateBuffer(
         { .type = BufferType::Uniform,
           .usage = BufferUsage::Dynamic,
-          .size = sizeof(FrameData) });
+          .size = sizeof(FrameUniforms) });
 
-        // Normals shown as colors: the debug view until lighting (GEF-41)
-        if (const auto shader = LoadShader(ctx.device, "mesh"))
+        LightUBO = ctx.device.CreateBuffer(
+        { .type = BufferType::Uniform,
+          .usage = BufferUsage::Dynamic,
+          .size = sizeof(LightUniforms) });
+
+        ObjectUBO = ctx.device.CreateBuffer(
+        { .type = BufferType::Uniform,
+          .usage = BufferUsage::Dynamic,
+          .size = sizeof(ObjectUniforms) });
+
+        MaterialUBO = ctx.device.CreateBuffer(
+        { .type = BufferType::Uniform,
+          .usage = BufferUsage::Dynamic,
+          .size = sizeof(MaterialUniforms) });
+
+        if (const auto shader = LoadShader(ctx.device, "lit"))
         {
             meshShader = *shader;
             // Depth test + back-face culling: the faces behind are hidden
@@ -103,6 +113,25 @@ struct Sandbox
             mesh = UploadMesh(ctx.device, *data);
         else
             GEF_ERROR("Failed to load mesh: {}", path.string());
+
+        // The Stanford Bunny is ~0.15 units tall, sitting around (-0.017, 0.11, 0):
+        // center it on the origin, then scale it to ~1.5 units
+        const glm::vec3 bunnyCenter(-0.017f, 0.11f, -0.0015f);
+        const glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(10.0f))
+            * glm::translate(glm::mat4(1.0f), -bunnyCenter);
+        const ObjectUniforms ObjectU{
+            .model = model,
+            .normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)))
+        };
+
+        const MaterialUniforms MaterialU{
+            .albedo = glm::vec4(glm::pow(glm::vec3(0.5f), glm::vec3(2.2f)),
+                                1.0f),
+            .params = glm::vec4(32.0f, 1.0f, 0.0f, 0.0f)
+        };
+
+        ctx.device.UpdateBuffer(ObjectUBO, 0, &ObjectU, sizeof(ObjectU));
+        ctx.device.UpdateBuffer(MaterialUBO, 0, &MaterialU, sizeof(MaterialU));
     }
 
     void OnUpdate(GEF::EngineContext& ctx, float dt)
@@ -111,14 +140,22 @@ struct Sandbox
 
         freeFlyController.Update(camera, ctx.input, ctx.window, dt);
 
-        const FrameData frameData{ .viewProjection = camera.GetViewProjection(),
-                                   // A tilted axis shows 3 faces at once
-                                   .model = glm::rotate(
-                                       glm::mat4(1.0f), time,
-                                       glm::normalize(
-                                           glm::vec3(1.0f, 1.0f, 0.0f))) };
-        ctx.device.UpdateBuffer(uniformBuffer, 0, &frameData,
-                                sizeof(frameData));
+        const FrameUniforms frameU{
+            .viewProjection = camera.GetViewProjection(),
+            .cameraPosition = glm::vec4(camera.position, 1.0f),
+        };
+
+        const glm::vec3 direction(glm::cos(time), -0.5f, glm::sin(time));
+        // a light turning around the bunny, from above
+        const LightUniforms lightU{
+            .direction = glm::vec4(glm::normalize(direction), 0.0f),
+            .color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+            .ambient = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f),
+
+        };
+
+        ctx.device.UpdateBuffer(FrameUBO, 0, &frameU, sizeof(frameU));
+        ctx.device.UpdateBuffer(LightUBO, 0, &lightU, sizeof(lightU));
     }
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
@@ -127,7 +164,10 @@ struct Sandbox
             return;
 
         cmd.BindPipeline(meshPipeline);
-        cmd.BindUniformBuffer(0, uniformBuffer);
+        cmd.BindUniformBuffer(UniformBinding::Frame, FrameUBO);
+        cmd.BindUniformBuffer(UniformBinding::Object, ObjectUBO);
+        cmd.BindUniformBuffer(UniformBinding::Light, LightUBO);
+        cmd.BindUniformBuffer(UniformBinding::Material, MaterialUBO);
         cmd.BindVertexArray(mesh.vertexArray);
         cmd.DrawIndexed(mesh.indexCount);
     }
@@ -144,7 +184,10 @@ struct Sandbox
             ctx.device.DestroyPipeline(meshPipeline);
         if (meshShader.IsValid())
             ctx.device.DestroyShader(meshShader);
-        ctx.device.DestroyBuffer(uniformBuffer);
+        ctx.device.DestroyBuffer(FrameUBO);
+        ctx.device.DestroyBuffer(LightUBO);
+        ctx.device.DestroyBuffer(ObjectUBO);
+        ctx.device.DestroyBuffer(MaterialUBO);
     }
 };
 

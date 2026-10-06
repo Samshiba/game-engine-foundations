@@ -7,6 +7,7 @@ add_executable(GEF_Tests
         "Core/PublicApi.test.cpp"
         "Renderer/Camera.test.cpp"
         "Renderer/ResourcePool.test.cpp"
+        "Platform/OpenGL/LitShader.test.cpp"
         "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"
         "Platform/OpenGL/OpenGLMesh.test.cpp"
         "Platform/OpenGL/OpenGLPipeline.test.cpp"
@@ -27,5 +28,11 @@ target_include_directories(GEF_Tests
 target_link_libraries(GEF_Tests PRIVATE Engine glad glfw)
 
 gef_set_warnings(GEF_Tests)
+
+# Lets tests read the real project files (e.g. the game's shaders), so a test
+# checks what actually ships, not a copy that could drift
+target_compile_definitions(GEF_Tests PRIVATE
+        GEF_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+)
 
 add_test(NAME GEF_Tests COMMAND GEF_Tests)
