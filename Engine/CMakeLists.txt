@@ -37,6 +37,9 @@ set(ENGINE_SOURCES
         "src/Engine/Renderer/ResourcePool.hpp"
         "src/Engine/Renderer/Camera.cpp"
         "src/Engine/Renderer/Mesh.cpp"
+
+        # Assets (file formats -> renderer data)
+        "src/Engine/Assets/ObjLoader.cpp"
 )
 
 set(ENGINE_HEADERS
@@ -58,6 +61,7 @@ set(ENGINE_HEADERS
         # Event
         "include/Engine/Event/Event.hpp"
         "include/Engine/Event/ApplicationEvent.hpp"
+        "include/Engine/Event/ApplicationEvent.inl"
         "include/Engine/Event/EventBus.hpp"
 
         # Renderer
@@ -68,6 +72,9 @@ set(ENGINE_HEADERS
         "include/Engine/Renderer/Handle.hpp"
         "include/Engine/Renderer/Camera.hpp"
         "include/Engine/Renderer/Mesh.hpp"
+
+        # Assets
+        "include/Engine/Assets/ObjLoader.hpp"
 )
 
 target_sources(Engine PRIVATE
@@ -85,11 +92,11 @@ target_include_directories(Engine
 
 target_link_libraries(Engine
         PUBLIC
-        glfw
         glm
         spdlog
 
         PRIVATE
+        glfw
         glad
         tinyobjloader
 )
