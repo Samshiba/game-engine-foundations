@@ -8,17 +8,20 @@
 #include <Engine/Core/FileSystem.hpp>
 #include <Engine/Event/ApplicationEvent.hpp>
 #include <Engine/Renderer/Camera.hpp>
+#include <Engine/Renderer/Mesh.hpp>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <iterator>
+#include <optional>
+#include <string>
+#include <string_view>
 
 #include "FreeFlyController.hpp"
 
 using namespace GEF::Renderer;
 
-// Mirrors the std140 block "Frame" in basic.vert
+// Mirrors the std140 block "Frame" in mesh.vert
 struct FrameData
 {
     glm::mat4 viewProjection;
@@ -29,55 +32,23 @@ static_assert(sizeof(FrameData) == 128, "Must match the std140 block size");
 
 namespace
 {
-    // A unit cube with one color per face. 24 vertices, not 8: a corner is
-    // shared by 3 faces of different colors (and later different normals).
-    // Every face is counter-clockwise seen from outside, which is what
-    // CullMode::Back expects (OpenGL's default front face is CCW).
-    // clang-format off
-    constexpr float CubeVertices[] = {
-        // position             // color
-        // +Z (front, red)
-        -0.5f, -0.5f,  0.5f,    0.9f, 0.2f, 0.2f,
-         0.5f, -0.5f,  0.5f,    0.9f, 0.2f, 0.2f,
-         0.5f,  0.5f,  0.5f,    0.9f, 0.2f, 0.2f,
-        -0.5f,  0.5f,  0.5f,    0.9f, 0.2f, 0.2f,
-        // -Z (back, cyan)
-         0.5f, -0.5f, -0.5f,    0.2f, 0.8f, 0.9f,
-        -0.5f, -0.5f, -0.5f,    0.2f, 0.8f, 0.9f,
-        -0.5f,  0.5f, -0.5f,    0.2f, 0.8f, 0.9f,
-         0.5f,  0.5f, -0.5f,    0.2f, 0.8f, 0.9f,
-        // +X (right, green)
-         0.5f, -0.5f,  0.5f,    0.2f, 0.8f, 0.3f,
-         0.5f, -0.5f, -0.5f,    0.2f, 0.8f, 0.3f,
-         0.5f,  0.5f, -0.5f,    0.2f, 0.8f, 0.3f,
-         0.5f,  0.5f,  0.5f,    0.2f, 0.8f, 0.3f,
-        // -X (left, magenta)
-        -0.5f, -0.5f, -0.5f,    0.8f, 0.3f, 0.8f,
-        -0.5f, -0.5f,  0.5f,    0.8f, 0.3f, 0.8f,
-        -0.5f,  0.5f,  0.5f,    0.8f, 0.3f, 0.8f,
-        -0.5f,  0.5f, -0.5f,    0.8f, 0.3f, 0.8f,
-        // +Y (top, blue)
-        -0.5f,  0.5f,  0.5f,    0.3f, 0.4f, 0.9f,
-         0.5f,  0.5f,  0.5f,    0.3f, 0.4f, 0.9f,
-         0.5f,  0.5f, -0.5f,    0.3f, 0.4f, 0.9f,
-        -0.5f,  0.5f, -0.5f,    0.3f, 0.4f, 0.9f,
-        // -Y (bottom, yellow)
-        -0.5f, -0.5f, -0.5f,    0.9f, 0.8f, 0.2f,
-         0.5f, -0.5f, -0.5f,    0.9f, 0.8f, 0.2f,
-         0.5f, -0.5f,  0.5f,    0.9f, 0.8f, 0.2f,
-        -0.5f, -0.5f,  0.5f,    0.9f, 0.8f, 0.2f,
-    };
+    std::optional<ShaderHandle> LoadShader(GraphicsDevice& device,
+                                           std::string_view name)
+    {
+        using GEF::FileSystem::AssetPath;
+        using GEF::FileSystem::ReadTextFile;
 
-    // Two triangles per face: (0, 1, 2) and (0, 2, 3), offset by 4 per face
-    constexpr uint32_t CubeIndices[] = {
-         0,  1,  2,   0,  2,  3,
-         4,  5,  6,   4,  6,  7,
-         8,  9, 10,   8, 10, 11,
-        12, 13, 14,  12, 14, 15,
-        16, 17, 18,  16, 18, 19,
-        20, 21, 22,  20, 22, 23,
-    };
-    // clang-format on
+        const std::string base = "shaders/" + std::string(name);
+        const auto vs = ReadTextFile(AssetPath(base + ".vert"));
+        const auto fs = ReadTextFile(AssetPath(base + ".frag"));
+        if (!vs || !fs)
+            return std::nullopt;
+
+        const ShaderHandle shader = device.CreateShader({ *vs, *fs });
+        if (!shader.IsValid())
+            return std::nullopt;
+        return shader;
+    }
 }
 
 struct Sandbox
@@ -86,15 +57,12 @@ struct Sandbox
 
     Camera camera;
     FreeFlyController freeFlyController;
-    GEF::Events::EventBus::SubscriberID resizeSubscription;
+    GEF::Events::EventBus::SubscriberID resizeSubscription{};
 
-    BufferHandle vertexBuffer;
-    BufferHandle indexBuffer;
     BufferHandle uniformBuffer;
-    VertexArrayHandle cube;
-    ShaderHandle shader;
-    PipelineHandle pipeline;
-    uint32_t indexCount = 0;
+    ShaderHandle meshShader;
+    PipelineHandle meshPipeline;
+    Mesh mesh;
 
     void OnInit(GEF::EngineContext& ctx)
     {
@@ -112,45 +80,28 @@ struct Sandbox
                     resize.GetHeight());
             });
 
-        vertexBuffer = ctx.device.CreateBuffer(
-        { .type = BufferType::Vertex,
-          .usage = BufferUsage::Static,
-          .size = sizeof(CubeVertices),
-          .data = CubeVertices });
-        indexBuffer = ctx.device.CreateBuffer(
-        { .type = BufferType::Index,
-          .usage = BufferUsage::Static,
-          .size = sizeof(CubeIndices),
-          .data = CubeIndices });
-        indexCount = static_cast<uint32_t>(std::size(CubeIndices));
-
-        cube = ctx.device.CreateVertexArray({
-            .vertexBuffers = {
-                { .buffer = vertexBuffer,
-                  .layout = { { ShaderDataType::Float3, "a_Position" },
-                              { ShaderDataType::Float3, "a_Color" } } },
-            },
-            .indexBuffer = indexBuffer,
-        });
-
-        const auto vs = GEF::FileSystem::ReadTextFile(
-            GEF::FileSystem::AssetPath("shaders/basic.vert"));
-        const auto fs = GEF::FileSystem::ReadTextFile(
-            GEF::FileSystem::AssetPath("shaders/basic.frag"));
-
-        shader = ctx.device.CreateShader({ vs.value_or(""),
-                                           fs.value_or("") });
-
-        // Depth test + back-face culling: the faces behind are hidden
-        pipeline = ctx.device.CreatePipeline({ .shader = shader,
-                                               .depth = { .test = true,
-                                                   .write = true },
-                                               .cull = CullMode::Back });
-
         uniformBuffer = ctx.device.CreateBuffer(
         { .type = BufferType::Uniform,
           .usage = BufferUsage::Dynamic,
           .size = sizeof(FrameData) });
+
+        // Normals shown as colors: the debug view until lighting (GEF-41)
+        if (const auto shader = LoadShader(ctx.device, "mesh"))
+        {
+            meshShader = *shader;
+            // Depth test + back-face culling: the faces behind are hidden
+            meshPipeline = ctx.device.CreatePipeline(
+            { .shader = meshShader,
+              .depth = { .test = true, .write = true },
+              .cull = CullMode::Back });
+        }
+
+        const auto path = GEF::FileSystem::AssetPath(
+            "models/stanford-bunny.obj");
+        if (const auto data = LoadObj(path))
+            mesh = UploadMesh(ctx.device, *data);
+        else
+            GEF_ERROR("Failed to load mesh: {}", path.string());
     }
 
     void OnUpdate(GEF::EngineContext& ctx, float dt)
@@ -171,10 +122,13 @@ struct Sandbox
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
-        cmd.BindPipeline(pipeline);
-        cmd.BindVertexArray(cube);
+        if (!meshPipeline.IsValid() || mesh.indexCount == 0)
+            return;
+
+        cmd.BindPipeline(meshPipeline);
         cmd.BindUniformBuffer(0, uniformBuffer);
-        cmd.DrawIndexed(indexCount);
+        cmd.BindVertexArray(mesh.vertexArray);
+        cmd.DrawIndexed(mesh.indexCount);
     }
 
     void OnShutdown(GEF::EngineContext& ctx)
@@ -183,12 +137,13 @@ struct Sandbox
             GEF::Events::WindowResizeEvent::GetStaticEventType(),
             resizeSubscription);
 
-        ctx.device.DestroyPipeline(pipeline);
-        ctx.device.DestroyVertexArray(cube);
-        ctx.device.DestroyBuffer(indexBuffer);
-        ctx.device.DestroyBuffer(vertexBuffer);
+        if (mesh.indexCount != 0)
+            DestroyMesh(ctx.device, mesh);
+        if (meshPipeline.IsValid())
+            ctx.device.DestroyPipeline(meshPipeline);
+        if (meshShader.IsValid())
+            ctx.device.DestroyShader(meshShader);
         ctx.device.DestroyBuffer(uniformBuffer);
-        ctx.device.DestroyShader(shader);
     }
 };
 
