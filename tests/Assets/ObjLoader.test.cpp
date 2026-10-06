@@ -1,5 +1,5 @@
 //
-// Path: tests/Renderer/Mesh.test.cpp
+// Path: tests/Assets/ObjLoader.test.cpp
 //
 // CPU side of the mesh loading (ParseObj / LoadObj): no GPU, runs on every
 // CI job. The OBJ files are written inline, small enough to check by hand.
@@ -7,7 +7,7 @@
 
 #include <doctest.h>
 
-#include <Engine/Renderer/Mesh.hpp>
+#include <Engine/Assets/ObjLoader.hpp>
 
 #include <glm/glm.hpp>
 
@@ -16,6 +16,8 @@
 #include <string>
 
 using namespace GEF::Renderer;
+using GEF::Assets::LoadObj;
+using GEF::Assets::ParseObj;
 namespace fs = std::filesystem;
 
 namespace

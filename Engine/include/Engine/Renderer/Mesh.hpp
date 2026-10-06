@@ -8,9 +8,6 @@
 #include <Engine/Renderer/GraphicsDevice.hpp>
 #include <Engine/Renderer/Handle.hpp>
 
-#include <filesystem>
-#include <optional>
-#include <string_view>
 #include <vector>
 #include <cstdint>
 
@@ -42,10 +39,6 @@ namespace GEF::Renderer
         uint32_t indexCount = 0;
     };
 
-    std::optional<MeshData> ParseObj(std::string_view objText); // pure parsing
-    std::optional<MeshData> LoadObj(const std::filesystem::path& path);
-    // ReadTextFile + ParseObj
     Mesh UploadMesh(GraphicsDevice& device, const MeshData& data);
     void DestroyMesh(GraphicsDevice& device, const Mesh& mesh);
-    // VAO first, then buffers
 }

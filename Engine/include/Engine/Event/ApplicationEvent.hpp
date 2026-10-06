@@ -135,4 +135,4 @@ namespace GEF::Events
     };
 }
 
-#include "ApplicationEvent.hxx"
+#include "ApplicationEvent.inl"

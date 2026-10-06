@@ -8,6 +8,7 @@
 #include <Engine/Core/FileSystem.hpp>
 #include <Engine/Event/ApplicationEvent.hpp>
 #include <Engine/Renderer/Camera.hpp>
+#include <Engine/Assets/ObjLoader.hpp>
 #include <Engine/Renderer/Mesh.hpp>
 
 #include <glm/glm.hpp>
@@ -98,7 +99,7 @@ struct Sandbox
 
         const auto path = GEF::FileSystem::AssetPath(
             "models/stanford-bunny.obj");
-        if (const auto data = LoadObj(path))
+        if (const auto data = GEF::Assets::LoadObj(path))
             mesh = UploadMesh(ctx.device, *data);
         else
             GEF_ERROR("Failed to load mesh: {}", path.string());
