@@ -59,6 +59,7 @@ set(ENGINE_HEADERS
         "include/Engine/Core/Input.hpp"
         "include/Engine/Core/KeyCodes.hpp"
         "include/Engine/Core/Base.hpp"
+        "include/Engine/Core/DedicatedGpu.hpp"
         "include/Engine/Core/Log.hpp"
         "include/Engine/Core/Window.hpp"
         "include/Engine/Core/Assert.hpp"

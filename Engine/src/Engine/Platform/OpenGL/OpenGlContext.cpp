@@ -54,14 +54,6 @@ namespace GEF::Platform
             return;
         }
 
-        GEF_ENGINE_INFO("OpenGL Vendor : {}",
-                        reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
-        GEF_ENGINE_INFO("OpenGL Renderer : {}",
-                        reinterpret_cast<const char*>(glGetString(GL_RENDERER)
-                        ));
-        GEF_ENGINE_INFO("OpenGL Version : {}",
-                        reinterpret_cast<const char*>(glGetString(GL_VERSION)));
-
         // The backend relies on DSA, so 4.5
         GEF_CORE_ASSERT(GLVersion.major > 4 ||
                         (GLVersion.major == 4 && GLVersion.minor >= 5),

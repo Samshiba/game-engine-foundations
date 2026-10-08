@@ -13,6 +13,7 @@
 // Core
 #include "Engine/Core/Assert.hpp"
 #include "Engine/Core/Base.hpp"
+#include "Engine/Core/DedicatedGpu.hpp"
 #include "Engine/Core/Engine.hpp"
 #include "Engine/Core/FileSystem.hpp"
 #include "Engine/Core/Input.hpp"

@@ -311,3 +311,18 @@ GL_TEST_CASE("The device frees leaked vertex arrays and their buffers")
     CHECK(glIsVertexArray(vao) == GL_FALSE);
     CHECK(glIsBuffer(vbo) == GL_FALSE);
 }
+
+GL_TEST_CASE("GetAdapterInfo names the GPU and driver the device runs on")
+{
+    Platform::OpenGLGraphicsDevice device;
+
+    const Renderer::AdapterInfo& adapter = device.GetAdapterInfo();
+    MESSAGE("GPU: " << adapter.renderer << " (" << adapter.vendor << ", "
+                    << adapter.version << ")");
+
+    CHECK_FALSE(adapter.vendor.empty());
+    CHECK_FALSE(adapter.renderer.empty());
+    CHECK(adapter.renderer != "unknown");
+    // The version string starts with the GL version we require
+    CHECK(adapter.version.rfind("4.", 0) == 0);
+}

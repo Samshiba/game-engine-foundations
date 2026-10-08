@@ -562,3 +562,5 @@ http-client.private.env.json
 # JetBrains project files (kept local)
 .idea/
 
+# ImGui window layout, saved next to wherever the app runs
+imgui.ini

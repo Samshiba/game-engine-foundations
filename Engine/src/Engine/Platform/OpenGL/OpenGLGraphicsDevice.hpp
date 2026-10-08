@@ -39,7 +39,7 @@ namespace GEF::Platform
     class OpenGLGraphicsDevice : public Renderer::GraphicsDevice
     {
     public:
-        OpenGLGraphicsDevice() = default;
+        OpenGLGraphicsDevice();
         ~OpenGLGraphicsDevice() override;
 
         // Buffer
@@ -74,11 +74,17 @@ namespace GEF::Platform
         [[nodiscard]] const GLPipeline* GetPipeline(
             Renderer::PipelineHandle handle) const;
 
+        [[nodiscard]] const Renderer::AdapterInfo&
+        GetAdapterInfo() const override;
+
         std::shared_ptr<Renderer::CommandList> BeginCommandList() override;
         void SubmitCommandList(
             const std::shared_ptr<Renderer::CommandList>& commandList) override;
 
     private:
+        Renderer::AdapterInfo adapterInfo_;
+
+        // Pools
         Renderer::ResourcePool<GLBuffer, Renderer::BufferTag> buffers_;
         Renderer::ResourcePool<GLVertexArray, Renderer::VertexArrayTag>
         vertexArrays_;
