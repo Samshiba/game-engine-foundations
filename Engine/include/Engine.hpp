@@ -39,3 +39,9 @@
 // Scene (ECS components and systems)
 #include "Engine/Scene/Components.hpp"
 #include "Engine/Scene/SceneRenderer.hpp"
+
+// UI (tool and editor windows)
+#include "Engine/UI/ImGuiBackend.hpp"
+
+// Utils
+#include "Engine/Utils/FrameTimer.hpp"

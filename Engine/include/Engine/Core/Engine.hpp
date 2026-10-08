@@ -15,6 +15,7 @@
 #include <Engine/Event/EventBus.hpp>
 #include <Engine/Renderer/CommandList.hpp>
 #include <Engine/Renderer/GraphicsDevice.hpp>
+#include <Engine/UI/ImGuiBackend.hpp>
 
 namespace GEF
 {
@@ -74,6 +75,7 @@ namespace GEF
         // context the device needs, and is destroyed after it
         std::unique_ptr<Window> window_;
         std::unique_ptr<Renderer::GraphicsDevice> graphics_device_;
+        std::unique_ptr<UI::ImGuiBackend> imgui_;
         Input input_;
         Events::EventBus event_bus_;
 
@@ -104,6 +106,8 @@ namespace GEF
 
             BeginFrame();
             game.OnRender(ctx, *frame_commands_);
+            if constexpr (requires { game.OnImGui(ctx); })
+                game.OnImGui(ctx);
             EndFrame();
         }
 
