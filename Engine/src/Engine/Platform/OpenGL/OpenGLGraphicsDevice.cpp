@@ -8,6 +8,30 @@
 
 namespace GEF::Platform
 {
+    namespace
+    {
+        std::string GetGLString(GLenum name)
+        {
+            const auto* value = reinterpret_cast<const char*>(
+                glGetString(name));
+            return value ? value : "unknown";
+        }
+    }
+
+    OpenGLGraphicsDevice::OpenGLGraphicsDevice()
+        : adapterInfo_{ .vendor = GetGLString(GL_VENDOR),
+                        .renderer = GetGLString(GL_RENDERER),
+                        .version = GetGLString(GL_VERSION) }
+    {
+        GEF_ENGINE_INFO("GPU: {} ({}), OpenGL {}", adapterInfo_.renderer,
+                        adapterInfo_.vendor, adapterInfo_.version);
+    }
+
+    const Renderer::AdapterInfo& OpenGLGraphicsDevice::GetAdapterInfo() const
+    {
+        return adapterInfo_;
+    }
+
     OpenGLGraphicsDevice::~OpenGLGraphicsDevice()
     {
         // Clean vertex arrays first, they reference buffers

@@ -9,11 +9,14 @@
 
 #include <algorithm>
 
+#include "imgui.h"
+
 void FreeFlyController::Update(GEF::Renderer::Camera& camera,
                                const GEF::Input& input, GEF::Window& window,
                                float dt)
 {
-    if (input.IsMouseButtonJustPressed(GEF::Key::MouseCode::MOUSE_BUTTON_RIGHT))
+    if (!ImGui::GetIO().WantCaptureMouse && input.IsMouseButtonJustPressed(
+        GEF::Key::MouseCode::MOUSE_BUTTON_RIGHT))
     {
         capturing_ = true;
         window.SetCursorMode(GEF::Window::CursorMode::DISABLED);

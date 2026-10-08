@@ -13,6 +13,7 @@
 // Core
 #include "Engine/Core/Assert.hpp"
 #include "Engine/Core/Base.hpp"
+#include "Engine/Core/DedicatedGpu.hpp"
 #include "Engine/Core/Engine.hpp"
 #include "Engine/Core/FileSystem.hpp"
 #include "Engine/Core/Input.hpp"
@@ -39,3 +40,9 @@
 // Scene (ECS components and systems)
 #include "Engine/Scene/Components.hpp"
 #include "Engine/Scene/SceneRenderer.hpp"
+
+// UI (tool and editor windows)
+#include "Engine/UI/ImGuiBackend.hpp"
+
+// Utils
+#include "Engine/Utils/FrameTimer.hpp"

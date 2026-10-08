@@ -11,8 +11,9 @@
 #include "Handle.hpp"
 
 #include <memory>
-#include <vector>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace GEF::Renderer
 {
@@ -81,6 +82,13 @@ namespace GEF::Renderer
         CullMode cull = CullMode::Back;
     };
 
+    struct AdapterInfo
+    {
+        std::string vendor;
+        std::string renderer; // the GPU model
+        std::string version; // API + driver version
+    };
+
     class GraphicsDevice
     {
     public:
@@ -94,7 +102,7 @@ namespace GEF::Renderer
                                   const void* data,
                                   uint32_t size) = 0;
 
-        // vertex Array
+        // Vertex Array
         [[nodiscard]] virtual VertexArrayHandle CreateVertexArray(
             const VertexArrayDesc& desc) = 0;
         virtual void DestroyVertexArray(VertexArrayHandle handle) = 0;
@@ -108,6 +116,8 @@ namespace GEF::Renderer
         [[nodiscard]] virtual PipelineHandle CreatePipeline(
             const PipelineDesc& desc) = 0;
         virtual void DestroyPipeline(PipelineHandle handle) = 0;
+
+        [[nodiscard]] virtual const AdapterInfo& GetAdapterInfo() const = 0;
 
         static std::unique_ptr<GraphicsDevice> Create(RendererBackend backend);
 

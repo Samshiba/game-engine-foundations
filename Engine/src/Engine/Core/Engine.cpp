@@ -28,6 +28,10 @@ namespace GEF
             GEF_ENGINE_ERROR("Assets directory not found: {}",
                          FileSystem::AssetsDirectory().string());
 
+        auto imgui = UI::ImGuiBackend::Create(*window_, spec_.backend);
+        GEF_CORE_ASSERT(imgui, "Failed to create ImGui backend");
+        imgui_ = std::move(imgui);
+
         GEF_ENGINE_INFO("Engine created");
     }
 
@@ -41,11 +45,14 @@ namespace GEF
         frame_commands_ = graphics_device_->BeginCommandList();
         frame_commands_->SetClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         frame_commands_->Clear();
+
+        imgui_->BeginFrame();
     }
 
     void Engine::EndFrame()
     {
         graphics_device_->SubmitCommandList(frame_commands_);
+        imgui_->EndFrame();
         window_->OnUpdate(); // swap buffers + poll events
     }
 

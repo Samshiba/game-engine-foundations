@@ -25,10 +25,10 @@ set(ENGINE_SOURCES
         "src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp"
         "src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.cpp"
         "src/Engine/Platform/OpenGL/OpenGLCommandList.hpp"
-
-        # GLFW handles the windowing on every desktop platform
         "src/Engine/Platform/Glfw/GlfwWindow.hpp"
         "src/Engine/Platform/Glfw/GlfwWindow.cpp"
+        "src/Engine/Platform/ImGui/GlfwOpenGLImGuiBackend.hpp"
+        "src/Engine/Platform/ImGui/GlfwOpenGLImGuiBackend.cpp"
 
         # Renderer
         "src/Engine/Renderer/GraphicsContext.hpp"
@@ -43,6 +43,9 @@ set(ENGINE_SOURCES
 
         # Scene
         "src/Engine/Scene/SceneRenderer.cpp"
+
+        # UI
+        "src/Engine/UI/ImGuiBackend.cpp"
 )
 
 set(ENGINE_HEADERS
@@ -56,6 +59,7 @@ set(ENGINE_HEADERS
         "include/Engine/Core/Input.hpp"
         "include/Engine/Core/KeyCodes.hpp"
         "include/Engine/Core/Base.hpp"
+        "include/Engine/Core/DedicatedGpu.hpp"
         "include/Engine/Core/Log.hpp"
         "include/Engine/Core/Window.hpp"
         "include/Engine/Core/Assert.hpp"
@@ -83,6 +87,9 @@ set(ENGINE_HEADERS
         # Scene
         "include/Engine/Scene/Components.hpp"
         "include/Engine/Scene/SceneRenderer.hpp"
+
+        # UI
+        "include/Engine/UI/ImGuiBackend.hpp"
 )
 
 target_sources(Engine PRIVATE
@@ -103,6 +110,7 @@ target_link_libraries(Engine
         glm
         spdlog
         libecs::libecs
+        imgui  # games draw their own UI with the ImGui API
 
         PRIVATE
         glfw

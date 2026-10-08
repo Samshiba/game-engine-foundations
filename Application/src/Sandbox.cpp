@@ -12,18 +12,26 @@
 #include <Engine/Renderer/Mesh.hpp>
 #include <Engine/Scene/Components.hpp>
 #include <Engine/Scene/SceneRenderer.hpp>
+#include <Engine/Core/DedicatedGpu.hpp>
 
 #include <libecs/core/registry/Registry.hpp>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include <imgui.h>
 
 #include <optional>
 #include <string>
 #include <string_view>
 
 #include "FreeFlyController.hpp"
+#include "Engine/Utils/FrameTimer.hpp"
 
 using namespace GEF::Renderer;
+
+// Laptops: run on the dedicated GPU, not the integrated one
+GEF_REQUEST_DEDICATED_GPU();
 
 namespace
 {
@@ -77,6 +85,10 @@ struct Sandbox
 
     std::optional<GEF::Scene::SceneRenderer> renderer;
 
+    GEF::Utils::FrameTimer frameTimer;
+
+    libecs::core::Entity light;
+
     void OnInit(GEF::EngineContext& ctx)
     {
         camera.aspectRatio = float(ctx.window.GetWidth()) / float(
@@ -99,7 +111,7 @@ struct Sandbox
         }
 
         const auto path = GEF::FileSystem::AssetPath(
-            "models/stanford-bunny.obj");
+            "models/cube.obj");
         if (const auto data = GEF::Assets::LoadObj(path))
             mesh = UploadMesh(ctx.device, *data);
         else
@@ -108,20 +120,19 @@ struct Sandbox
         if (meshShader.IsValid())
             renderer.emplace(ctx.device, meshShader);
 
-        const auto light = registry.CreateEntity();
+        light = registry.CreateEntity();
         registry.EmplaceComponent<GEF::Scene::DirectionalLight>(
             light, GEF::Scene::DirectionalLight{
                 .direction = { -1.0f, -1.0f, -0.5f } });
 
-        for (int x = 0; x < 5; ++x)
+        for (int x = 0; x < 100; ++x)
         {
-            for (int z = 0; z < 5; ++z)
+            for (int z = 0; z < 100; ++z)
             {
                 const auto bunny = registry.CreateEntity();
                 registry.EmplaceComponent<GEF::Scene::Transform>(bunny,
                     GEF::Scene::Transform{
-                        .position = { (x - 2) * 2.0f, 0.0f, (z - 2) * 2.0f },
-                        // 2 units apart, centered
+                        .position = { (x - 5) * 5.0f, 0.0f, (z - 5) * 5.0f },
                         .scale = glm::vec3(10.0f) });
 
                 const auto material = GEF::Scene::Material{
@@ -145,6 +156,7 @@ struct Sandbox
     void OnUpdate(GEF::EngineContext& ctx, float dt)
     {
         time += dt;
+        frameTimer.Update(dt);
 
         UpdateSpin(registry, dt);
         freeFlyController.Update(camera, ctx.input, ctx.window, dt);
@@ -168,6 +180,31 @@ struct Sandbox
             DestroyMesh(ctx.device, mesh);
         if (meshShader.IsValid())
             ctx.device.DestroyShader(meshShader);
+    }
+
+    void OnImGui(GEF::EngineContext& ctx)
+    {
+        ImGui::Begin("Stats");
+        ImGui::Text("GPU: %s", ctx.device.GetAdapterInfo().renderer.c_str());
+        ImGui::Text("FPS: %.2f", frameTimer.GetFPS());
+        ImGui::Text("Avg Frame Time: %.2f ms",
+                    frameTimer.GetAvgFrameTime() * 1000.0f);
+        ImGui::Text("Worst Frame Time: %.2f ms",
+                    frameTimer.GetWorstFrameTime() * 1000.0f);
+
+        // VSync
+        bool vsync = ctx.window.IsVSync();
+        if (ImGui::Checkbox("VSync", &vsync))
+            ctx.window.SetVSync(vsync);
+
+        // Light
+        glm::vec3 direction = registry.GetComponent<
+            GEF::Scene::DirectionalLight>(light).direction;
+        ImGui::SliderFloat3("Light Direction", glm::value_ptr(direction), -1.0f,
+                            1.0f);
+        registry.GetComponent<GEF::Scene::DirectionalLight>(light).direction =
+            direction;
+        ImGui::End();
     }
 };
 
