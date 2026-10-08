@@ -12,6 +12,7 @@
 #include <Engine/Renderer/Mesh.hpp>
 #include <Engine/Scene/Components.hpp>
 #include <Engine/Scene/SceneRenderer.hpp>
+#include <Engine/Core/DedicatedGpu.hpp>
 
 #include <libecs/core/registry/Registry.hpp>
 
@@ -28,6 +29,9 @@
 #include "Engine/Utils/FrameTimer.hpp"
 
 using namespace GEF::Renderer;
+
+// Laptops: run on the dedicated GPU, not the integrated one
+GEF_REQUEST_DEDICATED_GPU();
 
 namespace
 {
@@ -107,7 +111,7 @@ struct Sandbox
         }
 
         const auto path = GEF::FileSystem::AssetPath(
-            "models/stanford-bunny.obj");
+            "models/cube.obj");
         if (const auto data = GEF::Assets::LoadObj(path))
             mesh = UploadMesh(ctx.device, *data);
         else
@@ -128,8 +132,7 @@ struct Sandbox
                 const auto bunny = registry.CreateEntity();
                 registry.EmplaceComponent<GEF::Scene::Transform>(bunny,
                     GEF::Scene::Transform{
-                        .position = { (x - 2) * 2.0f, 0.0f, (z - 2) * 2.0f },
-                        // 2 units apart, centered
+                        .position = { (x - 5) * 5.0f, 0.0f, (z - 5) * 5.0f },
                         .scale = glm::vec3(10.0f) });
 
                 const auto material = GEF::Scene::Material{
@@ -182,6 +185,7 @@ struct Sandbox
     void OnImGui(GEF::EngineContext& ctx)
     {
         ImGui::Begin("Stats");
+        ImGui::Text("GPU: %s", ctx.device.GetAdapterInfo().renderer.c_str());
         ImGui::Text("FPS: %.2f", frameTimer.GetFPS());
         ImGui::Text("Avg Frame Time: %.2f ms",
                     frameTimer.GetAvgFrameTime() * 1000.0f);
