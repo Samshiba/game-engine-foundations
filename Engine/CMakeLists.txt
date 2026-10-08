@@ -38,8 +38,11 @@ set(ENGINE_SOURCES
         "src/Engine/Renderer/Camera.cpp"
         "src/Engine/Renderer/Mesh.cpp"
 
-        # Assets (file formats -> renderer data)
+        # Assets
         "src/Engine/Assets/ObjLoader.cpp"
+
+        # Scene
+        "src/Engine/Scene/SceneRenderer.cpp"
 )
 
 set(ENGINE_HEADERS
@@ -76,6 +79,10 @@ set(ENGINE_HEADERS
 
         # Assets
         "include/Engine/Assets/ObjLoader.hpp"
+
+        # Scene
+        "include/Engine/Scene/Components.hpp"
+        "include/Engine/Scene/SceneRenderer.hpp"
 )
 
 target_sources(Engine PRIVATE
@@ -95,6 +102,7 @@ target_link_libraries(Engine
         PUBLIC
         glm
         spdlog
+        libecs::libecs
 
         PRIVATE
         glfw

@@ -55,11 +55,17 @@ FetchContent_Declare(tinyobjloader
         GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git
         GIT_TAG v2.0.0rc13
         SYSTEM)
+# My own ECS library. As a subproject it skips its tests, benchmarks and
+# install rules, and does not turn its warnings into errors.
+FetchContent_Declare(libecs
+        GIT_REPOSITORY https://github.com/Samshiba/libecs.git
+        GIT_TAG v0.1.0
+        SYSTEM)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(glfw glm spdlog tinyobjloader)
+FetchContent_MakeAvailable(glfw glm spdlog tinyobjloader libecs)
 
 # Projects
 add_subdirectory(Engine)

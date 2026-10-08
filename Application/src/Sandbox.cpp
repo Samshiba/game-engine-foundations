@@ -10,16 +10,18 @@
 #include <Engine/Renderer/Camera.hpp>
 #include <Engine/Assets/ObjLoader.hpp>
 #include <Engine/Renderer/Mesh.hpp>
+#include <Engine/Scene/Components.hpp>
+#include <Engine/Scene/SceneRenderer.hpp>
+
+#include <libecs/core/registry/Registry.hpp>
 
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 #include <optional>
 #include <string>
 #include <string_view>
 
 #include "FreeFlyController.hpp"
-#include "Engine/Renderer/LightingData.hpp"
 
 using namespace GEF::Renderer;
 
@@ -42,24 +44,38 @@ namespace
             return std::nullopt;
         return shader;
     }
+
+    struct Spin
+    {
+        float speed = 1.0f;
+    };
+
+    void UpdateSpin(libecs::core::registry::Registry& registry, float dt)
+    {
+        registry.GetView<Spin, GEF::Scene::Transform>().Each(
+            [&](libecs::core::Entity, Spin& spin,
+                GEF::Scene::Transform& transform) {
+                transform.rotation = glm::rotate(
+                    transform.rotation, spin.speed * dt,
+                    glm::vec3(0.0f, 1.0f, 0.0f));
+            });
+    }
 }
 
 struct Sandbox
 {
     float time = 0.0f;
 
+    libecs::core::registry::Registry registry;
+
     Camera camera;
     FreeFlyController freeFlyController;
     GEF::Events::EventBus::SubscriberID resizeSubscription{};
 
-    BufferHandle FrameUBO;
-    BufferHandle ObjectUBO;
-    BufferHandle LightUBO;
-    BufferHandle MaterialUBO;
-
     ShaderHandle meshShader;
-    PipelineHandle meshPipeline;
     Mesh mesh;
+
+    std::optional<GEF::Scene::SceneRenderer> renderer;
 
     void OnInit(GEF::EngineContext& ctx)
     {
@@ -77,34 +93,9 @@ struct Sandbox
                     resize.GetHeight());
             });
 
-        FrameUBO = ctx.device.CreateBuffer(
-        { .type = BufferType::Uniform,
-          .usage = BufferUsage::Dynamic,
-          .size = sizeof(FrameUniforms) });
-
-        LightUBO = ctx.device.CreateBuffer(
-        { .type = BufferType::Uniform,
-          .usage = BufferUsage::Dynamic,
-          .size = sizeof(LightUniforms) });
-
-        ObjectUBO = ctx.device.CreateBuffer(
-        { .type = BufferType::Uniform,
-          .usage = BufferUsage::Dynamic,
-          .size = sizeof(ObjectUniforms) });
-
-        MaterialUBO = ctx.device.CreateBuffer(
-        { .type = BufferType::Uniform,
-          .usage = BufferUsage::Dynamic,
-          .size = sizeof(MaterialUniforms) });
-
         if (const auto shader = LoadShader(ctx.device, "lit"))
         {
             meshShader = *shader;
-            // Depth test + back-face culling: the faces behind are hidden
-            meshPipeline = ctx.device.CreatePipeline(
-            { .shader = meshShader,
-              .depth = { .test = true, .write = true },
-              .cull = CullMode::Back });
         }
 
         const auto path = GEF::FileSystem::AssetPath(
@@ -114,62 +105,55 @@ struct Sandbox
         else
             GEF_ERROR("Failed to load mesh: {}", path.string());
 
-        // The Stanford Bunny is ~0.15 units tall, sitting around (-0.017, 0.11, 0):
-        // center it on the origin, then scale it to ~1.5 units
-        const glm::vec3 bunnyCenter(-0.017f, 0.11f, -0.0015f);
-        const glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(10.0f))
-            * glm::translate(glm::mat4(1.0f), -bunnyCenter);
-        const ObjectUniforms ObjectU{
-            .model = model,
-            .normalMatrix = glm::transpose(glm::inverse(glm::mat3(model)))
-        };
+        if (meshShader.IsValid())
+            renderer.emplace(ctx.device, meshShader);
 
-        const MaterialUniforms MaterialU{
-            .albedo = glm::vec4(glm::pow(glm::vec3(0.5f), glm::vec3(2.2f)),
-                                1.0f),
-            .params = glm::vec4(32.0f, 1.0f, 0.0f, 0.0f)
-        };
+        const auto light = registry.CreateEntity();
+        registry.EmplaceComponent<GEF::Scene::DirectionalLight>(
+            light, GEF::Scene::DirectionalLight{
+                .direction = { -1.0f, -1.0f, -0.5f } });
 
-        ctx.device.UpdateBuffer(ObjectUBO, 0, &ObjectU, sizeof(ObjectU));
-        ctx.device.UpdateBuffer(MaterialUBO, 0, &MaterialU, sizeof(MaterialU));
+        for (int x = 0; x < 5; ++x)
+        {
+            for (int z = 0; z < 5; ++z)
+            {
+                const auto bunny = registry.CreateEntity();
+                registry.EmplaceComponent<GEF::Scene::Transform>(bunny,
+                    GEF::Scene::Transform{
+                        .position = { (x - 2) * 2.0f, 0.0f, (z - 2) * 2.0f },
+                        // 2 units apart, centered
+                        .scale = glm::vec3(10.0f) });
+
+                const auto material = GEF::Scene::Material{
+                    .albedo = { x / 4.0f, z / 4.0f, 0.5f },
+                    .shininess = 32.0f,
+                    .specularStrength = 1.0f,
+                };
+                registry.EmplaceComponent<GEF::Scene::MeshRenderer>(
+                    bunny, GEF::Scene::MeshRenderer{
+                        .mesh = mesh, .material = material });
+
+                if ((x + z) % 2 == 0)
+                {
+                    registry.EmplaceComponent<Spin>(
+                        bunny, Spin{ .speed = 1.0f });
+                }
+            }
+        }
     }
 
     void OnUpdate(GEF::EngineContext& ctx, float dt)
     {
         time += dt;
 
+        UpdateSpin(registry, dt);
         freeFlyController.Update(camera, ctx.input, ctx.window, dt);
-
-        const FrameUniforms frameU{
-            .viewProjection = camera.GetViewProjection(),
-            .cameraPosition = glm::vec4(camera.position, 1.0f),
-        };
-
-        const glm::vec3 direction(glm::cos(time), -0.5f, glm::sin(time));
-        // a light turning around the bunny, from above
-        const LightUniforms lightU{
-            .direction = glm::vec4(glm::normalize(direction), 0.0f),
-            .color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-            .ambient = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f),
-
-        };
-
-        ctx.device.UpdateBuffer(FrameUBO, 0, &frameU, sizeof(frameU));
-        ctx.device.UpdateBuffer(LightUBO, 0, &lightU, sizeof(lightU));
     }
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
-        if (!meshPipeline.IsValid() || mesh.indexCount == 0)
-            return;
-
-        cmd.BindPipeline(meshPipeline);
-        cmd.BindUniformBuffer(UniformBinding::Frame, FrameUBO);
-        cmd.BindUniformBuffer(UniformBinding::Object, ObjectUBO);
-        cmd.BindUniformBuffer(UniformBinding::Light, LightUBO);
-        cmd.BindUniformBuffer(UniformBinding::Material, MaterialUBO);
-        cmd.BindVertexArray(mesh.vertexArray);
-        cmd.DrawIndexed(mesh.indexCount);
+        if (renderer)
+            renderer->Render(registry, camera, cmd);
     }
 
     void OnShutdown(GEF::EngineContext& ctx)
@@ -178,16 +162,12 @@ struct Sandbox
             GEF::Events::WindowResizeEvent::GetStaticEventType(),
             resizeSubscription);
 
+        renderer.reset();
+
         if (mesh.indexCount != 0)
             DestroyMesh(ctx.device, mesh);
-        if (meshPipeline.IsValid())
-            ctx.device.DestroyPipeline(meshPipeline);
         if (meshShader.IsValid())
             ctx.device.DestroyShader(meshShader);
-        ctx.device.DestroyBuffer(FrameUBO);
-        ctx.device.DestroyBuffer(LightUBO);
-        ctx.device.DestroyBuffer(ObjectUBO);
-        ctx.device.DestroyBuffer(MaterialUBO);
     }
 };
 

@@ -7,6 +7,8 @@ add_executable(GEF_Tests
         "Core/PublicApi.test.cpp"
         "Renderer/Camera.test.cpp"
         "Renderer/ResourcePool.test.cpp"
+        "Scene/SceneRenderer.test.cpp"
+        "Scene/Transform.test.cpp"
         "Platform/OpenGL/LitShader.test.cpp"
         "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"
         "Platform/OpenGL/OpenGLMesh.test.cpp"

@@ -17,5 +17,6 @@ TEST_CASE("The umbrella header exposes the public API")
     CHECK(sizeof(GEF::Events::EventBus) > 0);
     CHECK(sizeof(GEF::Renderer::Camera) > 0);
     CHECK(sizeof(GEF::Renderer::Mesh) > 0);
+    CHECK(sizeof(GEF::Scene::Transform) > 0);
     CHECK(GEF::Assets::ParseObj("").has_value() == false);
 }
