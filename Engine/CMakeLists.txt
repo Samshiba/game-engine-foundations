@@ -103,6 +103,7 @@ target_link_libraries(Engine
         glm
         spdlog
         libecs::libecs
+        imgui  # games draw their own UI with the ImGui API
 
         PRIVATE
         glfw
