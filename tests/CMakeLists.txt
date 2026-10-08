@@ -9,6 +9,7 @@ add_executable(GEF_Tests
         "Renderer/ResourcePool.test.cpp"
         "Scene/SceneRenderer.test.cpp"
         "Scene/Transform.test.cpp"
+        "Utils/FrameTimer.test.cpp"
         "Platform/OpenGL/LitShader.test.cpp"
         "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"
         "Platform/OpenGL/OpenGLMesh.test.cpp"
