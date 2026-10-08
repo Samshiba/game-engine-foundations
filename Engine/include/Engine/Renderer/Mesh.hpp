@@ -33,9 +33,9 @@ namespace GEF::Renderer
 
     struct Mesh // GPU side: handles only
     {
-        BufferHandle vertexBuffer;
-        BufferHandle indexBuffer;
-        VertexArrayHandle vertexArray;
+        BufferHandle vertexBuffer{};
+        BufferHandle indexBuffer{};
+        VertexArrayHandle vertexArray{};
         uint32_t indexCount = 0;
     };
 

@@ -30,7 +30,12 @@
 #include "Engine/Renderer/CommandList.hpp"
 #include "Engine/Renderer/GraphicsDevice.hpp"
 #include "Engine/Renderer/Handle.hpp"
+#include "Engine/Renderer/LightingData.hpp"
 #include "Engine/Renderer/Mesh.hpp"
 
 // Assets
 #include "Engine/Assets/ObjLoader.hpp"
+
+// Scene (ECS components and systems)
+#include "Engine/Scene/Components.hpp"
+#include "Engine/Scene/SceneRenderer.hpp"
