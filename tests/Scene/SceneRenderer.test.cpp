@@ -47,6 +47,7 @@ namespace
             VertexArrayHandle vertexArray;
             uint32_t indexCount;
             uint32_t instanceCount;
+            uint32_t baseInstance;
         };
 
         std::vector<PipelineHandle> pipelines;
@@ -73,13 +74,14 @@ namespace
 
         void DrawIndexed(uint32_t indexCount) override
         {
-            draws.push_back({ boundVertexArray_, indexCount, 1 });
+            draws.push_back({ boundVertexArray_, indexCount, 1, 0 });
         }
 
-        void DrawIndexedInstanced(uint32_t indexCount,
-                                  uint32_t instanceCount) override
+        void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount,
+                                  uint32_t baseInstance) override
         {
-            draws.push_back({ boundVertexArray_, indexCount, instanceCount });
+            draws.push_back(
+                { boundVertexArray_, indexCount, instanceCount, baseInstance });
         }
 
         void Reset()
@@ -194,7 +196,8 @@ namespace
 
             std::vector<InstanceData> instances(draw.instanceCount);
             glGetNamedBufferSubData(
-                static_cast<GLuint>(buffer), 0,
+                static_cast<GLuint>(buffer),
+                static_cast<GLintptr>(draw.baseInstance * sizeof(InstanceData)),
                 static_cast<GLsizeiptr>(instances.size() * sizeof(InstanceData)),
                 instances.data());
             return instances;
@@ -377,4 +380,88 @@ GL_TEST_CASE("The instance buffer grows past its capacity without losing a frame
     for (const InstanceData& instance : instances)
         maxX = glm::max(maxX, instance.model[3].x);
     CHECK(maxX == doctest::Approx(float(Total - 1)));
+}
+
+GL_TEST_CASE("Instancing on: one draw per mesh, reading from the first slot")
+{
+    SceneFixture scene;
+    const Mesh mesh = scene.AddMesh(1);
+    for (int i = 0; i < 10; ++i)
+        scene.AddRenderable({}, { .mesh = mesh });
+
+    REQUIRE(scene.renderer->IsInstancingEnabled()); // the default
+    scene.Render();
+
+    REQUIRE(scene.cmd.draws.size() == 1);
+    CHECK(scene.cmd.draws[0].instanceCount == 10);
+    CHECK(scene.cmd.draws[0].baseInstance == 0);
+    CHECK(scene.renderer->GetDrawCallCount() == 1);
+}
+
+GL_TEST_CASE("Instancing off: one draw per entity, each reading its own slot")
+{
+    // Same data, same shader, same instance buffer: only the number of draws
+    // changes. That is what isolates the cost of a draw call.
+    SceneFixture scene;
+    const Mesh mesh = scene.AddMesh(1);
+    constexpr uint32_t Count = 10;
+    for (uint32_t i = 0; i < Count; ++i)
+        scene.AddRenderable({ .position = { float(i), 0, 0 } }, { .mesh = mesh });
+
+    scene.renderer->SetInstancingEnabled(false);
+    scene.Render();
+
+    REQUIRE(scene.cmd.draws.size() == Count);
+    CHECK(scene.renderer->GetDrawCallCount() == Count);
+
+    // Each draw reads its own slot, so each draw sees a different entity.
+    // (Slot order follows the view's iteration order, which libecs leaves
+    // unspecified (it walks backwards): don't assume slot i = entity i.)
+    std::vector<bool> slotDrawn(Count, false);
+    std::vector<bool> entityDrawn(Count, false);
+    for (const auto& draw : scene.cmd.draws)
+    {
+        CHECK(draw.instanceCount == 1);
+        REQUIRE(draw.baseInstance < Count);
+        slotDrawn[draw.baseInstance] = true;
+
+        // Entity i was placed at x = i
+        const auto instance = scene.ReadInstances(draw);
+        REQUIRE(instance.size() == 1);
+        const auto entity = static_cast<uint32_t>(instance[0].model[3].x);
+        REQUIRE(entity < Count);
+        entityDrawn[entity] = true;
+    }
+    // Every slot read once, every entity drawn once: if baseInstance were
+    // ignored, all draws would read slot 0 and show the same entity
+    for (uint32_t i = 0; i < Count; ++i)
+    {
+        CAPTURE(i);
+        CHECK(slotDrawn[i]);
+        CHECK(entityDrawn[i]);
+    }
+}
+
+GL_TEST_CASE("The draw call count follows the toggle from one frame to the next")
+{
+    SceneFixture scene;
+    const Mesh a = scene.AddMesh(1);
+    const Mesh b = scene.AddMesh(2);
+    for (int i = 0; i < 5; ++i)
+        scene.AddRenderable({}, { .mesh = a });
+    for (int i = 0; i < 3; ++i)
+        scene.AddRenderable({}, { .mesh = b });
+
+    scene.Render();
+    CHECK(scene.renderer->GetDrawCallCount() == 2); // one per mesh
+
+    scene.renderer->SetInstancingEnabled(false);
+    scene.cmd.Reset();
+    scene.Render();
+    CHECK(scene.renderer->GetDrawCallCount() == 8); // one per entity
+
+    scene.renderer->SetInstancingEnabled(true);
+    scene.cmd.Reset();
+    scene.Render();
+    CHECK(scene.renderer->GetDrawCallCount() == 2); // reset each frame
 }
