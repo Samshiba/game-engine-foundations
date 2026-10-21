@@ -20,6 +20,7 @@ namespace GEF::Scene
         glm::vec3 scale{ 1.0f };
 
         [[nodiscard]] glm::mat4 GetMatrix() const; // T * R * S
+        [[nodiscard]] glm::mat3 GetNormalMatrix() const; // R * S^-1
     };
 
     inline glm::mat4 Transform::GetMatrix() const
@@ -27,6 +28,12 @@ namespace GEF::Scene
         return glm::translate(glm::mat4(1.0f), position) *
             glm::mat4_cast(rotation) *
             glm::scale(glm::mat4(1.0f), scale);
+    }
+
+    inline glm::mat3 Transform::GetNormalMatrix() const
+    {
+        return glm::mat3_cast(rotation) * glm::mat3(
+            glm::scale(glm::mat4(1), 1.0f / scale));
     }
 
     struct Material

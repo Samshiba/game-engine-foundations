@@ -26,6 +26,8 @@ namespace GEF::Platform
                                Renderer::BufferHandle handle) override;
 
         void DrawIndexed(uint32_t indexCount) override;
+        void DrawIndexedInstanced(uint32_t indexCount,
+                                  uint32_t instanceCount) override;
 
     private:
         const OpenGLGraphicsDevice& device_;
@@ -111,5 +113,13 @@ namespace GEF::Platform
     {
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indexCount),
                        GL_UNSIGNED_INT, nullptr);
+    }
+
+    inline void OpenGLCommandList::DrawIndexedInstanced(uint32_t indexCount,
+        uint32_t instanceCount)
+    {
+        glDrawElementsInstanced(GL_TRIANGLES, static_cast<GLsizei>(indexCount),
+                                GL_UNSIGNED_INT, nullptr,
+                                static_cast<GLsizei>(instanceCount));
     }
 } // namespace GEF::Platform
