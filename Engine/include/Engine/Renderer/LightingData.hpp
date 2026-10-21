@@ -15,9 +15,7 @@ namespace GEF::Renderer
     namespace UniformBinding
     {
         constexpr uint32_t Frame = 0;
-        constexpr uint32_t Object = 1;
-        constexpr uint32_t Light = 2;
-        constexpr uint32_t Material = 3;
+        constexpr uint32_t Light = 1;
     }
 
     // std140 mirrors: vec4 / mat4 only
@@ -30,14 +28,6 @@ namespace GEF::Renderer
 
     static_assert(sizeof(FrameUniforms) == 80);
 
-    struct ObjectUniforms // binding 1: once per object
-    {
-        glm::mat4 model;
-        glm::mat4 normalMatrix;
-        // a mat3 in std140 is 3 padded vec4 columns, mat3() of it in the shader
-    };
-
-    static_assert(sizeof(ObjectUniforms) == 128);
 
     struct LightUniforms // binding 2: once per frame
     {
@@ -47,12 +37,4 @@ namespace GEF::Renderer
     };
 
     static_assert(sizeof(LightUniforms) == 48);
-
-    struct MaterialUniforms // binding 3: once per object (or per material)
-    {
-        glm::vec4 albedo; // rgb = base color (linear), a unused
-        glm::vec4 params; // x = shininess, y = specular strength
-    };
-
-    static_assert(sizeof(MaterialUniforms) == 32);
 }

@@ -14,7 +14,7 @@ layout (std140, binding = 0) uniform Frame
     vec4 u_CameraPosition;
 };
 
-layout (std140, binding = 2) uniform Light
+layout (std140, binding = 1) uniform Light
 {
     vec4 u_Direction;
     vec4 u_Color;
