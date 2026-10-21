@@ -45,6 +45,8 @@ void GEF::Scene::SceneRenderer::Render(
     const libecs::core::registry::Registry& registry,
     const Renderer::Camera& camera, Renderer::CommandList& cmd)
 {
+    drawCalls_ = 0;
+
     cmd.BindPipeline(pipeline_);
     cmd.BindUniformBuffer(Renderer::UniformBinding::Frame, frameUBO_);
     cmd.BindUniformBuffer(Renderer::UniformBinding::Light, lightUBO_);
@@ -106,19 +108,28 @@ void GEF::Scene::SceneRenderer::Render(
         if (batch.instances.empty())
             continue;
 
+        const auto count = static_cast<uint32_t>(batch.instances.size());
+
         if (batch.instances.size() > batch.capacity)
         {
-            GrowBatch(batch, std::max(
-                          static_cast<uint32_t>(batch.instances.size()),
-                          batch.capacity * 2));
+            GrowBatch(batch, std::max(count, batch.capacity * 2));
         }
 
         device_.UpdateBuffer(batch.instanceBuffer, 0, batch.instances.data(),
-                             static_cast<uint32_t>(batch.instances.size()) *
-                             sizeof(Renderer::InstanceData));
+                             count * sizeof(Renderer::InstanceData));
+
         cmd.BindVertexArray(batch.vertexArray);
-        cmd.DrawIndexedInstanced(batch.mesh.indexCount,
-                                 static_cast<uint32_t>(batch.instances.size()));
+        if (instancing_)
+        {
+            cmd.DrawIndexedInstanced(batch.mesh.indexCount, count, 0);
+            ++drawCalls_;
+        }
+        else
+        {
+            for (uint32_t i = 0; i < count; ++i)
+                cmd.DrawIndexedInstanced(batch.mesh.indexCount, 1, i);
+            drawCalls_ += count;
+        }
     }
 }
 
@@ -171,4 +182,19 @@ void GEF::Scene::SceneRenderer::GrowBatch(Batch& batch, uint32_t capacity)
         },
         .indexBuffer = batch.mesh.indexBuffer,
     });
+}
+
+void GEF::Scene::SceneRenderer::SetInstancingEnabled(bool enabled)
+{
+    instancing_ = enabled;
+}
+
+bool GEF::Scene::SceneRenderer::IsInstancingEnabled() const
+{
+    return instancing_;
+}
+
+uint32_t GEF::Scene::SceneRenderer::GetDrawCallCount() const
+{
+    return drawCalls_;
 }
