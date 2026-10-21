@@ -73,3 +73,39 @@ TEST_CASE("GetMatrix applies scale, then rotation, then translation (T * R * S)"
     // happen around the object itself, not around the world origin
     CHECK(Near(Apply(transform, { 0, 0, 0 }), { 10, 0, 0 }));
 }
+
+TEST_CASE("GetNormalMatrix is R * S^-1, the inverse transpose of a T * R * S")
+{
+    // Instancing sends one normal matrix per instance: R * S^-1 avoids a
+    // general 3x3 inversion per entity per frame, and is exactly equal to it
+    const Transform transform{
+        .position = { 3, -2, 7 },
+        .rotation = glm::angleAxis(glm::radians(40.0f),
+                                   glm::normalize(glm::vec3(1, 2, 3))),
+        .scale = { 2.0f, 0.5f, 3.0f } }; // non-uniform: where it matters
+
+    const glm::mat3 expected =
+        glm::transpose(glm::inverse(glm::mat3(transform.GetMatrix())));
+    const glm::mat3 normalMatrix = transform.GetNormalMatrix();
+
+    for (int column = 0; column < 3; ++column)
+        CHECK(Near(normalMatrix[column], expected[column]));
+}
+
+TEST_CASE("A normal stays perpendicular to its surface under non-uniform scale")
+{
+    // A 45 degree slope in XY, stretched 4x along X
+    const Transform transform{ .scale = { 4.0f, 1.0f, 1.0f } };
+    const glm::vec3 tangent = glm::normalize(glm::vec3(1, 1, 0));
+    const glm::vec3 normal = glm::normalize(glm::vec3(-1, 1, 0));
+
+    const glm::vec3 scaledTangent = glm::mat3(transform.GetMatrix()) * tangent;
+
+    // mat3(model) tilts the normal: no longer perpendicular (the classic bug)
+    const glm::vec3 wrong = glm::mat3(transform.GetMatrix()) * normal;
+    CHECK(glm::abs(glm::dot(wrong, scaledTangent)) > 0.1f);
+
+    // The normal matrix keeps it perpendicular
+    const glm::vec3 right = transform.GetNormalMatrix() * normal;
+    CHECK(glm::dot(right, scaledTangent) == doctest::Approx(0.0f).epsilon(1e-4));
+}

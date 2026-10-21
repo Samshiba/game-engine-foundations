@@ -7,6 +7,7 @@ add_executable(GEF_Tests
         "Core/PublicApi.test.cpp"
         "Renderer/Camera.test.cpp"
         "Renderer/ResourcePool.test.cpp"
+        "Renderer/VertexLayouts.test.cpp"
         "Scene/SceneRenderer.test.cpp"
         "Scene/Transform.test.cpp"
         "Utils/FrameTimer.test.cpp"
