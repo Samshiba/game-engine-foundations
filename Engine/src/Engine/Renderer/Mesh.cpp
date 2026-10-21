@@ -26,10 +26,7 @@ GEF::Renderer::Mesh GEF::Renderer::UploadMesh(GraphicsDevice& device,
 
     auto vao = device.CreateVertexArray({
         .vertexBuffers = {
-            { .buffer = vbo,
-              .layout = { { ShaderDataType::Float3, "a_Position" },
-                          { ShaderDataType::Float3, "a_Normal" },
-                          { ShaderDataType::Float2, "a_UV" } } },
+            { .buffer = vbo, .layout = Vertex::Layout() },
         },
         .indexBuffer = ibo });
 

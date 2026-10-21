@@ -125,9 +125,9 @@ struct Sandbox
             light, GEF::Scene::DirectionalLight{
                 .direction = { -1.0f, -1.0f, -0.5f } });
 
-        for (int x = 0; x < 100; ++x)
+        for (int x = 0; x < 200; ++x)
         {
-            for (int z = 0; z < 100; ++z)
+            for (int z = 0; z < 250; ++z)
             {
                 const auto bunny = registry.CreateEntity();
                 registry.EmplaceComponent<GEF::Scene::Transform>(bunny,
@@ -196,6 +196,12 @@ struct Sandbox
         bool vsync = ctx.window.IsVSync();
         if (ImGui::Checkbox("VSync", &vsync))
             ctx.window.SetVSync(vsync);
+
+        // Instancing
+        bool instancing = renderer->IsInstancingEnabled();
+        if (ImGui::Checkbox("Instancing", &instancing))
+            renderer->SetInstancingEnabled(instancing);
+        ImGui::Text("Draw calls: %u", renderer->GetDrawCallCount());
 
         // Light
         glm::vec3 direction = registry.GetComponent<

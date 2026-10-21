@@ -26,5 +26,8 @@ namespace GEF::Renderer
                                        BufferHandle handle) = 0;
 
         virtual void DrawIndexed(uint32_t indexCount) = 0;
+        virtual void DrawIndexedInstanced(uint32_t indexCount,
+                                          uint32_t instanceCount,
+                                          uint32_t baseInstance) = 0;
     };
 }

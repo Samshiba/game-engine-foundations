@@ -105,9 +105,7 @@ GL_TEST_CASE("Each uniform block is on the binding UniformBinding names")
     LitShaderFixture lit;
 
     CHECK(Block(lit.program, "Frame").binding == UniformBinding::Frame);
-    CHECK(Block(lit.program, "Object").binding == UniformBinding::Object);
     CHECK(Block(lit.program, "Light").binding == UniformBinding::Light);
-    CHECK(Block(lit.program, "Material").binding == UniformBinding::Material);
 }
 
 GL_TEST_CASE("Each uniform block has the size of its C++ struct")
@@ -115,9 +113,7 @@ GL_TEST_CASE("Each uniform block has the size of its C++ struct")
     LitShaderFixture lit;
 
     CHECK(Block(lit.program, "Frame").size == SizeOf<FrameUniforms>());
-    CHECK(Block(lit.program, "Object").size == SizeOf<ObjectUniforms>());
     CHECK(Block(lit.program, "Light").size == SizeOf<LightUniforms>());
-    CHECK(Block(lit.program, "Material").size == SizeOf<MaterialUniforms>());
 }
 
 GL_TEST_CASE("Each uniform sits at the offset of its C++ member")
@@ -131,15 +127,28 @@ GL_TEST_CASE("Each uniform sits at the offset of its C++ member")
     GEF_CHECK_OFFSET("u_ViewProjection", FrameUniforms, viewProjection);
     GEF_CHECK_OFFSET("u_CameraPosition", FrameUniforms, cameraPosition);
 
-    GEF_CHECK_OFFSET("u_Model", ObjectUniforms, model);
-    GEF_CHECK_OFFSET("u_NormalMatrix", ObjectUniforms, normalMatrix);
-
     GEF_CHECK_OFFSET("u_Direction", LightUniforms, direction);
     GEF_CHECK_OFFSET("u_Color", LightUniforms, color);
     GEF_CHECK_OFFSET("u_Ambient", LightUniforms, ambient);
 
-    GEF_CHECK_OFFSET("u_Albedo", MaterialUniforms, albedo);
-    GEF_CHECK_OFFSET("u_Params", MaterialUniforms, params);
-
 #undef GEF_CHECK_OFFSET
+}
+
+GL_TEST_CASE("Per-vertex and per-instance attributes sit where the layouts put them")
+{
+    // CreateVertexArray numbers attributes in order: Vertex::Layout() on
+    // binding 0 (0, 1, 2), then InstanceData::Layout() on binding 1 (3...).
+    // A matrix takes one location per column. The shader's "location = N"
+    // must match, or an instance would read another field's data.
+    LitShaderFixture lit;
+    const auto location = [&](const char* name) {
+        return glGetAttribLocation(lit.program, name);
+    };
+
+    CHECK(location("a_Position") == 0);
+    CHECK(location("a_Normal") == 1);
+    CHECK(location("a_Model") == 3);         // mat4: 3, 4, 5, 6
+    CHECK(location("a_NormalMatrix") == 7);  // mat3: 7, 8, 9
+    CHECK(location("a_Albedo") == 10);
+    CHECK(location("a_Params") == 11);
 }
