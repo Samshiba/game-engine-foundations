@@ -11,6 +11,13 @@
 
 namespace GEF::Platform
 {
+    namespace
+    {
+        // GLFW is initialized with the first window and terminated with the
+        // last one, so windows can be created and destroyed in any order
+        uint32_t s_WindowCount = 0;
+    }
+
     GlfwWindow::GlfwWindow(const WindowProps& props,
                            Renderer::RendererBackend backend)
     {
@@ -116,13 +123,11 @@ namespace GEF::Platform
         windowData_.flags = props.flags;
         windowData_.VSync = true;
 
-        static bool s_GLFWInitialized = false;
-        if (!s_GLFWInitialized)
+        if (s_WindowCount == 0)
         {
-            int success = glfwInit();
-            GEF_CORE_ASSERT(success, "Failed to initialize GLFW");
             glfwSetErrorCallback(ErrorCallback);
-            s_GLFWInitialized = true;
+            [[maybe_unused]] const int success = glfwInit();
+            GEF_CORE_ASSERT(success, "Failed to initialize GLFW");
         }
 
         if (backend != Renderer::RendererBackend::OpenGL)
@@ -138,6 +143,11 @@ namespace GEF::Platform
         glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
 
+        glfwWindowHint(GLFW_RESIZABLE,
+                       (props.flags & FLAGS_RESIZE_DISABLED)
+                       ? GLFW_FALSE
+                       : GLFW_TRUE);
+
         GLFWmonitor* monitor = nullptr;
         if (windowData_.windowMode == WindowMode::FULLSCREEN)
         {
@@ -152,7 +162,8 @@ namespace GEF::Platform
         if (!window)
         {
             GEF_ENGINE_ERROR("Failed to create GLFW window");
-            glfwTerminate();
+            if (s_WindowCount == 0)
+                glfwTerminate();
             return;
         }
         window_ = window;
@@ -162,10 +173,13 @@ namespace GEF::Platform
         {
             GEF_ENGINE_ERROR("Failed to create Graphics Context");
             glfwDestroyWindow(window_);
-            glfwTerminate();
+            window_ = nullptr;
+            if (s_WindowCount == 0)
+                glfwTerminate();
             return;
         }
         context_->Init();
+        ++s_WindowCount;
 
         glfwSetWindowUserPointer(window_, &windowData_);
         SetVSync(true);
@@ -181,10 +195,25 @@ namespace GEF::Platform
 
     void GlfwWindow::Shutdown()
     {
-        // TODO REFACTO TO HANDLE MULTI WINDOWS
-        GEF_ENGINE_WARN("Destroying windows");
+        // TODO multi-window: Engine owns N windows, per-window context/input/ImGui
+        if (!window_)
+            return;
+
+        GEF_ENGINE_INFO("Destroying window");
         glfwDestroyWindow(window_);
-        glfwTerminate();
+        window_ = nullptr;
+
+        if (--s_WindowCount == 0)
+            glfwTerminate();
+    }
+
+    void GlfwWindow::Close()
+    {
+        // Same path as the user clicking the close button
+        glfwSetWindowShouldClose(window_, GLFW_TRUE);
+        Events::WindowCloseEvent event;
+        if (windowData_.eventCallback)
+            windowData_.eventCallback(event);
     }
 
     void GlfwWindow::ErrorCallback([[maybe_unused]] int error,

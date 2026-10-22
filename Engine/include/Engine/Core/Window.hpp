@@ -85,6 +85,8 @@ namespace GEF
 
         virtual void SetCursorMode(CursorMode mode) = 0;
 
+        virtual void Close() = 0;
+
         virtual void SetEventCallback(const EventCallbackFunction& callback) =
         0;
 

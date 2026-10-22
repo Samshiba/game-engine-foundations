@@ -52,6 +52,8 @@ namespace GEF::Platform
 
         void SetCursorMode(CursorMode mode) override;
 
+        void Close() override;
+
         void SetEventCallback(const EventCallbackFunction& callback) override;
         [[nodiscard]] void* GetNativeWindow() const override;
 
