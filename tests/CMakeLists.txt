@@ -10,6 +10,7 @@ add_executable(GEF_Tests
         "Renderer/VertexLayouts.test.cpp"
         "Scene/SceneRenderer.test.cpp"
         "Scene/Transform.test.cpp"
+        "Utils/FrameStatistics.test.cpp"
         "Utils/FrameTimer.test.cpp"
         "Platform/OpenGL/LitShader.test.cpp"
         "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"

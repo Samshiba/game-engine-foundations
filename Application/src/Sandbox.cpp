@@ -13,6 +13,7 @@
 #include <Engine/Scene/Components.hpp>
 #include <Engine/Scene/SceneRenderer.hpp>
 #include <Engine/Core/DedicatedGpu.hpp>
+#include <Engine/Utils/FrameTimer.hpp>
 
 #include <libecs/core/registry/Registry.hpp>
 
@@ -26,7 +27,6 @@
 #include <string_view>
 
 #include "FreeFlyController.hpp"
-#include "Engine/Utils/FrameTimer.hpp"
 
 using namespace GEF::Renderer;
 

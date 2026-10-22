@@ -53,6 +53,8 @@ set(ENGINE_HEADERS
 
         # Utils
         "include/Engine/Utils/FNV-1a.hpp"
+        "include/Engine/Utils/FrameTimer.hpp"
+        "include/Engine/Utils/FrameStatistics.hpp"
 
         # Core
         "include/Engine/Core/Engine.hpp"

@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "Engine/Utils/FrameStatistics.hpp"
+#include "FrameStatistics.hpp"
 
 #include <vector>
 
