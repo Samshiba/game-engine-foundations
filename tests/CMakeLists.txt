@@ -10,6 +10,7 @@ add_executable(GEF_Tests
         "Renderer/VertexLayouts.test.cpp"
         "Scene/SceneRenderer.test.cpp"
         "Scene/Transform.test.cpp"
+        "Utils/FrameStatistics.test.cpp"
         "Utils/FrameTimer.test.cpp"
         "Platform/OpenGL/LitShader.test.cpp"
         "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"
@@ -29,7 +30,7 @@ target_include_directories(GEF_Tests
         "${PROJECT_SOURCE_DIR}/Engine/src"
 )
 
-target_link_libraries(GEF_Tests PRIVATE Engine glad glfw)
+target_link_libraries(GEF_Tests PRIVATE GEF_Engine glad glfw)
 
 gef_set_warnings(GEF_Tests)
 

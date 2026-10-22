@@ -1,8 +1,8 @@
 # Engine/CMakeLists.txt
 
-project(Engine)
+project(GEF_Engine)
 
-add_library(Engine STATIC)
+add_library(GEF_Engine STATIC)
 
 add_subdirectory("vendor/glad")
 
@@ -53,6 +53,8 @@ set(ENGINE_HEADERS
 
         # Utils
         "include/Engine/Utils/FNV-1a.hpp"
+        "include/Engine/Utils/FrameTimer.hpp"
+        "include/Engine/Utils/FrameStatistics.hpp"
 
         # Core
         "include/Engine/Core/Engine.hpp"
@@ -92,12 +94,12 @@ set(ENGINE_HEADERS
         "include/Engine/UI/ImGuiBackend.hpp"
 )
 
-target_sources(Engine PRIVATE
+target_sources(GEF_Engine PRIVATE
         ${ENGINE_SOURCES}
         ${ENGINE_HEADERS}
 )
 
-target_include_directories(Engine
+target_include_directories(GEF_Engine
         PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
 
@@ -105,7 +107,7 @@ target_include_directories(Engine
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
-target_link_libraries(Engine
+target_link_libraries(GEF_Engine
         PUBLIC
         glm
         spdlog
@@ -119,10 +121,10 @@ target_link_libraries(Engine
 )
 
 # Compile Options (optimization flags come from the build type, see root CMakeLists)
-gef_set_warnings(Engine)
+gef_set_warnings(GEF_Engine)
 
 # Compile Definitions
-target_compile_definitions(Engine PUBLIC
+target_compile_definitions(GEF_Engine PUBLIC
         # Platform
         $<$<PLATFORM_ID:Windows>:GEF_PLATFORM_WINDOWS>
         $<$<PLATFORM_ID:Linux>:GEF_PLATFORM_LINUX>

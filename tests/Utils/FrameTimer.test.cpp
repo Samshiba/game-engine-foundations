@@ -47,6 +47,20 @@ TEST_CASE("The worst frame time reveals a stutter the average hides")
     CHECK(timer.GetWorstFrameTime() == doctest::Approx(0.5f)); // the stutter
 }
 
+TEST_CASE("The full statistics of the window are available, percentiles included")
+{
+    FrameTimer timer;
+    for (int i = 0; i < 6; ++i)
+        timer.Update(0.125f);
+    timer.Update(0.25f); // one hitch: 7 frames, 1 second in total
+
+    const auto& stats = timer.GetStatistics();
+    CHECK(stats.frames == 7);
+    CHECK(stats.p50Ms == doctest::Approx(125.0f));
+    CHECK(stats.p99Ms == doctest::Approx(250.0f));
+    CHECK(stats.worstMs == doctest::Approx(250.0f));
+}
+
 TEST_CASE("Each one-second window starts fresh")
 {
     FrameTimer timer;

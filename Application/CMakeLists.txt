@@ -2,9 +2,12 @@
 
 project(Application)
 
-add_executable(Application "src/Sandbox.cpp" "src/FreeFlyController.cpp")
+add_executable(Application
+        "src/Sandbox.cpp"
+        "src/FreeFlyController.cpp"
+)
 
-target_link_libraries(Application PRIVATE Engine)
+target_link_libraries(Application PRIVATE GEF_Engine)
 
 gef_set_warnings(Application)
 
