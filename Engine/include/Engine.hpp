@@ -45,4 +45,5 @@
 #include "Engine/UI/ImGuiBackend.hpp"
 
 // Utils
+#include "Engine/Utils/FrameStatistics.hpp"
 #include "Engine/Utils/FrameTimer.hpp"

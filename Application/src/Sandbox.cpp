@@ -189,6 +189,8 @@ struct Sandbox
         ImGui::Text("FPS: %.2f", frameTimer.GetFPS());
         ImGui::Text("Avg Frame Time: %.2f ms",
                     frameTimer.GetAvgFrameTime() * 1000.0f);
+        ImGui::Text("p99 Frame Time: %.2f ms",
+                    frameTimer.GetStatistics().p99Ms);
         ImGui::Text("Worst Frame Time: %.2f ms",
                     frameTimer.GetWorstFrameTime() * 1000.0f);
 

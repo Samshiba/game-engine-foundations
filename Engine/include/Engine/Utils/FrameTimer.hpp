@@ -5,6 +5,10 @@
 
 #pragma once
 
+#include "Engine/Utils/FrameStatistics.hpp"
+
+#include <vector>
+
 namespace GEF::Utils
 {
     class FrameTimer
@@ -13,43 +17,43 @@ namespace GEF::Utils
         void Update(float dt)
         {
             accumulatedTime_ += dt;
-            frameCount_++;
-            if (dt > currentWorst_)
-                currentWorst_ = dt;
+            frameTimesMs_.push_back(dt * 1000.0f);
 
             if (accumulatedTime_ >= 1.0f)
             {
-                fps_ = static_cast<float>(frameCount_) / accumulatedTime_;
-                avgFrameTime_ = accumulatedTime_ / frameCount_;
-                worstFrameTime_ = currentWorst_;
+                stats_ = ComputeFrameStatistics(frameTimesMs_);
 
                 accumulatedTime_ = 0.0f;
-                frameCount_ = 0;
-                currentWorst_ = 0.0f;
+                frameTimesMs_.clear();
             }
+        }
+
+        // Mean, percentiles and worst of the last complete second, in ms
+        const FrameStatistics& GetStatistics() const
+        {
+            return stats_;
         }
 
         float GetFPS() const
         {
-            return fps_;
+            return stats_.fps;
         }
 
+        // In seconds
         float GetAvgFrameTime() const
         {
-            return avgFrameTime_;
+            return stats_.meanMs / 1000.0f;
         }
 
+        // In seconds
         float GetWorstFrameTime() const
         {
-            return worstFrameTime_;
+            return stats_.worstMs / 1000.0f;
         }
 
     private:
         float accumulatedTime_ = 0.0f;
-        int frameCount_ = 0;
-        float currentWorst_ = 0.0f;
-        float fps_ = 0.0f;
-        float avgFrameTime_ = 0.0f;
-        float worstFrameTime_ = 0.0f;
+        std::vector<float> frameTimesMs_;
+        FrameStatistics stats_;
     };
 }
