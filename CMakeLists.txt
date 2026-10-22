@@ -93,6 +93,11 @@ target_link_libraries(imgui PRIVATE glfw ${CMAKE_DL_LIBS})
 add_subdirectory(Engine)
 add_subdirectory(Application)
 
+option(GEF_BUILD_BENCHMARKS "Build the rendering benchmark (GEF_Bench)" ${PROJECT_IS_TOP_LEVEL})
+if (GEF_BUILD_BENCHMARKS)
+    add_subdirectory(bench)
+endif ()
+
 option(GEF_BUILD_TESTS "Build the unit tests" ${PROJECT_IS_TOP_LEVEL})
 if (GEF_BUILD_TESTS)
     enable_testing()

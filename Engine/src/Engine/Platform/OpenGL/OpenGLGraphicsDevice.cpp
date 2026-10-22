@@ -229,7 +229,9 @@ namespace GEF::Platform
                 glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
 
                 std::string infoLog(maxLength, '\0');
-                glGetShaderInfoLog(shader, maxLength, nullptr, infoLog.data());
+                GLsizei written = 0;
+                glGetShaderInfoLog(shader, maxLength, &written, infoLog.data());
+                infoLog.resize(written);
                 GEF_ENGINE_ERROR("Shader compilation failed: {}", infoLog);
 
                 glDeleteShader(shader);
@@ -267,7 +269,9 @@ namespace GEF::Platform
             glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
 
             std::string log(maxLength, '\0');
-            glGetProgramInfoLog(program, maxLength, nullptr, log.data());
+            GLsizei written = 0;
+            glGetProgramInfoLog(program, maxLength, &written, log.data());
+            log.resize(written);
             GEF_ENGINE_ERROR("Shader link failed: {}", log);
 
             glDeleteShader(vs);
