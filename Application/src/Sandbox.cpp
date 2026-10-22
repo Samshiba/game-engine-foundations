@@ -89,6 +89,52 @@ struct Sandbox
 
     libecs::core::Entity light;
 
+    int entityCount = 10000;
+    std::vector<libecs::core::Entity> spawned;
+
+    void SpawnAt(int index)
+    {
+        int x = index / 250;
+        int z = index % 250;
+
+        const auto bunny = registry.CreateEntity();
+        spawned.emplace_back(bunny);
+
+        registry.EmplaceComponent<GEF::Scene::Transform>(bunny,
+            GEF::Scene::Transform{
+                .position = { (x - 5) * 5.0f, 0.0f, (z - 5) * 5.0f },
+                .scale = glm::vec3(10.0f) });
+
+        const auto material = GEF::Scene::Material{
+            .albedo = { x / 200.0f, z / 250.0f, 0.5f },
+            .shininess = 32.0f,
+            .specularStrength = 1.0f,
+        };
+        registry.EmplaceComponent<GEF::Scene::MeshRenderer>(
+            bunny, GEF::Scene::MeshRenderer{
+                .mesh = mesh, .material = material });
+
+        if ((x + z) % 2 == 0)
+        {
+            registry.EmplaceComponent<Spin>(
+                bunny, Spin{ .speed = 1.0f });
+        }
+    }
+
+    void UpdateEntities()
+    {
+        const auto target = static_cast<size_t>(entityCount);
+
+        while (spawned.size() < target)
+            SpawnAt(static_cast<int>(spawned.size()));
+
+        while (spawned.size() > target)
+        {
+            registry.DestroyEntity(spawned.back());
+            spawned.pop_back();
+        }
+    }
+
     void OnInit(GEF::EngineContext& ctx)
     {
         camera.aspectRatio = float(ctx.window.GetWidth()) / float(
@@ -125,38 +171,15 @@ struct Sandbox
             light, GEF::Scene::DirectionalLight{
                 .direction = { -1.0f, -1.0f, -0.5f } });
 
-        for (int x = 0; x < 200; ++x)
-        {
-            for (int z = 0; z < 250; ++z)
-            {
-                const auto bunny = registry.CreateEntity();
-                registry.EmplaceComponent<GEF::Scene::Transform>(bunny,
-                    GEF::Scene::Transform{
-                        .position = { (x - 5) * 5.0f, 0.0f, (z - 5) * 5.0f },
-                        .scale = glm::vec3(10.0f) });
-
-                const auto material = GEF::Scene::Material{
-                    .albedo = { x / 4.0f, z / 4.0f, 0.5f },
-                    .shininess = 32.0f,
-                    .specularStrength = 1.0f,
-                };
-                registry.EmplaceComponent<GEF::Scene::MeshRenderer>(
-                    bunny, GEF::Scene::MeshRenderer{
-                        .mesh = mesh, .material = material });
-
-                if ((x + z) % 2 == 0)
-                {
-                    registry.EmplaceComponent<Spin>(
-                        bunny, Spin{ .speed = 1.0f });
-                }
-            }
-        }
+        UpdateEntities();
     }
 
     void OnUpdate(GEF::EngineContext& ctx, float dt)
     {
         time += dt;
         frameTimer.Update(dt);
+
+        UpdateEntities();
 
         UpdateSpin(registry, dt);
         freeFlyController.Update(camera, ctx.input, ctx.window, dt);
@@ -200,6 +223,8 @@ struct Sandbox
             ctx.window.SetVSync(vsync);
 
         // Instancing
+        ImGui::Text("Entities: %zu", spawned.size());
+        ImGui::SliderInt("Entities", &entityCount, 0, 50000);
         bool instancing = renderer->IsInstancingEnabled();
         if (ImGui::Checkbox("Instancing", &instancing))
             renderer->SetInstancingEnabled(instancing);
