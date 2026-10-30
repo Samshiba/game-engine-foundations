@@ -5,10 +5,10 @@
 
 #pragma once
 
+#include <glad/glad.h>
+
 #include <Engine/Renderer/GraphicsDevice.hpp>
 #include <Engine/Renderer/ResourcePool.hpp>
-
-#include <glad/glad.h>
 
 namespace GEF::Platform
 {
@@ -38,6 +38,15 @@ namespace GEF::Platform
 
     class OpenGLGraphicsDevice : public Renderer::GraphicsDevice
     {
+    private:
+        struct BoundState
+        {
+            Renderer::PipelineHandle pipeline;
+            Renderer::VertexArrayHandle vertexArray;
+            std::array<Renderer::BufferHandle, Renderer::MaxUniformBindings>
+            uniformBuffers;
+        };
+
     public:
         OpenGLGraphicsDevice();
         ~OpenGLGraphicsDevice() override;
@@ -74,15 +83,31 @@ namespace GEF::Platform
         [[nodiscard]] const GLPipeline* GetPipeline(
             Renderer::PipelineHandle handle) const;
 
+        // Infos
         [[nodiscard]] const Renderer::AdapterInfo&
         GetAdapterInfo() const override;
+        [[nodiscard]] const Renderer::SubmitStats&
+        GetLastSubmitStats() const override;
 
-        std::shared_ptr<Renderer::CommandList> BeginCommandList() override;
-        void SubmitCommandList(
-            const std::shared_ptr<Renderer::CommandList>& commandList) override;
+        void Submit(Renderer::CommandList& cmd) override;
 
     private:
+        void SetClearColor(float r, float g, float b, float a);
+        void Clear();
+        void SetViewport(uint32_t x, uint32_t y, uint32_t width,
+                         uint32_t height);
+        void BindVertexArray(Renderer::VertexArrayHandle handle);
+        void BindPipeline(Renderer::PipelineHandle handle);
+        void BindUniformBuffer(uint32_t bindingPoint,
+                               Renderer::BufferHandle handle);
+
+        void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount,
+                                  uint32_t baseInstance);
+
+    private:
+        // Infos
         Renderer::AdapterInfo adapterInfo_;
+        Renderer::SubmitStats lastSubmitStats_;
 
         // Pools
         Renderer::ResourcePool<GLBuffer, Renderer::BufferTag> buffers_;

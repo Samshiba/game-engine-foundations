@@ -24,7 +24,6 @@ set(ENGINE_SOURCES
         "src/Engine/Platform/OpenGL/OpenGlContext.cpp"
         "src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp"
         "src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.cpp"
-        "src/Engine/Platform/OpenGL/OpenGLCommandList.hpp"
         "src/Engine/Platform/Glfw/GlfwWindow.hpp"
         "src/Engine/Platform/Glfw/GlfwWindow.cpp"
         "src/Engine/Platform/ImGui/GlfwOpenGLImGuiBackend.hpp"
@@ -37,6 +36,7 @@ set(ENGINE_SOURCES
         "src/Engine/Renderer/ResourcePool.hpp"
         "src/Engine/Renderer/Camera.cpp"
         "src/Engine/Renderer/Mesh.cpp"
+        "src/Engine/Renderer/CommandList.cpp"
 
         # Assets
         "src/Engine/Assets/ObjLoader.cpp"
@@ -55,6 +55,7 @@ set(ENGINE_HEADERS
         "include/Engine/Utils/FNV-1a.hpp"
         "include/Engine/Utils/FrameTimer.hpp"
         "include/Engine/Utils/FrameStatistics.hpp"
+        "include/Engine/Utils/Overloaded.hpp"
 
         # Core
         "include/Engine/Core/Engine.hpp"

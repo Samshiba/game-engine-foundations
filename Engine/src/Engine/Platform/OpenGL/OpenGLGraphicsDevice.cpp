@@ -3,8 +3,9 @@
 // Path: Engine/src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.cpp
 //
 
+#include <Engine/Utils/Overloaded.hpp>
+
 #include "OpenGLGraphicsDevice.hpp"
-#include "OpenGLCommandList.hpp"
 
 namespace GEF::Platform
 {
@@ -30,6 +31,12 @@ namespace GEF::Platform
     const Renderer::AdapterInfo& OpenGLGraphicsDevice::GetAdapterInfo() const
     {
         return adapterInfo_;
+    }
+
+    const Renderer::SubmitStats& OpenGLGraphicsDevice::
+    GetLastSubmitStats() const
+    {
+        return lastSubmitStats_;
     }
 
     OpenGLGraphicsDevice::~OpenGLGraphicsDevice()
@@ -339,15 +346,151 @@ namespace GEF::Platform
         return pipelines_.IsValid(handle) ? pipelines_.Get(handle) : nullptr;
     }
 
-    std::shared_ptr<Renderer::CommandList> OpenGLGraphicsDevice::
-    BeginCommandList()
+
+    void OpenGLGraphicsDevice::Submit(Renderer::CommandList& cmd)
     {
-        return std::make_shared<OpenGLCommandList>(*this);
+        cmd.SortPackets();
+        lastSubmitStats_ = {};
+        BoundState bound{};
+
+        const auto visitor = Utils::Overloaded{
+            [this](const Renderer::CommandList::SetClearColorCommand& command) {
+                SetClearColor(command.r, command.g, command.b, command.a);
+            },
+            [this](const Renderer::CommandList::ClearCommand&) {
+                Clear();
+            },
+            [this](const Renderer::CommandList::SetViewportCommand& command) {
+                SetViewport(command.x, command.y, command.width,
+                            command.height);
+            },
+        };
+
+        for (const auto& command : cmd.GetFrameCommands())
+        {
+            std::visit(visitor, command);
+        }
+
+        const auto& drawPackets = cmd.GetDrawPackets();
+        for (const uint64_t key : cmd.GetSortKeys())
+        {
+            const auto sequence = Renderer::SortKey::Sequence(key);
+            auto const& packet = drawPackets[sequence];
+
+            if (packet.pipeline != bound.pipeline)
+            {
+                BindPipeline(packet.pipeline);
+                bound.pipeline = packet.pipeline;
+                ++lastSubmitStats_.pipelineChanges;
+            }
+
+            if (packet.vertexArray != bound.vertexArray)
+            {
+                BindVertexArray(packet.vertexArray);
+                bound.vertexArray = packet.vertexArray;
+                ++lastSubmitStats_.vertexArrayChanges;
+            }
+
+            for (uint32_t i = 0; i < Renderer::MaxUniformBindings; ++i)
+            {
+                const auto buffer = packet.uniformBuffers[i];
+                if (buffer.IsValid() && buffer != bound.uniformBuffers[i])
+                {
+                    BindUniformBuffer(i, buffer);
+                    bound.uniformBuffers[i] = buffer;
+                    ++lastSubmitStats_.uniformBufferChanges;
+                }
+            }
+
+            DrawIndexedInstanced(packet.indexCount, packet.instanceCount,
+                                 packet.baseInstance);
+            ++lastSubmitStats_.drawCalls;
+        }
     }
 
-    void OpenGLGraphicsDevice::SubmitCommandList(
-        const std::shared_ptr<Renderer::CommandList>& commandList)
+    void OpenGLGraphicsDevice::SetClearColor(float r, float g, float b,
+                                             float a)
     {
-        (void)commandList;
+        glClearColor(r, g, b, a);
+    }
+
+    void OpenGLGraphicsDevice::Clear()
+    {
+        glDepthMask(GL_TRUE);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
+    void OpenGLGraphicsDevice::SetViewport(uint32_t x, uint32_t y,
+                                           uint32_t width, uint32_t height)
+    {
+        glViewport(x, y, width, height);
+    }
+
+    void OpenGLGraphicsDevice::BindVertexArray(
+        Renderer::VertexArrayHandle handle)
+    {
+        const GLVertexArray* vertexArray = GetVertexArray(handle);
+        GEF_CORE_ASSERT(vertexArray, "Invalid vertex array handle");
+        glBindVertexArray(vertexArray->id);
+    }
+
+    void OpenGLGraphicsDevice::BindPipeline(Renderer::PipelineHandle handle)
+    {
+        const GLPipeline* pipeline = GetPipeline(handle);
+        GEF_CORE_ASSERT(pipeline, "Invalid pipeline handle");
+
+        auto shader = GetShader(pipeline->shader);
+        GEF_CORE_ASSERT(shader, "Invalid shader handle");
+
+        if (!shader)
+            return;
+
+        glUseProgram(shader->program);
+        if (pipeline->depth.test)
+        {
+            glEnable(GL_DEPTH_TEST);
+        }
+        else
+        {
+            glDisable(GL_DEPTH_TEST);
+        }
+        glDepthMask(pipeline->depth.write);
+
+        switch (pipeline->cull)
+        {
+        case Renderer::CullMode::None:
+            glDisable(GL_CULL_FACE);
+            break;
+        case Renderer::CullMode::Front:
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_FRONT);
+            break;
+        case Renderer::CullMode::Back:
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+            break;
+        default:
+            glDisable(GL_CULL_FACE);
+        }
+    }
+
+    void OpenGLGraphicsDevice::BindUniformBuffer(uint32_t bindingPoint,
+                                                 Renderer::BufferHandle handle)
+    {
+        const GLBuffer* buffer = GetBuffer(handle);
+        GEF_CORE_ASSERT(buffer, "Invalid buffer handle");
+        GEF_CORE_ASSERT(buffer->type == Renderer::BufferType::Uniform,
+                        "Buffer is not a uniform buffer");
+        glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, buffer->id);
+    }
+
+    void OpenGLGraphicsDevice::DrawIndexedInstanced(uint32_t indexCount,
+                                                    uint32_t instanceCount,
+                                                    uint32_t baseInstance)
+    {
+        glDrawElementsInstancedBaseInstance(
+            GL_TRIANGLES, static_cast<GLsizei>(indexCount),
+            GL_UNSIGNED_INT, nullptr,
+            static_cast<GLsizei>(instanceCount), baseInstance);
     }
 }

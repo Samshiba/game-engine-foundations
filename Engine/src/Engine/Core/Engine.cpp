@@ -9,8 +9,6 @@
 
 #include "Commons.hpp"
 
-#include <glad/glad.h>
-
 namespace GEF
 {
     Engine::Engine(EngineSpecification spec)
@@ -42,16 +40,17 @@ namespace GEF
 
     void Engine::BeginFrame()
     {
-        frame_commands_ = graphics_device_->BeginCommandList();
-        frame_commands_->SetClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        frame_commands_->Clear();
+        frame_commands_.Reset();
+        frame_commands_.SetViewport(0, 0, spec_.width, spec_.height);
+        frame_commands_.SetClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        frame_commands_.Clear();
 
         imgui_->BeginFrame();
     }
 
     void Engine::EndFrame()
     {
-        graphics_device_->SubmitCommandList(frame_commands_);
+        graphics_device_->Submit(frame_commands_);
         imgui_->EndFrame();
         window_->OnUpdate(); // swap buffers + poll events
     }
@@ -65,10 +64,9 @@ namespace GEF
         else if (e.GetEventType() ==
             Events::WindowResizeEvent::GetStaticEventType())
         {
-            // TODO(GEF-38): goes through the CommandList once it records
             const auto& resize = static_cast<Events::WindowResizeEvent&>(e);
-            glViewport(0, 0, static_cast<GLsizei>(resize.GetWidth()),
-                       static_cast<GLsizei>(resize.GetHeight()));
+            spec_.width = resize.GetWidth();
+            spec_.height = resize.GetHeight();
         }
 
         event_bus_.TriggerEvent(e);

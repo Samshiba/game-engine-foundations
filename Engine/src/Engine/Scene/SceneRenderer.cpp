@@ -45,8 +45,6 @@ void GEF::Scene::SceneRenderer::Render(
     const libecs::core::registry::Registry& registry,
     const Renderer::Camera& camera, Renderer::CommandList& cmd)
 {
-    drawCalls_ = 0;
-
     cmd.BindPipeline(pipeline_);
     cmd.BindUniformBuffer(Renderer::UniformBinding::Frame, frameUBO_);
     cmd.BindUniformBuffer(Renderer::UniformBinding::Light, lightUBO_);
@@ -122,13 +120,11 @@ void GEF::Scene::SceneRenderer::Render(
         if (instancing_)
         {
             cmd.DrawIndexedInstanced(batch.mesh.indexCount, count, 0);
-            ++drawCalls_;
         }
         else
         {
             for (uint32_t i = 0; i < count; ++i)
                 cmd.DrawIndexedInstanced(batch.mesh.indexCount, 1, i);
-            drawCalls_ += count;
         }
     }
 }
@@ -192,9 +188,4 @@ void GEF::Scene::SceneRenderer::SetInstancingEnabled(bool enabled)
 bool GEF::Scene::SceneRenderer::IsInstancingEnabled() const
 {
     return instancing_;
-}
-
-uint32_t GEF::Scene::SceneRenderer::GetDrawCallCount() const
-{
-    return drawCalls_;
 }

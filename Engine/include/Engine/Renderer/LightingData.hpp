@@ -18,6 +18,8 @@ namespace GEF::Renderer
         constexpr uint32_t Light = 1;
     }
 
+    constexpr uint32_t MaxUniformBindings = 2;
+
     // std140 mirrors: vec4 / mat4 only
 
     struct FrameUniforms // binding 0: once per frame

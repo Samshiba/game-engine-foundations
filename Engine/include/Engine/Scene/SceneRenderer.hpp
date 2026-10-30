@@ -45,7 +45,6 @@ namespace GEF::Scene
 
         void SetInstancingEnabled(bool enabled);
         [[nodiscard]] bool IsInstancingEnabled() const;
-        [[nodiscard]] uint32_t GetDrawCallCount() const;
 
     private:
         Batch CreateBatch(const Renderer::Mesh& mesh, uint32_t capacity);
@@ -60,6 +59,5 @@ namespace GEF::Scene
         Renderer::BufferHandle lightUBO_;
 
         bool instancing_ = true;
-        uint32_t drawCalls_ = 0;
     };
 }

@@ -228,7 +228,11 @@ struct Sandbox
         bool instancing = renderer->IsInstancingEnabled();
         if (ImGui::Checkbox("Instancing", &instancing))
             renderer->SetInstancingEnabled(instancing);
-        ImGui::Text("Draw calls: %u", renderer->GetDrawCallCount());
+        const auto stats = ctx.device.GetLastSubmitStats();
+        ImGui::Text("Draw calls: %u", stats.drawCalls);
+        ImGui::Text("Pipeline changes: %u", stats.pipelineChanges);
+        ImGui::Text("Vertex Arrays changes: %u", stats.vertexArrayChanges);
+        ImGui::Text("Uniform buffer changes: %u", stats.uniformBufferChanges);
 
         // Light
         glm::vec3 direction = registry.GetComponent<

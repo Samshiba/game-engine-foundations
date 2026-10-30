@@ -14,6 +14,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <array>
 
 namespace GEF::Renderer
 {
@@ -82,11 +83,20 @@ namespace GEF::Renderer
         CullMode cull = CullMode::Back;
     };
 
+    // Infos
     struct AdapterInfo
     {
         std::string vendor;
         std::string renderer; // the GPU model
         std::string version; // API + driver version
+    };
+
+    struct SubmitStats
+    {
+        uint32_t drawCalls = 0;
+        uint32_t pipelineChanges = 0;
+        uint32_t vertexArrayChanges = 0;
+        uint32_t uniformBufferChanges = 0;
     };
 
     class GraphicsDevice
@@ -117,12 +127,12 @@ namespace GEF::Renderer
             const PipelineDesc& desc) = 0;
         virtual void DestroyPipeline(PipelineHandle handle) = 0;
 
+        // Infos
         [[nodiscard]] virtual const AdapterInfo& GetAdapterInfo() const = 0;
+        [[nodiscard]] virtual const SubmitStats& GetLastSubmitStats() const = 0;
 
         static std::unique_ptr<GraphicsDevice> Create(RendererBackend backend);
 
-        virtual std::shared_ptr<CommandList> BeginCommandList() = 0;
-        virtual void SubmitCommandList(
-            const std::shared_ptr<CommandList>& commandList) = 0;
+        virtual void Submit(CommandList& cmd) = 0;
     };
 }

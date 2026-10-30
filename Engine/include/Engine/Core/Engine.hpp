@@ -78,8 +78,8 @@ namespace GEF
         std::unique_ptr<UI::ImGuiBackend> imgui_;
         Input input_;
         Events::EventBus event_bus_;
+        Renderer::CommandList frame_commands_;
 
-        std::shared_ptr<Renderer::CommandList> frame_commands_;
         bool is_running_ = true;
     };
 
@@ -105,7 +105,7 @@ namespace GEF
             game.OnUpdate(ctx, dt);
 
             BeginFrame();
-            game.OnRender(ctx, *frame_commands_);
+            game.OnRender(ctx, frame_commands_);
             if constexpr (requires { game.OnImGui(ctx); })
                 game.OnImGui(ctx);
             EndFrame();
