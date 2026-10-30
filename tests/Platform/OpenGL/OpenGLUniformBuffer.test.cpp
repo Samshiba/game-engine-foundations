@@ -1,12 +1,12 @@
 //
 // Path: tests/Platform/OpenGL/OpenGLUniformBuffer.test.cpp
 //
-// Contract for the GEF-32 step 4 API (add this file to tests/CMakeLists.txt
-// once it exists):
+// Uniform buffers on the OpenGL backend:
 //   - BufferType::Uniform
 //   - GraphicsDevice::UpdateBuffer(BufferHandle, uint32_t offset,
 //                                  const void* data, uint32_t size)
-//   - CommandList::BindUniformBuffer(uint32_t binding, BufferHandle)
+//   - CommandList::BindUniformBuffer(uint32_t binding, BufferHandle), applied
+//     by Submit with the draws that follow it
 //
 
 #include <array>
@@ -16,7 +16,10 @@
 #include <glm/glm.hpp>
 
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
+#include <Engine/Renderer/CommandList.hpp>
+#include <Engine/Renderer/LightingData.hpp>
 
+#include "GLDrawHelpers.hpp"
 #include "GLTestContext.hpp"
 
 using namespace GEF;
@@ -120,18 +123,21 @@ GL_TEST_CASE("UpdateBuffer can be called every frame")
 
 GL_TEST_CASE("BindUniformBuffer attaches the buffer to the binding point")
 {
-    Platform::OpenGLGraphicsDevice device;
+    Tests::DrawFixture fixture;
     const Renderer::BufferHandle handle =
-        CreateUniformBuffer(device, sizeof(FrameData));
+        CreateUniformBuffer(fixture.device, sizeof(FrameData));
 
-    auto cmd = device.BeginCommandList();
-    cmd->BindUniformBuffer(3, handle);
-    device.SubmitCommandList(cmd); // still valid once the list records (GEF-38)
+    // The binding is part of the draw's packet, applied by Submit
+    Renderer::CommandList cmd;
+    cmd.BindUniformBuffer(Renderer::UniformBinding::Light, handle);
+    fixture.RecordDraw(cmd);
+    fixture.device.Submit(cmd);
 
-    // binding = 3 in GLSL reads whatever is attached to slot 3
+    // binding = 1 in GLSL reads whatever is attached to slot 1
     GLint bound = 0;
-    glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, 3, &bound);
-    CHECK(static_cast<GLuint>(bound) == device.GetBuffer(handle)->id);
+    glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, Renderer::UniformBinding::Light,
+                    &bound);
+    CHECK(static_cast<GLuint>(bound) == fixture.device.GetBuffer(handle)->id);
 
-    device.DestroyBuffer(handle);
+    fixture.device.DestroyBuffer(handle);
 }

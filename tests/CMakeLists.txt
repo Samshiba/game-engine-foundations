@@ -6,6 +6,7 @@ add_executable(GEF_Tests
         "Core/FileSystem.test.cpp"
         "Core/PublicApi.test.cpp"
         "Renderer/Camera.test.cpp"
+        "Renderer/CommandList.test.cpp"
         "Renderer/ResourcePool.test.cpp"
         "Renderer/VertexLayouts.test.cpp"
         "Scene/SceneRenderer.test.cpp"
@@ -17,6 +18,7 @@ add_executable(GEF_Tests
         "Platform/OpenGL/OpenGLMesh.test.cpp"
         "Platform/OpenGL/OpenGLPipeline.test.cpp"
         "Platform/OpenGL/OpenGLShader.test.cpp"
+        "Platform/OpenGL/OpenGLSubmit.test.cpp"
         "Platform/OpenGL/OpenGLUniformBuffer.test.cpp"
 )
 
