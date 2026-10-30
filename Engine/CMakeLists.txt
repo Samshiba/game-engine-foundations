@@ -125,6 +125,10 @@ target_link_libraries(GEF_Engine
 gef_set_warnings(GEF_Engine)
 
 # Compile Definitions
+
+# Omit GLFW from loading GL headers : prevent include orders problems with Glad
+target_compile_definitions(GEF_Engine PRIVATE GLFW_INCLUDE_NONE)
+
 target_compile_definitions(GEF_Engine PUBLIC
         # Platform
         $<$<PLATFORM_ID:Windows>:GEF_PLATFORM_WINDOWS>

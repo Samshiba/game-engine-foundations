@@ -45,8 +45,7 @@ namespace GEF
     // OnInit(EngineContext&) and OnShutdown(EngineContext&) are optional.
     template <typename T>
     concept Game = requires(T game, EngineContext& ctx, float dt,
-                            Renderer::CommandList& cmd)
-    {
+                            Renderer::CommandList& cmd) {
         game.OnUpdate(ctx, dt);
         game.OnRender(ctx, cmd);
     };
@@ -97,8 +96,8 @@ namespace GEF
         while (is_running_)
         {
             const auto now = Clock::now();
-            const float dt = std::chrono::duration<float>(now - previous).
-                count();
+            const float dt =
+                std::chrono::duration<float>(now - previous).count();
             previous = now;
 
             input_.Update(*window_);
@@ -116,4 +115,4 @@ namespace GEF
 
         return 0;
     }
-}
+} // namespace GEF

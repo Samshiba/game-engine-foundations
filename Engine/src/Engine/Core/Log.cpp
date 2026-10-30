@@ -4,9 +4,10 @@
 //
 
 #include <Engine/Core/Log.hpp>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/sinks/basic_file_sink.h>
+
 #include <spdlog/pattern_formatter.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace GEF
 {
@@ -25,27 +26,27 @@ namespace GEF
             std::string file_pattern;
             spdlog::level::level_enum level;
 
-#if defined(GEF_DEBUG_BUILD)
+#    if defined(GEF_DEBUG_BUILD)
             stdout_pattern = "%^[%T] [%n] {%s:%#} %l%$ - %v";
             file_pattern = "[%T] [%n] {%s:%#} %l - %v";
             level = spdlog::level::debug;
 
-#elif defined(GEF_PROFILE_BUILD)
+#    elif defined(GEF_PROFILE_BUILD)
             stdout_pattern = "%^[%T] [%n] %l%$ - %v";
             file_pattern = "[%T] [%n] %l - %v";
             level = spdlog::level::info;
 
-#else
+#    else
             // Release: only warnings and errors
             stdout_pattern = "%^[%T] [%n] %l%$ - %v";
             file_pattern = "[%T] [%n] %l - %v";
             level = spdlog::level::warn;
-#endif
+#    endif
 
             std::vector<spdlog::sink_ptr> sinks;
 
-            sinks.emplace_back(std::make_shared<
-                spdlog::sinks::stdout_color_sink_mt>());
+            sinks.emplace_back(
+                std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
             sinks.emplace_back(
                 std::make_shared<spdlog::sinks::basic_file_sink_mt>(
                     "Engine.log", true));
@@ -78,7 +79,7 @@ namespace GEF
             static Loggers loggers = CreateLoggers();
             return loggers;
         }
-    }
+    } // namespace
 
     std::shared_ptr<spdlog::logger>& Log::GetEngineLogger()
     {
@@ -97,4 +98,4 @@ namespace GEF
         (void)GetLoggers();
 #endif
     }
-}
+} // namespace GEF

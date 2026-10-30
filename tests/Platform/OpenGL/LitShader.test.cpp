@@ -7,18 +7,18 @@
 // it before the screen does (e.g. two blocks bound to each other's slot).
 //
 
-#include <doctest.h>
+#include <cstddef>
+#include <filesystem>
+#include <optional>
+#include <string>
 
-#include "GLTestContext.hpp"
+#include <doctest.h>
 
 #include <Engine/Core/FileSystem.hpp>
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
 #include <Engine/Renderer/LightingData.hpp>
 
-#include <cstddef>
-#include <filesystem>
-#include <optional>
-#include <string>
+#include "GLTestContext.hpp"
 
 using namespace GEF;
 using namespace GEF::Renderer;
@@ -27,9 +27,9 @@ namespace
 {
     std::optional<std::string> ReadShader(const char* fileName)
     {
-        return FileSystem::ReadTextFile(std::filesystem::path(GEF_SOURCE_DIR) /
-                                        "Application" / "assets" / "shaders" /
-                                        fileName);
+        return FileSystem::ReadTextFile(std::filesystem::path(GEF_SOURCE_DIR)
+                                        / "Application" / "assets" / "shaders"
+                                        / fileName);
     }
 
     struct BlockInfo
@@ -87,12 +87,15 @@ namespace
             program = device.GetShader(shader)->program;
         }
 
-        ~LitShaderFixture() { device.DestroyShader(shader); }
+        ~LitShaderFixture()
+        {
+            device.DestroyShader(shader);
+        }
 
         LitShaderFixture(const LitShaderFixture&) = delete;
         LitShaderFixture& operator=(const LitShaderFixture&) = delete;
     };
-}
+} // namespace
 
 GL_TEST_CASE("The lit shader compiles and links")
 {
@@ -134,7 +137,8 @@ GL_TEST_CASE("Each uniform sits at the offset of its C++ member")
 #undef GEF_CHECK_OFFSET
 }
 
-GL_TEST_CASE("Per-vertex and per-instance attributes sit where the layouts put them")
+GL_TEST_CASE(
+    "Per-vertex and per-instance attributes sit where the layouts put them")
 {
     // CreateVertexArray numbers attributes in order: Vertex::Layout() on
     // binding 0 (0, 1, 2), then InstanceData::Layout() on binding 1 (3...).
@@ -147,8 +151,8 @@ GL_TEST_CASE("Per-vertex and per-instance attributes sit where the layouts put t
 
     CHECK(location("a_Position") == 0);
     CHECK(location("a_Normal") == 1);
-    CHECK(location("a_Model") == 3);         // mat4: 3, 4, 5, 6
-    CHECK(location("a_NormalMatrix") == 7);  // mat3: 7, 8, 9
+    CHECK(location("a_Model") == 3); // mat4: 3, 4, 5, 6
+    CHECK(location("a_NormalMatrix") == 7); // mat3: 7, 8, 9
     CHECK(location("a_Albedo") == 10);
     CHECK(location("a_Params") == 11);
 }

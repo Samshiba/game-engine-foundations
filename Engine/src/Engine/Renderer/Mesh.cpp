@@ -8,21 +8,19 @@
 GEF::Renderer::Mesh GEF::Renderer::UploadMesh(GraphicsDevice& device,
                                               const MeshData& data)
 {
-    auto ibo = device.CreateBuffer({ .type = BufferType::Index,
-                                     .usage = BufferUsage::Static,
-                                     .size = static_cast<uint32_t>(sizeof(
-                                         uint32_t)) * static_cast<
-                                         uint32_t>(data.indices.
-                                         size()),
-                                     .data = data.indices.data() });
+    auto ibo =
+        device.CreateBuffer({ .type = BufferType::Index,
+                              .usage = BufferUsage::Static,
+                              .size = static_cast<uint32_t>(sizeof(uint32_t))
+                                  * static_cast<uint32_t>(data.indices.size()),
+                              .data = data.indices.data() });
 
-    auto vbo = device.CreateBuffer({ .type = BufferType::Vertex,
-                                     .usage = BufferUsage::Static,
-                                     .size = static_cast<uint32_t>(sizeof(
-                                         Vertex)) * static_cast<uint32_t>(data.
-                                         vertices.
-                                         size()),
-                                     .data = data.vertices.data() });
+    auto vbo =
+        device.CreateBuffer({ .type = BufferType::Vertex,
+                              .usage = BufferUsage::Static,
+                              .size = static_cast<uint32_t>(sizeof(Vertex))
+                                  * static_cast<uint32_t>(data.vertices.size()),
+                              .data = data.vertices.data() });
 
     auto vao = device.CreateVertexArray({
         .vertexBuffers = {

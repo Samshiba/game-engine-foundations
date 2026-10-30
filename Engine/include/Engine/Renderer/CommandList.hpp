@@ -26,8 +26,8 @@ namespace GEF::Renderer
         inline constexpr uint64_t SEQUENCE_MASK = 0xFFFFF;
 
         constexpr uint64_t Make(uint32_t pass, uint32_t pipeline,
-                                uint32_t vertexArray,
-                                uint32_t depth, uint32_t sequence)
+                                uint32_t vertexArray, uint32_t depth,
+                                uint32_t sequence)
         {
             return static_cast<uint64_t>(pass) << PASS_SHIFT
                 | static_cast<uint64_t>(pipeline) << PIPELINE_SHIFT
@@ -40,7 +40,7 @@ namespace GEF::Renderer
         {
             return uint32_t(key & SEQUENCE_MASK);
         }
-    }
+    } // namespace SortKey
 
     class CommandList
     {
@@ -56,8 +56,7 @@ namespace GEF::Renderer
         };
 
         struct ClearCommand
-        {
-        };
+        {};
 
         struct SetClearColorCommand
         {
@@ -75,8 +74,8 @@ namespace GEF::Renderer
             uint32_t height;
         };
 
-        using FrameCommand = std::variant<
-            SetClearColorCommand, ClearCommand, SetViewportCommand>;
+        using FrameCommand = std::variant<SetClearColorCommand, ClearCommand,
+                                          SetViewportCommand>;
 
     public:
         ~CommandList() = default;
@@ -96,8 +95,7 @@ namespace GEF::Renderer
         void BindUniformBuffer(uint32_t bindingPoint, BufferHandle handle);
 
         void DrawIndexed(uint32_t indexCount);
-        void DrawIndexedInstanced(uint32_t indexCount,
-                                  uint32_t instanceCount,
+        void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount,
                                   uint32_t baseInstance);
 
         // Getters for backend
@@ -116,4 +114,4 @@ namespace GEF::Renderer
         VertexArrayHandle vertexArray_;
         std::array<BufferHandle, MaxUniformBindings> uniformBuffers_;
     };
-}
+} // namespace GEF::Renderer

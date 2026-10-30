@@ -5,14 +5,13 @@
 
 #pragma once
 
-#include <Engine/Renderer/GraphicsDevice.hpp>
-#include <Engine/Renderer/Handle.hpp>
-
-#include <vector>
 #include <cstdint>
+#include <vector>
 
 #include <glm/glm.hpp>
 
+#include <Engine/Renderer/GraphicsDevice.hpp>
+#include <Engine/Renderer/Handle.hpp>
 
 namespace GEF::Renderer
 {
@@ -52,7 +51,7 @@ namespace GEF::Renderer
 
     Mesh UploadMesh(GraphicsDevice& device, const MeshData& data);
     void DestroyMesh(GraphicsDevice& device, const Mesh& mesh);
-}
+} // namespace GEF::Renderer
 
 inline GEF::Renderer::BufferLayout GEF::Renderer::Vertex::Layout()
 {

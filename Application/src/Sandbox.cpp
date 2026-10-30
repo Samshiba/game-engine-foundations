@@ -3,28 +3,26 @@
 // Path: Application/src/Sandbox.cpp
 //
 
-#include <Engine/Core/Engine.hpp>
-#include <Engine/Core/Log.hpp>
-#include <Engine/Core/FileSystem.hpp>
-#include <Engine/Event/ApplicationEvent.hpp>
-#include <Engine/Renderer/Camera.hpp>
-#include <Engine/Assets/ObjLoader.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-#include <Engine/Scene/Components.hpp>
-#include <Engine/Scene/SceneRenderer.hpp>
-#include <Engine/Core/DedicatedGpu.hpp>
-#include <Engine/Utils/FrameTimer.hpp>
-
-#include <libecs/core/registry/Registry.hpp>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include <imgui.h>
-
 #include <optional>
 #include <string>
 #include <string_view>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <imgui.h>
+#include <libecs/core/registry/Registry.hpp>
+
+#include <Engine/Assets/ObjLoader.hpp>
+#include <Engine/Core/DedicatedGpu.hpp>
+#include <Engine/Core/Engine.hpp>
+#include <Engine/Core/FileSystem.hpp>
+#include <Engine/Core/Log.hpp>
+#include <Engine/Event/ApplicationEvent.hpp>
+#include <Engine/Renderer/Camera.hpp>
+#include <Engine/Renderer/Mesh.hpp>
+#include <Engine/Scene/Components.hpp>
+#include <Engine/Scene/SceneRenderer.hpp>
+#include <Engine/Utils/FrameTimer.hpp>
 
 #include "FreeFlyController.hpp"
 
@@ -63,12 +61,12 @@ namespace
         registry.GetView<Spin, GEF::Scene::Transform>().Each(
             [&](libecs::core::Entity, Spin& spin,
                 GEF::Scene::Transform& transform) {
-                transform.rotation = glm::rotate(
-                    transform.rotation, spin.speed * dt,
-                    glm::vec3(0.0f, 1.0f, 0.0f));
+                transform.rotation =
+                    glm::rotate(transform.rotation, spin.speed * dt,
+                                glm::vec3(0.0f, 1.0f, 0.0f));
             });
     }
-}
+} // namespace
 
 struct Sandbox
 {
@@ -100,7 +98,8 @@ struct Sandbox
         const auto bunny = registry.CreateEntity();
         spawned.emplace_back(bunny);
 
-        registry.EmplaceComponent<GEF::Scene::Transform>(bunny,
+        registry.EmplaceComponent<GEF::Scene::Transform>(
+            bunny,
             GEF::Scene::Transform{
                 .position = { (x - 5) * 5.0f, 0.0f, (z - 5) * 5.0f },
                 .scale = glm::vec3(10.0f) });
@@ -111,13 +110,12 @@ struct Sandbox
             .specularStrength = 1.0f,
         };
         registry.EmplaceComponent<GEF::Scene::MeshRenderer>(
-            bunny, GEF::Scene::MeshRenderer{
-                .mesh = mesh, .material = material });
+            bunny,
+            GEF::Scene::MeshRenderer{ .mesh = mesh, .material = material });
 
         if ((x + z) % 2 == 0)
         {
-            registry.EmplaceComponent<Spin>(
-                bunny, Spin{ .speed = 1.0f });
+            registry.EmplaceComponent<Spin>(bunny, Spin{ .speed = 1.0f });
         }
     }
 
@@ -137,18 +135,18 @@ struct Sandbox
 
     void OnInit(GEF::EngineContext& ctx)
     {
-        camera.aspectRatio = float(ctx.window.GetWidth()) / float(
-            ctx.window.GetHeight());
+        camera.aspectRatio =
+            float(ctx.window.GetWidth()) / float(ctx.window.GetHeight());
 
         resizeSubscription = ctx.events.Subscribe(
             GEF::Events::WindowResizeEvent::GetStaticEventType(),
             [this](GEF::Events::Event const& e) {
-                const auto& resize = static_cast<GEF::Events::WindowResizeEvent
-                    const&>(e);
+                const auto& resize =
+                    static_cast<GEF::Events::WindowResizeEvent const&>(e);
                 if (resize.GetHeight() == 0)
                     return;
-                camera.aspectRatio = float(resize.GetWidth()) / float(
-                    resize.GetHeight());
+                camera.aspectRatio =
+                    float(resize.GetWidth()) / float(resize.GetHeight());
             });
 
         if (const auto shader = LoadShader(ctx.device, "lit"))
@@ -156,8 +154,7 @@ struct Sandbox
             meshShader = *shader;
         }
 
-        const auto path = GEF::FileSystem::AssetPath(
-            "models/cube.obj");
+        const auto path = GEF::FileSystem::AssetPath("models/cube.obj");
         if (const auto data = GEF::Assets::LoadObj(path))
             mesh = UploadMesh(ctx.device, *data);
         else
@@ -168,7 +165,8 @@ struct Sandbox
 
         light = registry.CreateEntity();
         registry.EmplaceComponent<GEF::Scene::DirectionalLight>(
-            light, GEF::Scene::DirectionalLight{
+            light,
+            GEF::Scene::DirectionalLight{
                 .direction = { -1.0f, -1.0f, -0.5f } });
 
         UpdateEntities();
@@ -235,8 +233,9 @@ struct Sandbox
         ImGui::Text("Uniform buffer changes: %u", stats.uniformBufferChanges);
 
         // Light
-        glm::vec3 direction = registry.GetComponent<
-            GEF::Scene::DirectionalLight>(light).direction;
+        glm::vec3 direction =
+            registry.GetComponent<GEF::Scene::DirectionalLight>(light)
+                .direction;
         ImGui::SliderFloat3("Light Direction", glm::value_ptr(direction), -1.0f,
                             1.0f);
         registry.GetComponent<GEF::Scene::DirectionalLight>(light).direction =

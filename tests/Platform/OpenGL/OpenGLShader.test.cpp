@@ -2,17 +2,16 @@
 // Path: tests/Platform/OpenGL/OpenGLShader.test.cpp
 //
 
-#include <doctest.h>
-
-#include "GLTestContext.hpp"
-
-#include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
-
-#include <glm/glm.hpp>
-
 #include <cstddef>
 #include <string>
 #include <string_view>
+
+#include <doctest.h>
+#include <glm/glm.hpp>
+
+#include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
+
+#include "GLTestContext.hpp"
 
 using namespace GEF;
 
@@ -43,7 +42,7 @@ namespace
         glGetProgramiv(program, pname, &value);
         return value;
     }
-}
+} // namespace
 
 GL_TEST_CASE("CreateShader links a valid program")
 {
@@ -76,8 +75,8 @@ GL_TEST_CASE("CreateShader reads exactly the string_view, not up to a '\\0'")
         device.CreateShader({ vertexView, fragmentView });
 
     REQUIRE(handle.IsValid());
-    CHECK(ProgramParam(device.GetShader(handle)->program, GL_LINK_STATUS) ==
-          GL_TRUE);
+    CHECK(ProgramParam(device.GetShader(handle)->program, GL_LINK_STATUS)
+          == GL_TRUE);
 
     device.DestroyShader(handle);
 }
@@ -214,9 +213,10 @@ namespace
         glGetActiveUniformsiv(program, 1, &index, GL_UNIFORM_OFFSET, &offset);
         return offset;
     }
-}
+} // namespace
 
-GL_TEST_CASE("std140: uniform blocks keep their binding and match the C++ layout")
+GL_TEST_CASE(
+    "std140: uniform blocks keep their binding and match the C++ layout")
 {
     Platform::OpenGLGraphicsDevice device;
     const Renderer::ShaderHandle handle = device.CreateShader(
@@ -232,18 +232,18 @@ GL_TEST_CASE("std140: uniform blocks keep their binding and match the C++ layout
 
     SUBCASE("mat4 + vec4: the C++ struct matches as is")
     {
-        CHECK(BlockParam(program, "Frame", GL_UNIFORM_BLOCK_DATA_SIZE) ==
-              static_cast<GLint>(sizeof(FrameData)));
-        CHECK(UniformOffset(program, "u_Tint") ==
-              static_cast<GLint>(offsetof(FrameData, tint)));
+        CHECK(BlockParam(program, "Frame", GL_UNIFORM_BLOCK_DATA_SIZE)
+              == static_cast<GLint>(sizeof(FrameData)));
+        CHECK(UniformOffset(program, "u_Tint")
+              == static_cast<GLint>(offsetof(FrameData, tint)));
     }
 
     SUBCASE("vec3 + vec3: the naive C++ struct is off by 4 bytes")
     {
         CHECK(UniformOffset(program, "u_Color") == 16);
         CHECK(offsetof(NaiveLightData, color) == 12); // the silent bug
-        CHECK(UniformOffset(program, "u_Color") ==
-              static_cast<GLint>(offsetof(LightData, color))); // the fix
+        CHECK(UniformOffset(program, "u_Color")
+              == static_cast<GLint>(offsetof(LightData, color))); // the fix
     }
 
     device.DestroyShader(handle);

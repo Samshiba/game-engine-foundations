@@ -3,10 +3,10 @@
 // Path: Engine/src/Engine/Platform/OpenGL/OpenGlContext.cpp
 //
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-
 #include "OpenGlContext.hpp"
+
+#include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
 namespace GEF::Platform
 {
@@ -35,7 +35,7 @@ namespace GEF::Platform
                 break; // GL_DEBUG_SEVERITY_NOTIFICATION is too verbose
             }
         }
-    }
+    } // namespace
 #endif
 
     OpenGLContext::OpenGLContext(GLFWwindow* windowHandle)
@@ -55,8 +55,8 @@ namespace GEF::Platform
         }
 
         // The backend relies on DSA, so 4.5
-        GEF_CORE_ASSERT(GLVersion.major > 4 ||
-                        (GLVersion.major == 4 && GLVersion.minor >= 5),
+        GEF_CORE_ASSERT(GLVersion.major > 4
+                            || (GLVersion.major == 4 && GLVersion.minor >= 5),
                         "OpenGL 4.5 or newer is required");
 
 #ifdef GEF_DEBUG_BUILD
@@ -70,4 +70,4 @@ namespace GEF::Platform
     {
         glfwSwapBuffers(windowHandle_);
     }
-}
+} // namespace GEF::Platform

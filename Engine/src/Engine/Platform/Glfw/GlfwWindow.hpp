@@ -5,10 +5,11 @@
 
 #pragma once
 
-#include <Engine/Core/Window.hpp>
-#include <Engine/Platform/OpenGL/OpenGlContext.hpp>
-#include <Engine/Event/Event.hpp>
 #include <GLFW/glfw3.h>
+
+#include <Engine/Core/Window.hpp>
+#include <Engine/Event/Event.hpp>
+#include <Engine/Platform/OpenGL/OpenGlContext.hpp>
 
 #include "Commons.hpp"
 
@@ -35,8 +36,7 @@ namespace GEF::Platform
         };
 
     public:
-        GlfwWindow(const WindowProps& props,
-                   Renderer::RendererBackend backend);
+        GlfwWindow(const WindowProps& props, Renderer::RendererBackend backend);
         ~GlfwWindow();
 
         void OnUpdate() override;
@@ -79,4 +79,4 @@ namespace GEF::Platform
         GLFWwindow* window_ = nullptr;
         WindowData windowData_;
     };
-}
+} // namespace GEF::Platform

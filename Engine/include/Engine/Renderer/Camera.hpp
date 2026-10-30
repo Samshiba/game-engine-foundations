@@ -25,4 +25,4 @@ namespace GEF::Renderer
         [[nodiscard]] glm::mat4 GetProjection() const;
         [[nodiscard]] glm::mat4 GetViewProjection() const;
     };
-}
+} // namespace GEF::Renderer

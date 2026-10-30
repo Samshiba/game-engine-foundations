@@ -26,8 +26,7 @@ namespace GEF::Renderer
 
     glm::vec3 Camera::GetRight() const
     {
-        return { -glm::sin(glm::radians(yaw)), 0,
-                 glm::cos(glm::radians(yaw)) };
+        return { -glm::sin(glm::radians(yaw)), 0, glm::cos(glm::radians(yaw)) };
     }
 
     glm::mat4 Camera::GetView() const
@@ -46,4 +45,4 @@ namespace GEF::Renderer
     {
         return GetProjection() * GetView();
     }
-}
+} // namespace GEF::Renderer

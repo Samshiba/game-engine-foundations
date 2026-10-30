@@ -4,12 +4,13 @@
 //
 
 #include <Engine/Assets/ObjLoader.hpp>
-#include <Engine/Core/FileSystem.hpp>
-#include <Engine/Core/Log.hpp>
 
 #include <unordered_map>
 
 #include <tiny_obj_loader.h>
+
+#include <Engine/Core/FileSystem.hpp>
+#include <Engine/Core/Log.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -21,18 +22,18 @@ struct std::hash<GEF::Renderer::Vertex>
     std::size_t operator()(const GEF::Renderer::Vertex& v) const noexcept
     {
         std::size_t seed = 0x19BD75E6;
-        seed ^= (seed << 6) + (seed >> 2) + 0x0C4A02F0 + std::hash<
-            glm::vec3>{}(v.position);
-        seed ^= (seed << 6) + (seed >> 2) + 0x6AAFFEDC + std::hash<
-            glm::vec3>{}(v.normal);
-        seed ^= (seed << 6) + (seed >> 2) + 0x68196E62 + std::hash<
-            glm::vec2>{}(v.uv);
+        seed ^= (seed << 6) + (seed >> 2) + 0x0C4A02F0
+            + std::hash<glm::vec3>{}(v.position);
+        seed ^= (seed << 6) + (seed >> 2) + 0x6AAFFEDC
+            + std::hash<glm::vec3>{}(v.normal);
+        seed ^= (seed << 6) + (seed >> 2) + 0x68196E62
+            + std::hash<glm::vec2>{}(v.uv);
         return seed;
     }
 };
 
-std::optional<GEF::Renderer::MeshData> GEF::Assets::ParseObj(
-    std::string_view objText)
+std::optional<GEF::Renderer::MeshData>
+GEF::Assets::ParseObj(std::string_view objText)
 {
     tinyobj::ObjReaderConfig config;
     config.triangulate = true;
@@ -82,11 +83,9 @@ std::optional<GEF::Renderer::MeshData> GEF::Assets::ParseObj(
                                  index.vertex_index);
                 return std::nullopt;
             }
-            vertex.position = {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
-            };
+            vertex.position = { attrib.vertices[3 * index.vertex_index + 0],
+                                attrib.vertices[3 * index.vertex_index + 1],
+                                attrib.vertices[3 * index.vertex_index + 2] };
 
             if (index.normal_index != -1)
             {
@@ -96,11 +95,9 @@ std::optional<GEF::Renderer::MeshData> GEF::Assets::ParseObj(
                                      index.normal_index);
                     return std::nullopt;
                 }
-                vertex.normal = {
-                    attrib.normals[3 * index.normal_index + 0],
-                    attrib.normals[3 * index.normal_index + 1],
-                    attrib.normals[3 * index.normal_index + 2]
-                };
+                vertex.normal = { attrib.normals[3 * index.normal_index + 0],
+                                  attrib.normals[3 * index.normal_index + 1],
+                                  attrib.normals[3 * index.normal_index + 2] };
                 hasNormals = true;
             }
 
@@ -113,16 +110,14 @@ std::optional<GEF::Renderer::MeshData> GEF::Assets::ParseObj(
                                      index.texcoord_index);
                     return std::nullopt;
                 }
-                vertex.uv = {
-                    attrib.texcoords[2 * index.texcoord_index + 0],
-                    attrib.texcoords[2 * index.texcoord_index + 1]
-                };
+                vertex.uv = { attrib.texcoords[2 * index.texcoord_index + 0],
+                              attrib.texcoords[2 * index.texcoord_index + 1] };
             }
 
             if (!vertexMap.contains(vertex))
             {
-                vertexMap[vertex] = static_cast<uint32_t>(meshData.vertices.
-                    size());
+                vertexMap[vertex] =
+                    static_cast<uint32_t>(meshData.vertices.size());
                 meshData.vertices.push_back(vertex);
             }
 
@@ -138,8 +133,8 @@ std::optional<GEF::Renderer::MeshData> GEF::Assets::ParseObj(
             Renderer::Vertex& b = meshData.vertices[meshData.indices[i + 1]];
             Renderer::Vertex& c = meshData.vertices[meshData.indices[i + 2]];
 
-            const glm::vec3 faceNormal = glm::cross(
-                b.position - a.position, c.position - a.position);
+            const glm::vec3 faceNormal =
+                glm::cross(b.position - a.position, c.position - a.position);
 
             a.normal += faceNormal;
             b.normal += faceNormal;
@@ -153,8 +148,8 @@ std::optional<GEF::Renderer::MeshData> GEF::Assets::ParseObj(
     return meshData;
 }
 
-std::optional<GEF::Renderer::MeshData> GEF::Assets::LoadObj(
-    const std::filesystem::path& path)
+std::optional<GEF::Renderer::MeshData>
+GEF::Assets::LoadObj(const std::filesystem::path& path)
 {
     auto string = FileSystem::ReadTextFile(path);
     if (!string)

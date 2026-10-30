@@ -38,8 +38,8 @@ namespace GEF::Utils
         return sorted[std::clamp<std::size_t>(rank, 1, sorted.size()) - 1];
     }
 
-    [[nodiscard]] inline FrameStatistics ComputeFrameStatistics(
-        std::vector<float> frameTimesMs)
+    [[nodiscard]] inline FrameStatistics
+    ComputeFrameStatistics(std::vector<float> frameTimesMs)
     {
         FrameStatistics stats;
         if (frameTimesMs.empty())
@@ -49,10 +49,10 @@ namespace GEF::Utils
 
         stats.frames = frameTimesMs.size();
         // Accumulated in double: summing thousands of floats drifts
-        const double sum = std::accumulate(frameTimesMs.begin(),
-                                           frameTimesMs.end(), 0.0);
-        stats.meanMs = static_cast<float>(sum / static_cast<double>(stats.
-            frames));
+        const double sum =
+            std::accumulate(frameTimesMs.begin(), frameTimesMs.end(), 0.0);
+        stats.meanMs =
+            static_cast<float>(sum / static_cast<double>(stats.frames));
         stats.p50Ms = Percentile(frameTimesMs, 50.0f);
         stats.p95Ms = Percentile(frameTimesMs, 95.0f);
         stats.p99Ms = Percentile(frameTimesMs, 99.0f);
@@ -60,4 +60,4 @@ namespace GEF::Utils
         stats.fps = stats.meanMs > 0.0f ? 1000.0f / stats.meanMs : 0.0f;
         return stats;
     }
-}
+} // namespace GEF::Utils

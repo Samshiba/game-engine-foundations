@@ -4,27 +4,26 @@
 //
 
 #include <Engine/Core/Engine.hpp>
-#include <Engine/Event/ApplicationEvent.hpp>
+
 #include <Engine/Core/FileSystem.hpp>
+#include <Engine/Event/ApplicationEvent.hpp>
 
 #include "Commons.hpp"
 
 namespace GEF
 {
     Engine::Engine(EngineSpecification spec)
-        : spec_(std::move(spec)),
-          window_(Window::Create(spec_))
+        : spec_(std::move(spec))
+        , window_(Window::Create(spec_))
     {
         auto device = Renderer::GraphicsDevice::Create(spec_.backend);
         GEF_CORE_ASSERT(device, "Failed to create graphics device");
         graphics_device_ = std::move(device);
-        window_->SetEventCallback([this](Events::Event& e) {
-            OnEvent(e);
-        });
+        window_->SetEventCallback([this](Events::Event& e) { OnEvent(e); });
 
         if (!std::filesystem::is_directory(FileSystem::AssetsDirectory()))
             GEF_ENGINE_ERROR("Assets directory not found: {}",
-                         FileSystem::AssetsDirectory().string());
+                             FileSystem::AssetsDirectory().string());
 
         auto imgui = UI::ImGuiBackend::Create(*window_, spec_.backend);
         GEF_CORE_ASSERT(imgui, "Failed to create ImGui backend");
@@ -61,8 +60,8 @@ namespace GEF
         {
             is_running_ = false;
         }
-        else if (e.GetEventType() ==
-            Events::WindowResizeEvent::GetStaticEventType())
+        else if (e.GetEventType()
+                 == Events::WindowResizeEvent::GetStaticEventType())
         {
             const auto& resize = static_cast<Events::WindowResizeEvent&>(e);
             spec_.width = resize.GetWidth();
@@ -71,4 +70,4 @@ namespace GEF
 
         event_bus_.TriggerEvent(e);
     }
-}
+} // namespace GEF

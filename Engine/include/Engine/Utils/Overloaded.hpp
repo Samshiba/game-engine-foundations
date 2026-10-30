@@ -14,4 +14,4 @@ namespace GEF::Utils
     {
         using Ts::operator()...;
     };
-}
+} // namespace GEF::Utils

@@ -3,15 +3,16 @@
 // Path: Engine/src/Engine/Renderer/GraphicsContext.cpp
 //
 
+#include "GraphicsContext.hpp"
+
 #include <Engine/Platform/OpenGL/OpenGlContext.hpp>
 
 #include "Commons.hpp"
-#include "GraphicsContext.hpp"
 
 namespace GEF::Renderer
 {
-    std::unique_ptr<GraphicsContext> GraphicsContext::Create(void* windowHandle,
-        RendererBackend backend)
+    std::unique_ptr<GraphicsContext>
+    GraphicsContext::Create(void* windowHandle, RendererBackend backend)
     {
         switch (backend)
         {
@@ -44,5 +45,4 @@ namespace GEF::Renderer
         GEF_ENGINE_ERROR("Unknown Renderer Backend");
         return nullptr;
     }
-}
-
+} // namespace GEF::Renderer

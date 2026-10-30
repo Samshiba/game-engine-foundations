@@ -4,14 +4,14 @@
 // GPU side of the meshes: UploadMesh / DestroyMesh on the OpenGL backend.
 //
 
-#include <doctest.h>
+#include <vector>
 
-#include "GLTestContext.hpp"
+#include <doctest.h>
 
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
 #include <Engine/Renderer/Mesh.hpp>
 
-#include <vector>
+#include "GLTestContext.hpp"
 
 using namespace GEF;
 using Renderer::MeshData;
@@ -31,7 +31,7 @@ namespace
         data.indices = { 0, 1, 2, 0, 2, 3 };
         return data;
     }
-}
+} // namespace
 
 GL_TEST_CASE("UploadMesh creates buffers holding all the vertices and indices")
 {
@@ -55,7 +55,8 @@ GL_TEST_CASE("UploadMesh creates buffers holding all the vertices and indices")
 
     // The data really reached the GPU
     std::vector<Vertex> readBack(4);
-    glGetNamedBufferSubData(vertices->id, 0, 4 * sizeof(Vertex), readBack.data());
+    glGetNamedBufferSubData(vertices->id, 0, 4 * sizeof(Vertex),
+                            readBack.data());
     CHECK(readBack[2].position.x == doctest::Approx(1.0f));
     CHECK(readBack[2].uv.y == doctest::Approx(1.0f));
 

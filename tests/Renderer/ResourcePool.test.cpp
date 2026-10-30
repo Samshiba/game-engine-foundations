@@ -3,11 +3,11 @@
 // Path: tests/Renderer/ResourcePool.test.cpp
 //
 
-#include <doctest.h>
-
 #include <Engine/Renderer/ResourcePool.hpp>
 
 #include <cstdint>
+
+#include <doctest.h>
 
 using namespace GEF::Renderer;
 
@@ -22,7 +22,7 @@ namespace
     };
 
     using Pool = ResourcePool<FakeBuffer, BufferTag>;
-}
+} // namespace
 
 TEST_CASE("A default handle is invalid")
 {
@@ -103,8 +103,8 @@ TEST_CASE("Several freed slots are all reused before the pool grows")
     const BufferHandle y = pool.Insert({ 5, 0 });
     const BufferHandle z = pool.Insert({ 6, 0 }); // no free slot left: grows
 
-    CHECK(((x.index == a.index && y.index == b.index) ||
-        (x.index == b.index && y.index == a.index)));
+    CHECK(((x.index == a.index && y.index == b.index)
+           || (x.index == b.index && y.index == a.index)));
     CHECK(z.index == 3);
 }
 

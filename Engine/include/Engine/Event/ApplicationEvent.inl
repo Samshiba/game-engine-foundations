@@ -8,9 +8,9 @@
 namespace GEF::Events
 {
     inline WindowResizeEvent::WindowResizeEvent(int width, int height)
-        : width_(width), height_(height)
-    {
-    }
+        : width_(width)
+        , height_(height)
+    {}
 
     inline std::string WindowResizeEvent::ToString() const
     {
@@ -30,15 +30,15 @@ namespace GEF::Events
     }
 
     inline KeyPressedEvent::KeyPressedEvent(int key, int repeat)
-        : key_(key), repeat_(repeat)
-    {
-    }
+        : key_(key)
+        , repeat_(repeat)
+    {}
 
     inline std::string KeyPressedEvent::ToString() const
     {
         std::stringstream ss;
         ss << "KeyPressedEvent: " << key_ << ", "
-            << (repeat_ ? "Held" : "Pressed");
+           << (repeat_ ? "Held" : "Pressed");
         return ss.str();
     }
 
@@ -54,8 +54,7 @@ namespace GEF::Events
 
     inline KeyReleasedEvent::KeyReleasedEvent(int key)
         : key_(key)
-    {
-    }
+    {}
 
     inline std::string KeyReleasedEvent::ToString() const
     {
@@ -71,8 +70,7 @@ namespace GEF::Events
 
     inline MouseButtonPressedEvent::MouseButtonPressedEvent(int button)
         : button_(button)
-    {
-    }
+    {}
 
     inline std::string MouseButtonPressedEvent::ToString() const
     {
@@ -88,8 +86,7 @@ namespace GEF::Events
 
     inline MouseButtonReleasedEvent::MouseButtonReleasedEvent(int button)
         : button_(button)
-    {
-    }
+    {}
 
     inline std::string MouseButtonReleasedEvent::ToString() const
     {
@@ -104,9 +101,9 @@ namespace GEF::Events
     }
 
     inline MouseMovedEvent::MouseMovedEvent(double x, double y)
-        : x_(x), y_(y)
-    {
-    }
+        : x_(x)
+        , y_(y)
+    {}
 
     inline std::string MouseMovedEvent::ToString() const
     {
@@ -127,9 +124,9 @@ namespace GEF::Events
 
     inline MouseScrolledEvent::MouseScrolledEvent(double xOffset,
                                                   double yOffset)
-        : xOffset_(xOffset), yOffset_(yOffset)
-    {
-    }
+        : xOffset_(xOffset)
+        , yOffset_(yOffset)
+    {}
 
     inline std::string MouseScrolledEvent::ToString() const
     {
@@ -147,4 +144,4 @@ namespace GEF::Events
     {
         return yOffset_;
     }
-}
+} // namespace GEF::Events

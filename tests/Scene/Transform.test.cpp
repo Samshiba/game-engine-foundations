@@ -5,11 +5,10 @@
 //
 
 #include <doctest.h>
-
-#include <Engine/Scene/Components.hpp>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+
+#include <Engine/Scene/Components.hpp>
 
 using GEF::Scene::Transform;
 
@@ -26,7 +25,7 @@ namespace
     {
         return glm::vec3(transform.GetMatrix() * glm::vec4(point, 1.0f));
     }
-}
+} // namespace
 
 TEST_CASE("A default Transform is the identity")
 {
@@ -48,7 +47,8 @@ TEST_CASE("Position translates, rotation turns, scale stretches")
     {
         // +90 degrees around Y turns +X into -Z (right-handed)
         const Transform transform{
-            .rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0)) };
+            .rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0))
+        };
         CHECK(Near(Apply(transform, { 1, 0, 0 }), { 0, 0, -1 }));
     }
 
@@ -59,14 +59,16 @@ TEST_CASE("Position translates, rotation turns, scale stretches")
     }
 }
 
-TEST_CASE("GetMatrix applies scale, then rotation, then translation (T * R * S)")
+TEST_CASE(
+    "GetMatrix applies scale, then rotation, then translation (T * R * S)")
 {
-    const Transform transform{
-        .position = { 10, 0, 0 },
-        .rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0)),
-        .scale = glm::vec3(2.0f) };
+    const Transform transform{ .position = { 10, 0, 0 },
+                               .rotation = glm::angleAxis(glm::radians(90.0f),
+                                                          glm::vec3(0, 1, 0)),
+                               .scale = glm::vec3(2.0f) };
 
-    // (1,0,0) -> scale -> (2,0,0) -> rotate -> (0,0,-2) -> translate -> (10,0,-2)
+    // (1,0,0) -> scale -> (2,0,0) -> rotate -> (0,0,-2) -> translate ->
+    // (10,0,-2)
     CHECK(Near(Apply(transform, { 1, 0, 0 }), { 10, 0, -2 }));
 
     // The object's origin only moves by the translation: scaling and rotating
@@ -82,7 +84,8 @@ TEST_CASE("GetNormalMatrix is R * S^-1, the inverse transpose of a T * R * S")
         .position = { 3, -2, 7 },
         .rotation = glm::angleAxis(glm::radians(40.0f),
                                    glm::normalize(glm::vec3(1, 2, 3))),
-        .scale = { 2.0f, 0.5f, 3.0f } }; // non-uniform: where it matters
+        .scale = { 2.0f, 0.5f, 3.0f }
+    }; // non-uniform: where it matters
 
     const glm::mat3 expected =
         glm::transpose(glm::inverse(glm::mat3(transform.GetMatrix())));
@@ -107,5 +110,6 @@ TEST_CASE("A normal stays perpendicular to its surface under non-uniform scale")
 
     // The normal matrix keeps it perpendicular
     const glm::vec3 right = transform.GetNormalMatrix() * normal;
-    CHECK(glm::dot(right, scaledTangent) == doctest::Approx(0.0f).epsilon(1e-4));
+    CHECK(glm::dot(right, scaledTangent)
+          == doctest::Approx(0.0f).epsilon(1e-4));
 }

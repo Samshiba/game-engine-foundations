@@ -9,27 +9,26 @@
 // uniform and instance buffers are real GPU objects.
 //
 
-#include <doctest.h>
-
-#include "../Platform/OpenGL/GLTestContext.hpp"
-
-#include <Engine/Core/FileSystem.hpp>
-#include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
-#include <Engine/Renderer/LightingData.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-#include <Engine/Scene/Components.hpp>
 #include <Engine/Scene/SceneRenderer.hpp>
-
-#include <libecs/core/registry/Registry.hpp>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
 
 #include <cstdint>
 #include <filesystem>
 #include <map>
 #include <optional>
 #include <vector>
+
+#include <doctest.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <libecs/core/registry/Registry.hpp>
+
+#include <Engine/Core/FileSystem.hpp>
+#include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
+#include <Engine/Renderer/LightingData.hpp>
+#include <Engine/Renderer/Mesh.hpp>
+#include <Engine/Scene/Components.hpp>
+
+#include "../Platform/OpenGL/GLTestContext.hpp"
 
 using namespace GEF;
 using namespace GEF::Renderer;
@@ -129,8 +128,8 @@ namespace
 
         SceneFixture()
         {
-            const auto dir = std::filesystem::path(GEF_SOURCE_DIR) /
-                "Application" / "assets" / "shaders";
+            const auto dir = std::filesystem::path(GEF_SOURCE_DIR)
+                / "Application" / "assets" / "shaders";
             const auto vertex = FileSystem::ReadTextFile(dir / "lit.vert");
             const auto fragment = FileSystem::ReadTextFile(dir / "lit.frag");
             REQUIRE(vertex.has_value());
@@ -157,7 +156,10 @@ namespace
             return meshes.back();
         }
 
-        void Render() { renderer->Render(registry, camera, cmd); }
+        void Render()
+        {
+            renderer->Render(registry, camera, cmd);
+        }
 
         void AddRenderable(const Transform& transform,
                            const MeshRenderer& meshRenderer)
@@ -180,8 +182,8 @@ namespace
 
         // The instances a draw reads: the buffer behind attribute 3 (a_Model),
         // the first per-instance attribute, on binding 1 of the draw's VAO
-        std::vector<InstanceData> ReadInstances(
-            const RecordingCommandList::Draw& draw) const
+        std::vector<InstanceData>
+        ReadInstances(const RecordingCommandList::Draw& draw) const
         {
             const Platform::GLVertexArray* vao =
                 device.GetVertexArray(draw.vertexArray);
@@ -198,7 +200,8 @@ namespace
             glGetNamedBufferSubData(
                 static_cast<GLuint>(buffer),
                 static_cast<GLintptr>(draw.baseInstance * sizeof(InstanceData)),
-                static_cast<GLsizeiptr>(instances.size() * sizeof(InstanceData)),
+                static_cast<GLsizeiptr>(instances.size()
+                                        * sizeof(InstanceData)),
                 instances.data());
             return instances;
         }
@@ -208,7 +211,7 @@ namespace
     {
         return glm::all(glm::lessThan(glm::abs(a - b), glm::vec3(1e-4f)));
     }
-}
+} // namespace
 
 GL_TEST_CASE("An empty scene draws nothing")
 {
@@ -224,7 +227,8 @@ GL_TEST_CASE("Entities sharing a mesh are drawn in ONE instanced draw")
     SceneFixture scene;
     const Mesh mesh = scene.AddMesh(2);
     for (int i = 0; i < 25; ++i)
-        scene.AddRenderable({ .position = { float(i), 0, 0 } }, { .mesh = mesh });
+        scene.AddRenderable({ .position = { float(i), 0, 0 } },
+                            { .mesh = mesh });
 
     scene.Render();
 
@@ -236,8 +240,8 @@ GL_TEST_CASE("Entities sharing a mesh are drawn in ONE instanced draw")
 GL_TEST_CASE("One draw per mesh, with the right instance count each")
 {
     SceneFixture scene;
-    const Mesh small = scene.AddMesh(1);  // 3 indices
-    const Mesh large = scene.AddMesh(4);  // 12 indices
+    const Mesh small = scene.AddMesh(1); // 3 indices
+    const Mesh large = scene.AddMesh(4); // 12 indices
     for (int i = 0; i < 10; ++i)
         scene.AddRenderable({}, { .mesh = small });
     for (int i = 0; i < 3; ++i)
@@ -284,12 +288,13 @@ GL_TEST_CASE("One pipeline, Frame and Light uniform buffers on their bindings")
     CHECK(scene.cmd.pipelines.size() == 1);
     CHECK(scene.cmd.pipelines[0].IsValid());
     // Per-object data moved to the instance buffer: only per-frame UBOs left
-    for (const uint32_t binding : { UniformBinding::Frame, UniformBinding::Light })
+    for (const uint32_t binding :
+         { UniformBinding::Frame, UniformBinding::Light })
     {
         CAPTURE(binding);
         REQUIRE(scene.cmd.uniformBuffers.contains(binding));
-        CHECK(scene.device.GetBuffer(scene.cmd.uniformBuffers[binding]) !=
-              nullptr);
+        CHECK(scene.device.GetBuffer(scene.cmd.uniformBuffers[binding])
+              != nullptr);
     }
 }
 
@@ -300,9 +305,10 @@ GL_TEST_CASE("The per-frame uniform buffers hold the camera and the light")
 
     const auto sun = scene.registry.CreateEntity();
     scene.registry.EmplaceComponent<DirectionalLight>(
-        sun, DirectionalLight{ .direction = { 0, -2, 0 },
-                               .color = { 1.0f, 0.5f, 0.25f },
-                               .intensity = 2.0f });
+        sun,
+        DirectionalLight{ .direction = { 0, -2, 0 },
+                          .color = { 1.0f, 0.5f, 0.25f },
+                          .intensity = 2.0f });
     scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
 
     scene.Render();
@@ -319,10 +325,10 @@ GL_TEST_CASE("The per-frame uniform buffers hold the camera and the light")
 GL_TEST_CASE("The instance buffer holds each entity's transform and material")
 {
     SceneFixture scene;
-    const Transform transform{
-        .position = { 4, 5, 6 },
-        .rotation = glm::angleAxis(glm::radians(30.0f), glm::vec3(0, 1, 0)),
-        .scale = { 2, 1, 0.5f } };
+    const Transform transform{ .position = { 4, 5, 6 },
+                               .rotation = glm::angleAxis(glm::radians(30.0f),
+                                                          glm::vec3(0, 1, 0)),
+                               .scale = { 2, 1, 0.5f } };
     scene.AddRenderable(transform,
                         { .mesh = scene.AddMesh(1),
                           .material = { .albedo = { 0.5f, 0.5f, 0.5f },
@@ -350,14 +356,16 @@ GL_TEST_CASE("The instance buffer holds each entity's transform and material")
     CHECK(instance.params.y == doctest::Approx(0.25f));
 }
 
-GL_TEST_CASE("The instance buffer grows past its capacity without losing a frame")
+GL_TEST_CASE(
+    "The instance buffer grows past its capacity without losing a frame")
 {
     SceneFixture scene;
     const Mesh mesh = scene.AddMesh(1);
 
     // First frame: a few instances, the batch gets its initial capacity
     for (int i = 0; i < 3; ++i)
-        scene.AddRenderable({ .position = { float(i), 0, 0 } }, { .mesh = mesh });
+        scene.AddRenderable({ .position = { float(i), 0, 0 } },
+                            { .mesh = mesh });
     scene.Render();
     REQUIRE(scene.cmd.draws.size() == 1);
     REQUIRE(scene.cmd.draws[0].instanceCount == 3);
@@ -365,7 +373,8 @@ GL_TEST_CASE("The instance buffer grows past its capacity without losing a frame
     // Far more than any reasonable initial capacity
     constexpr int Total = 3 + 1000;
     for (int i = 3; i < Total; ++i)
-        scene.AddRenderable({ .position = { float(i), 0, 0 } }, { .mesh = mesh });
+        scene.AddRenderable({ .position = { float(i), 0, 0 } },
+                            { .mesh = mesh });
     scene.cmd.Reset();
     scene.Render();
 
@@ -406,7 +415,8 @@ GL_TEST_CASE("Instancing off: one draw per entity, each reading its own slot")
     const Mesh mesh = scene.AddMesh(1);
     constexpr uint32_t Count = 10;
     for (uint32_t i = 0; i < Count; ++i)
-        scene.AddRenderable({ .position = { float(i), 0, 0 } }, { .mesh = mesh });
+        scene.AddRenderable({ .position = { float(i), 0, 0 } },
+                            { .mesh = mesh });
 
     scene.renderer->SetInstancingEnabled(false);
     scene.Render();
@@ -442,7 +452,8 @@ GL_TEST_CASE("Instancing off: one draw per entity, each reading its own slot")
     }
 }
 
-GL_TEST_CASE("The draw call count follows the toggle from one frame to the next")
+GL_TEST_CASE(
+    "The draw call count follows the toggle from one frame to the next")
 {
     SceneFixture scene;
     const Mesh a = scene.AddMesh(1);

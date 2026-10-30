@@ -6,9 +6,9 @@
 // include, or pulls a private one, breaks this file's build.
 //
 
-#include <Engine.hpp>
-
 #include <doctest.h>
+
+#include <Engine.hpp>
 
 TEST_CASE("The umbrella header exposes the public API")
 {

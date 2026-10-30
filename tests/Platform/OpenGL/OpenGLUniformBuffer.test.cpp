@@ -9,16 +9,15 @@
 //   - CommandList::BindUniformBuffer(uint32_t binding, BufferHandle)
 //
 
-#include <doctest.h>
+#include <array>
+#include <cstdint>
 
-#include "GLTestContext.hpp"
+#include <doctest.h>
+#include <glm/glm.hpp>
 
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
 
-#include <glm/glm.hpp>
-
-#include <array>
-#include <cstdint>
+#include "GLTestContext.hpp"
 
 using namespace GEF;
 
@@ -31,8 +30,8 @@ namespace
         glm::vec4 tint;
     };
 
-    Renderer::BufferHandle CreateUniformBuffer(
-        Platform::OpenGLGraphicsDevice& device, uint32_t size)
+    Renderer::BufferHandle
+    CreateUniformBuffer(Platform::OpenGLGraphicsDevice& device, uint32_t size)
     {
         return device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
                                      .usage = Renderer::BufferUsage::Dynamic,
@@ -44,11 +43,11 @@ namespace
                Renderer::BufferHandle handle, uint32_t offset = 0)
     {
         T value{};
-        glGetNamedBufferSubData(device.GetBuffer(handle)->id, offset,
-                                sizeof(T), &value);
+        glGetNamedBufferSubData(device.GetBuffer(handle)->id, offset, sizeof(T),
+                                &value);
         return value;
     }
-}
+} // namespace
 
 GL_TEST_CASE("A uniform buffer is created with its type and size")
 {
@@ -71,7 +70,8 @@ GL_TEST_CASE("UpdateBuffer replaces the whole content")
     const Renderer::BufferHandle handle =
         CreateUniformBuffer(device, sizeof(FrameData));
 
-    const FrameData frame{ glm::mat4(2.0f), glm::vec4(1.0f, 0.5f, 0.25f, 1.0f) };
+    const FrameData frame{ glm::mat4(2.0f),
+                           glm::vec4(1.0f, 0.5f, 0.25f, 1.0f) };
     device.UpdateBuffer(handle, 0, &frame, sizeof(frame));
 
     const auto gpu = ReadBack<FrameData>(device, handle);

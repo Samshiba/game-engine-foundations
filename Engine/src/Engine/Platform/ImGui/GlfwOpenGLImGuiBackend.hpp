@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <Engine/UI/ImGuiBackend.hpp>
 #include <Engine/Core/Window.hpp>
+#include <Engine/UI/ImGuiBackend.hpp>
 
 namespace GEF::Platform
 {
@@ -19,4 +19,4 @@ namespace GEF::Platform
         void BeginFrame() override;
         void EndFrame() override;
     };
-}
+} // namespace GEF::Platform

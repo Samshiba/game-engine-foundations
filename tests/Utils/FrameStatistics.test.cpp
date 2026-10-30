@@ -2,11 +2,11 @@
 // Path: tests/Utils/FrameStatistics.test.cpp
 //
 
-#include <doctest.h>
-
 #include <Engine/Utils/FrameStatistics.hpp>
 
 #include <vector>
+
+#include <doctest.h>
 
 using namespace GEF::Utils;
 

@@ -4,14 +4,14 @@
 //
 
 #include <Engine/Renderer/GraphicsDevice.hpp>
-#include <Engine/Renderer/RendererAPI.hpp>
 
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
+#include <Engine/Renderer/RendererAPI.hpp>
 
 namespace GEF::Renderer
 {
-    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(
-        RendererBackend backend)
+    std::unique_ptr<GraphicsDevice>
+    GraphicsDevice::Create(RendererBackend backend)
     {
         switch (backend)
         {
@@ -34,4 +34,4 @@ namespace GEF::Renderer
             return nullptr;
         }
     }
-}
+} // namespace GEF::Renderer

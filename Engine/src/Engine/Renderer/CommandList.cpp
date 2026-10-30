@@ -3,9 +3,10 @@
 // Path: Engine/src/Engine/Renderer/CommandList.cpp
 //
 
+#include <Engine/Renderer/CommandList.hpp>
+
 #include <algorithm>
 
-#include <Engine/Renderer/CommandList.hpp>
 #include <Engine/Core/Assert.hpp>
 
 namespace GEF::Renderer
@@ -72,10 +73,9 @@ namespace GEF::Renderer
         GEF_CORE_ASSERT(drawPackets_.size() <= SortKey::SEQUENCE_MASK,
                         "Too many draw packets");
 
-        sortKeys_.emplace_back(SortKey::Make(0, pipeline_.index,
-                                             vertexArray_.index, 0,
-                                             static_cast<uint32_t>(drawPackets_.
-                                                 size())));
+        sortKeys_.emplace_back(
+            SortKey::Make(0, pipeline_.index, vertexArray_.index, 0,
+                          static_cast<uint32_t>(drawPackets_.size())));
 
         drawPackets_.emplace_back(pipeline_, vertexArray_, uniformBuffers_,
                                   indexCount, instanceCount, baseInstance);
@@ -86,14 +86,14 @@ namespace GEF::Renderer
         std::ranges::sort(sortKeys_);
     }
 
-    const std::vector<CommandList::FrameCommand>& CommandList::
-    GetFrameCommands() const
+    const std::vector<CommandList::FrameCommand>&
+    CommandList::GetFrameCommands() const
     {
         return frameCommands_;
     }
 
-    const std::vector<CommandList::DrawPacket>& CommandList::
-    GetDrawPackets() const
+    const std::vector<CommandList::DrawPacket>&
+    CommandList::GetDrawPackets() const
     {
         return drawPackets_;
     }
@@ -102,4 +102,4 @@ namespace GEF::Renderer
     {
         return sortKeys_;
     }
-}
+} // namespace GEF::Renderer

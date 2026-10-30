@@ -6,9 +6,9 @@
 // where the test expects, without rounding noise.
 //
 
-#include <doctest.h>
-
 #include <Engine/Utils/FrameTimer.hpp>
+
+#include <doctest.h>
 
 using GEF::Utils::FrameTimer;
 
@@ -47,7 +47,8 @@ TEST_CASE("The worst frame time reveals a stutter the average hides")
     CHECK(timer.GetWorstFrameTime() == doctest::Approx(0.5f)); // the stutter
 }
 
-TEST_CASE("The full statistics of the window are available, percentiles included")
+TEST_CASE(
+    "The full statistics of the window are available, percentiles included")
 {
     FrameTimer timer;
     for (int i = 0; i < 6; ++i)

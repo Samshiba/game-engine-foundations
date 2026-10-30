@@ -5,13 +5,12 @@
 
 #pragma once
 
-#include <Engine/Renderer/GraphicsDevice.hpp>
-#include <Engine/Renderer/CommandList.hpp>
-#include <Engine/Renderer/Camera.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-
 #include <libecs/core/registry/Registry.hpp>
 
+#include <Engine/Renderer/Camera.hpp>
+#include <Engine/Renderer/CommandList.hpp>
+#include <Engine/Renderer/GraphicsDevice.hpp>
+#include <Engine/Renderer/Mesh.hpp>
 
 namespace GEF::Scene
 {
@@ -40,8 +39,7 @@ namespace GEF::Scene
         SceneRenderer& operator=(const SceneRenderer&) = delete;
 
         void Render(const libecs::core::registry::Registry& registry,
-                    const Renderer::Camera& camera,
-                    Renderer::CommandList& cmd);
+                    const Renderer::Camera& camera, Renderer::CommandList& cmd);
 
         void SetInstancingEnabled(bool enabled);
         [[nodiscard]] bool IsInstancingEnabled() const;
@@ -60,4 +58,4 @@ namespace GEF::Scene
 
         bool instancing_ = true;
     };
-}
+} // namespace GEF::Scene

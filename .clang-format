@@ -44,12 +44,20 @@ Cpp11BracedListStyle: false
 DerivePointerAlignment: false
 FixNamespaceComments: true
 ForEachMacros: [ 'ILIST_FOREACH', 'ILIST_FOREACH_ENTRY' ]
+# Include order: own header, standard
+# library, external libraries, engine, local headers.
 IncludeBlocks: Regroup
+IncludeIsMainRegex: '(\.test)?$'
+MainIncludeChar: Any # the own header may be included as <Engine/...>
 IncludeCategories:
-  - Regex: '<.*>'
+  - Regex: '^<[a-z_]+>$'
     Priority: 1
-  - Regex: '.*'
+  - Regex: '^<Engine[/.]'
+    Priority: 3
+  - Regex: '^<'
     Priority: 2
+  - Regex: '^"'
+    Priority: 4
 IndentCaseLabels: false
 IndentPPDirectives: AfterHash
 IndentWidth: 4
@@ -60,7 +68,7 @@ NamespaceIndentation: All
 PointerAlignment: Left
 ReferenceAlignment: Left
 ReflowComments: true
-SeparateDefinitionBlocks: Never
+SeparateDefinitionBlocks: Leave
 SortIncludes: true
 SortUsingDeclarations: false
 SpaceAfterCStyleCast: false

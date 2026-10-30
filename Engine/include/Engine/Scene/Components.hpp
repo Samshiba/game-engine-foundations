@@ -5,11 +5,11 @@
 
 #pragma once
 
-#include <Engine/Renderer/Mesh.hpp>
-
 #include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+
+#include <Engine/Renderer/Mesh.hpp>
 
 namespace GEF::Scene
 {
@@ -25,15 +25,14 @@ namespace GEF::Scene
 
     inline glm::mat4 Transform::GetMatrix() const
     {
-        return glm::translate(glm::mat4(1.0f), position) *
-            glm::mat4_cast(rotation) *
-            glm::scale(glm::mat4(1.0f), scale);
+        return glm::translate(glm::mat4(1.0f), position)
+            * glm::mat4_cast(rotation) * glm::scale(glm::mat4(1.0f), scale);
     }
 
     inline glm::mat3 Transform::GetNormalMatrix() const
     {
-        return glm::mat3_cast(rotation) * glm::mat3(
-            glm::scale(glm::mat4(1), 1.0f / scale));
+        return glm::mat3_cast(rotation)
+            * glm::mat3(glm::scale(glm::mat4(1), 1.0f / scale));
     }
 
     struct Material
@@ -57,4 +56,4 @@ namespace GEF::Scene
         float intensity = 1.0f;
         glm::vec3 ambient{ 0.1f };
     };
-}
+} // namespace GEF::Scene

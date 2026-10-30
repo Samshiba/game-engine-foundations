@@ -5,14 +5,13 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <ostream>
-#include <string>
 #include <sstream>
-#include <algorithm>
+#include <string>
 
 #include <Engine/Utils/FNV-1a.hpp>
-
 
 namespace GEF::Events
 {
@@ -59,7 +58,17 @@ namespace GEF::Events
         return os << e.ToString();
     }
 
-#define EVENT_TYPE(event_type)  static EventType GetStaticEventType() { return GEF::Utils::HashFNV1a(event_type); } \
-                                EventType GetEventType() const override { return GetStaticEventType(); } \
-                                virtual const char* GetName() const override { return #event_type; }
-}
+#define EVENT_TYPE(event_type)                                                 \
+    static EventType GetStaticEventType()                                      \
+    {                                                                          \
+        return GEF::Utils::HashFNV1a(event_type);                              \
+    }                                                                          \
+    EventType GetEventType() const override                                    \
+    {                                                                          \
+        return GetStaticEventType();                                           \
+    }                                                                          \
+    virtual const char* GetName() const override                               \
+    {                                                                          \
+        return #event_type;                                                    \
+    }
+} // namespace GEF::Events

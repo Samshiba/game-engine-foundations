@@ -37,6 +37,7 @@ gef_set_warnings(GEF_Tests)
 # Lets tests read the real project files (e.g. the game's shaders), so a test
 # checks what actually ships, not a copy that could drift
 target_compile_definitions(GEF_Tests PRIVATE
+        GLFW_INCLUDE_NONE # glad is the only GL loader, see Engine/CMakeLists.txt
         GEF_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
 )
 

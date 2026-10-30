@@ -5,17 +5,17 @@
 
 #pragma once
 
-#include <Engine/Renderer/Mesh.hpp>
-
 #include <filesystem>
 #include <optional>
 #include <string_view>
 
+#include <Engine/Renderer/Mesh.hpp>
+
 namespace GEF::Assets
 {
-    [[nodiscard]] std::optional<Renderer::MeshData> ParseObj(
-        std::string_view objText);
+    [[nodiscard]] std::optional<Renderer::MeshData>
+    ParseObj(std::string_view objText);
 
-    [[nodiscard]] std::optional<Renderer::MeshData> LoadObj(
-        const std::filesystem::path& path);
-}
+    [[nodiscard]] std::optional<Renderer::MeshData>
+    LoadObj(const std::filesystem::path& path);
+} // namespace GEF::Assets
