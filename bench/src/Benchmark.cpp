@@ -94,7 +94,7 @@ namespace
     {
         Scenario scenario;
         uint32_t triangles;
-        uint32_t drawCalls;
+        SubmitStats submit; // of the last measured frame
         Utils::FrameStatistics stats;
     };
 
@@ -201,8 +201,9 @@ namespace
             out << "> Not a Release build: numbers are not representative.\n\n";
 
         out << "| Mesh | Triangles/mesh | Entities | Instancing | Draw calls "
-               "| FPS | Mean (ms) | p50 (ms) | p99 (ms) | Worst (ms) |\n";
-        out << "|---|---:|---:|:---:|---:|---:|---:|---:|---:|---:|\n";
+               "| Binds (pipeline/VAO/UBO) | FPS | Mean (ms) | p50 (ms) "
+               "| p99 (ms) | Worst (ms) |\n";
+        out << "|---|---:|---:|:---:|---:|:---:|---:|---:|---:|---:|---:|\n";
         for (const Result& r : results)
         {
             const std::string_view mesh =
@@ -210,8 +211,11 @@ namespace
             out << "| " << mesh << " | " << r.triangles << " | "
                 << r.scenario.entities << " | "
                 << (r.scenario.instancing ? "on" : "off") << " | "
-                << r.drawCalls << " | " << std::setprecision(1) << r.stats.fps
-                << " | " << std::setprecision(2) << r.stats.meanMs << " | "
+                << r.submit.drawCalls << " | " << r.submit.pipelineChanges
+                << "/" << r.submit.vertexArrayChanges << "/"
+                << r.submit.uniformBufferChanges << " | "
+                << std::setprecision(1) << r.stats.fps << " | "
+                << std::setprecision(2) << r.stats.meanMs << " | "
                 << r.stats.p50Ms << " | " << r.stats.p99Ms << " | "
                 << r.stats.worstMs << " |\n";
         }
@@ -268,7 +272,7 @@ public:
         }
         else if (measuring_ && elapsed_ >= options_.measureSeconds)
         {
-            FinishScenario();
+            FinishScenario(ctx.device.GetLastSubmitStats());
             if (current_ + 1 < scenarios_.size())
             {
                 StartScenario(ctx, current_ + 1);
@@ -372,12 +376,12 @@ private:
                   << std::endl;
     }
 
-    void FinishScenario()
+    void FinishScenario(const SubmitStats& submit)
     {
         results_.push_back(
             { .scenario = scenarios_[current_],
               .triangles = triangles_,
-              .drawCalls = renderer_->GetDrawCallCount(),
+              .submit = submit,
               .stats = Utils::ComputeFrameStatistics(frameTimesMs_) });
     }
 
