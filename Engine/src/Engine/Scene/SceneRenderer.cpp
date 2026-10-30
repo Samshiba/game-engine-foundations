@@ -3,12 +3,13 @@
 // Path: Engine/src/Engine/Scene/SceneRenderer.cpp
 //
 
-#include <ranges>
-#include <algorithm>
-
 #include <Engine/Scene/SceneRenderer.hpp>
-#include <Engine/Scene/Components.hpp>
+
+#include <algorithm>
+#include <ranges>
+
 #include <Engine/Renderer/LightingData.hpp>
+#include <Engine/Scene/Components.hpp>
 
 GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device,
                                          Renderer::ShaderHandle litShader)
@@ -17,15 +18,15 @@ GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device,
     pipeline_ = device_.CreatePipeline({ .shader = litShader,
                                          .depth = { true, true },
                                          .cull = Renderer::CullMode::Back });
-    frameUBO_ = device.CreateBuffer(
-    { .type = Renderer::BufferType::Uniform,
-      .usage = Renderer::BufferUsage::Dynamic,
-      .size = sizeof(Renderer::FrameUniforms) });
+    frameUBO_ =
+        device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
+                              .usage = Renderer::BufferUsage::Dynamic,
+                              .size = sizeof(Renderer::FrameUniforms) });
 
-    lightUBO_ = device.CreateBuffer(
-    { .type = Renderer::BufferType::Uniform,
-      .usage = Renderer::BufferUsage::Dynamic,
-      .size = sizeof(Renderer::LightUniforms) });
+    lightUBO_ =
+        device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
+                              .usage = Renderer::BufferUsage::Dynamic,
+                              .size = sizeof(Renderer::LightUniforms) });
 }
 
 GEF::Scene::SceneRenderer::~SceneRenderer()
@@ -45,8 +46,6 @@ void GEF::Scene::SceneRenderer::Render(
     const libecs::core::registry::Registry& registry,
     const Renderer::Camera& camera, Renderer::CommandList& cmd)
 {
-    drawCalls_ = 0;
-
     cmd.BindPipeline(pipeline_);
     cmd.BindUniformBuffer(Renderer::UniformBinding::Frame, frameUBO_);
     cmd.BindUniformBuffer(Renderer::UniformBinding::Light, lightUBO_);
@@ -91,15 +90,13 @@ void GEF::Scene::SceneRenderer::Render(
                 it->second = CreateBatch(mesh, InitialBatchCapacity);
             }
 
-            it->second.instances.push_back(
-                Renderer::InstanceData{
-                    .model = transform.GetMatrix(),
-                    .normalMatrix = transform.GetNormalMatrix(),
-                    .albedo = glm::pow(meshRenderer.material.albedo,
-                                       glm::vec3(2.2f)),
-                    .params = glm::vec2(meshRenderer.material.shininess,
-                                        meshRenderer.material.specularStrength)
-                });
+            it->second.instances.push_back(Renderer::InstanceData{
+                .model = transform.GetMatrix(),
+                .normalMatrix = transform.GetNormalMatrix(),
+                .albedo =
+                    glm::pow(meshRenderer.material.albedo, glm::vec3(2.2f)),
+                .params = glm::vec2(meshRenderer.material.shininess,
+                                    meshRenderer.material.specularStrength) });
         });
 
     // Draw
@@ -122,28 +119,27 @@ void GEF::Scene::SceneRenderer::Render(
         if (instancing_)
         {
             cmd.DrawIndexedInstanced(batch.mesh.indexCount, count, 0);
-            ++drawCalls_;
         }
         else
         {
             for (uint32_t i = 0; i < count; ++i)
                 cmd.DrawIndexedInstanced(batch.mesh.indexCount, 1, i);
-            drawCalls_ += count;
         }
     }
 }
 
-GEF::Scene::SceneRenderer::Batch GEF::Scene::SceneRenderer::CreateBatch(
-    const Renderer::Mesh& mesh, uint32_t capacity)
+GEF::Scene::SceneRenderer::Batch
+GEF::Scene::SceneRenderer::CreateBatch(const Renderer::Mesh& mesh,
+                                       uint32_t capacity)
 {
     Batch batch;
     batch.mesh = mesh;
     batch.capacity = capacity;
-    batch.instanceBuffer = device_.CreateBuffer({
-        .type = Renderer::BufferType::Vertex,
-        .usage = Renderer::BufferUsage::Dynamic,
-        .size = static_cast<uint32_t>(sizeof(Renderer::InstanceData)) * capacity
-    });
+    batch.instanceBuffer = device_.CreateBuffer(
+        { .type = Renderer::BufferType::Vertex,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = static_cast<uint32_t>(sizeof(Renderer::InstanceData))
+              * capacity });
     batch.vertexArray = device_.CreateVertexArray({
         .vertexBuffers = {
             { .buffer = mesh.vertexBuffer,
@@ -165,11 +161,11 @@ void GEF::Scene::SceneRenderer::GrowBatch(Batch& batch, uint32_t capacity)
     device_.DestroyVertexArray(batch.vertexArray);
     device_.DestroyBuffer(batch.instanceBuffer);
 
-    batch.instanceBuffer = device_.CreateBuffer({
-        .type = Renderer::BufferType::Vertex,
-        .usage = Renderer::BufferUsage::Dynamic,
-        .size = static_cast<uint32_t>(sizeof(Renderer::InstanceData)) * capacity
-    });
+    batch.instanceBuffer = device_.CreateBuffer(
+        { .type = Renderer::BufferType::Vertex,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = static_cast<uint32_t>(sizeof(Renderer::InstanceData))
+              * capacity });
     batch.vertexArray = device_.CreateVertexArray({
         .vertexBuffers = {
             { .buffer = batch.mesh.vertexBuffer,
@@ -192,9 +188,4 @@ void GEF::Scene::SceneRenderer::SetInstancingEnabled(bool enabled)
 bool GEF::Scene::SceneRenderer::IsInstancingEnabled() const
 {
     return instancing_;
-}
-
-uint32_t GEF::Scene::SceneRenderer::GetDrawCallCount() const
-{
-    return drawCalls_;
 }

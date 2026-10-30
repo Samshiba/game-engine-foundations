@@ -4,7 +4,8 @@
 //
 
 #include "OpenGLGraphicsDevice.hpp"
-#include "OpenGLCommandList.hpp"
+
+#include <Engine/Utils/Overloaded.hpp>
 
 namespace GEF::Platform
 {
@@ -12,11 +13,11 @@ namespace GEF::Platform
     {
         std::string GetGLString(GLenum name)
         {
-            const auto* value = reinterpret_cast<const char*>(
-                glGetString(name));
+            const auto* value =
+                reinterpret_cast<const char*>(glGetString(name));
             return value ? value : "unknown";
         }
-    }
+    } // namespace
 
     OpenGLGraphicsDevice::OpenGLGraphicsDevice()
         : adapterInfo_{ .vendor = GetGLString(GL_VENDOR),
@@ -30,6 +31,12 @@ namespace GEF::Platform
     const Renderer::AdapterInfo& OpenGLGraphicsDevice::GetAdapterInfo() const
     {
         return adapterInfo_;
+    }
+
+    const Renderer::SubmitStats&
+    OpenGLGraphicsDevice::GetLastSubmitStats() const
+    {
+        return lastSubmitStats_;
     }
 
     OpenGLGraphicsDevice::~OpenGLGraphicsDevice()
@@ -70,8 +77,8 @@ namespace GEF::Platform
         }
     }
 
-    Renderer::BufferHandle OpenGLGraphicsDevice::CreateBuffer(
-        const Renderer::BufferDesc& desc)
+    Renderer::BufferHandle
+    OpenGLGraphicsDevice::CreateBuffer(const Renderer::BufferDesc& desc)
     {
         GLuint id = 0;
         glCreateBuffers(1, &id);
@@ -137,9 +144,9 @@ namespace GEF::Platform
             GEF_CORE_ASSERT(buffer->type == Renderer::BufferType::Vertex,
                             "Buffer is not a vertex buffer");
 
-            glVertexArrayVertexBuffer(vao, b, buffer->id, 0,
-                                      static_cast<GLsizei>(
-                                          binding.layout.GetStride()));
+            glVertexArrayVertexBuffer(
+                vao, b, buffer->id, 0,
+                static_cast<GLsizei>(binding.layout.GetStride()));
             glVertexArrayBindingDivisor(vao, b, binding.instanceDivisor);
 
             const auto addAttribute = [&](GLint count, GLenum type,
@@ -182,8 +189,8 @@ namespace GEF::Platform
                 case Mat4:
                     for (GLint column = 0; column < count; ++column)
                         addAttribute(count, GL_FLOAT, false, element.normalized,
-                                     element.offset + sizeof(float) * count *
-                                     column);
+                                     element.offset
+                                         + sizeof(float) * count * column);
                     break;
                 default:
                     GEF_CORE_ASSERT(false, "Unsupported data type");
@@ -200,8 +207,8 @@ namespace GEF::Platform
         return vertexArrays_.Insert(GLVertexArray{ vao });
     }
 
-    void OpenGLGraphicsDevice::DestroyVertexArray(
-        Renderer::VertexArrayHandle handle)
+    void
+    OpenGLGraphicsDevice::DestroyVertexArray(Renderer::VertexArrayHandle handle)
     {
         auto vertexArray = vertexArrays_.Get(handle);
         if (vertexArray)
@@ -239,17 +246,15 @@ namespace GEF::Platform
             }
             return shader;
         }
-    }
+    } // namespace
 
-    Renderer::ShaderHandle OpenGLGraphicsDevice::CreateShader(
-        const Renderer::ShaderDesc& desc)
+    Renderer::ShaderHandle
+    OpenGLGraphicsDevice::CreateShader(const Renderer::ShaderDesc& desc)
     {
-        const GLuint vs = CompileStage(
-            GL_VERTEX_SHADER, desc.vertexSource);
+        const GLuint vs = CompileStage(GL_VERTEX_SHADER, desc.vertexSource);
         if (!vs)
             return Renderer::ShaderHandle{};
-        const GLuint fs = CompileStage(
-            GL_FRAGMENT_SHADER, desc.fragmentSource);
+        const GLuint fs = CompileStage(GL_FRAGMENT_SHADER, desc.fragmentSource);
         if (!fs)
         {
             glDeleteShader(vs);
@@ -296,8 +301,8 @@ namespace GEF::Platform
         }
     }
 
-    Renderer::PipelineHandle OpenGLGraphicsDevice::CreatePipeline(
-        const Renderer::PipelineDesc& desc)
+    Renderer::PipelineHandle
+    OpenGLGraphicsDevice::CreatePipeline(const Renderer::PipelineDesc& desc)
     {
         GEF_CORE_ASSERT(desc.shader.IsValid(), "Pipeline needs a valid shader");
 
@@ -313,8 +318,8 @@ namespace GEF::Platform
         pipelines_.Remove(handle);
     }
 
-    const GLBuffer* OpenGLGraphicsDevice::GetBuffer(
-        Renderer::BufferHandle handle) const
+    const GLBuffer*
+    OpenGLGraphicsDevice::GetBuffer(Renderer::BufferHandle handle) const
     {
         return buffers_.IsValid(handle) ? buffers_.Get(handle) : nullptr;
     }
@@ -322,32 +327,162 @@ namespace GEF::Platform
     const GLVertexArray* OpenGLGraphicsDevice::GetVertexArray(
         Renderer::VertexArrayHandle handle) const
     {
-        return vertexArrays_.IsValid(handle)
-            ? vertexArrays_.Get(handle)
-            : nullptr;
+        return vertexArrays_.IsValid(handle) ? vertexArrays_.Get(handle)
+                                             : nullptr;
     }
 
-    const GLShader* OpenGLGraphicsDevice::GetShader(
-        Renderer::ShaderHandle handle) const
+    const GLShader*
+    OpenGLGraphicsDevice::GetShader(Renderer::ShaderHandle handle) const
     {
         return shaders_.IsValid(handle) ? shaders_.Get(handle) : nullptr;
     }
 
-    const GLPipeline* OpenGLGraphicsDevice::GetPipeline(
-        Renderer::PipelineHandle handle) const
+    const GLPipeline*
+    OpenGLGraphicsDevice::GetPipeline(Renderer::PipelineHandle handle) const
     {
         return pipelines_.IsValid(handle) ? pipelines_.Get(handle) : nullptr;
     }
 
-    std::shared_ptr<Renderer::CommandList> OpenGLGraphicsDevice::
-    BeginCommandList()
+    void OpenGLGraphicsDevice::Submit(Renderer::CommandList& cmd)
     {
-        return std::make_shared<OpenGLCommandList>(*this);
+        cmd.SortPackets();
+        lastSubmitStats_ = {};
+        BoundState bound{};
+
+        const auto visitor = Utils::Overloaded{
+            [this](const Renderer::CommandList::SetClearColorCommand& command) {
+                SetClearColor(command.r, command.g, command.b, command.a);
+            },
+            [this](const Renderer::CommandList::ClearCommand&) { Clear(); },
+            [this](const Renderer::CommandList::SetViewportCommand& command) {
+                SetViewport(command.x, command.y, command.width,
+                            command.height);
+            },
+        };
+
+        for (const auto& command : cmd.GetFrameCommands())
+        {
+            std::visit(visitor, command);
+        }
+
+        const auto& drawPackets = cmd.GetDrawPackets();
+        for (const uint64_t key : cmd.GetSortKeys())
+        {
+            const auto sequence = Renderer::SortKey::Sequence(key);
+            auto const& packet = drawPackets[sequence];
+
+            if (packet.pipeline != bound.pipeline)
+            {
+                BindPipeline(packet.pipeline);
+                bound.pipeline = packet.pipeline;
+                ++lastSubmitStats_.pipelineChanges;
+            }
+
+            if (packet.vertexArray != bound.vertexArray)
+            {
+                BindVertexArray(packet.vertexArray);
+                bound.vertexArray = packet.vertexArray;
+                ++lastSubmitStats_.vertexArrayChanges;
+            }
+
+            for (uint32_t i = 0; i < Renderer::MaxUniformBindings; ++i)
+            {
+                const auto buffer = packet.uniformBuffers[i];
+                if (buffer.IsValid() && buffer != bound.uniformBuffers[i])
+                {
+                    BindUniformBuffer(i, buffer);
+                    bound.uniformBuffers[i] = buffer;
+                    ++lastSubmitStats_.uniformBufferChanges;
+                }
+            }
+
+            DrawIndexedInstanced(packet.indexCount, packet.instanceCount,
+                                 packet.baseInstance);
+            ++lastSubmitStats_.drawCalls;
+        }
     }
 
-    void OpenGLGraphicsDevice::SubmitCommandList(
-        const std::shared_ptr<Renderer::CommandList>& commandList)
+    void OpenGLGraphicsDevice::SetClearColor(float r, float g, float b, float a)
     {
-        (void)commandList;
+        glClearColor(r, g, b, a);
     }
-}
+
+    void OpenGLGraphicsDevice::Clear()
+    {
+        glDepthMask(GL_TRUE);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
+    void OpenGLGraphicsDevice::SetViewport(uint32_t x, uint32_t y,
+                                           uint32_t width, uint32_t height)
+    {
+        glViewport(x, y, width, height);
+    }
+
+    void
+    OpenGLGraphicsDevice::BindVertexArray(Renderer::VertexArrayHandle handle)
+    {
+        const GLVertexArray* vertexArray = GetVertexArray(handle);
+        GEF_CORE_ASSERT(vertexArray, "Invalid vertex array handle");
+        glBindVertexArray(vertexArray->id);
+    }
+
+    void OpenGLGraphicsDevice::BindPipeline(Renderer::PipelineHandle handle)
+    {
+        const GLPipeline* pipeline = GetPipeline(handle);
+        GEF_CORE_ASSERT(pipeline, "Invalid pipeline handle");
+
+        auto shader = GetShader(pipeline->shader);
+        GEF_CORE_ASSERT(shader, "Invalid shader handle");
+
+        if (!shader)
+            return;
+
+        glUseProgram(shader->program);
+        if (pipeline->depth.test)
+        {
+            glEnable(GL_DEPTH_TEST);
+        }
+        else
+        {
+            glDisable(GL_DEPTH_TEST);
+        }
+        glDepthMask(pipeline->depth.write);
+
+        switch (pipeline->cull)
+        {
+        case Renderer::CullMode::None:
+            glDisable(GL_CULL_FACE);
+            break;
+        case Renderer::CullMode::Front:
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_FRONT);
+            break;
+        case Renderer::CullMode::Back:
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+            break;
+        default:
+            glDisable(GL_CULL_FACE);
+        }
+    }
+
+    void OpenGLGraphicsDevice::BindUniformBuffer(uint32_t bindingPoint,
+                                                 Renderer::BufferHandle handle)
+    {
+        const GLBuffer* buffer = GetBuffer(handle);
+        GEF_CORE_ASSERT(buffer, "Invalid buffer handle");
+        GEF_CORE_ASSERT(buffer->type == Renderer::BufferType::Uniform,
+                        "Buffer is not a uniform buffer");
+        glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, buffer->id);
+    }
+
+    void OpenGLGraphicsDevice::DrawIndexedInstanced(uint32_t indexCount,
+                                                    uint32_t instanceCount,
+                                                    uint32_t baseInstance)
+    {
+        glDrawElementsInstancedBaseInstance(
+            GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT,
+            nullptr, static_cast<GLsizei>(instanceCount), baseInstance);
+    }
+} // namespace GEF::Platform

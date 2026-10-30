@@ -5,23 +5,20 @@
 
 #pragma once
 
-#include <iostream>
-#include <string>
-#include <sstream>
-
-#include <memory>
-#include <utility>
 #include <algorithm>
-#include <functional>
-
 #include <array>
-#include <vector>
 #include <deque>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
+#include <Engine/Core/Assert.hpp>
 #include <Engine/Core/Base.hpp>
 #include <Engine/Core/Log.hpp>
-#include <Engine/Core/Assert.hpp>
-
 #include <Engine/Utils/FNV-1a.hpp>

@@ -3,14 +3,14 @@
 // Path: tests/Platform/OpenGL/OpenGLGraphicsDevice.test.cpp
 //
 
-#include <doctest.h>
-
-#include "GLTestContext.hpp"
-
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
 
 #include <array>
 #include <cstdint>
+
+#include <doctest.h>
+
+#include "GLTestContext.hpp"
 
 using namespace GEF;
 
@@ -25,7 +25,7 @@ namespace
                  .size = static_cast<uint32_t>(sizeof(Vertices)),
                  .data = Vertices.data() };
     }
-}
+} // namespace
 
 GL_TEST_CASE("CreateBuffer returns a valid handle to a GL buffer")
 {
@@ -147,7 +147,8 @@ namespace
         Renderer::BufferHandle indices;
     };
 
-    TriangleBuffers CreateTriangleBuffers(Platform::OpenGLGraphicsDevice& device)
+    TriangleBuffers
+    CreateTriangleBuffers(Platform::OpenGLGraphicsDevice& device)
     {
         static constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
         return { device.CreateBuffer(VertexDesc()),
@@ -164,7 +165,7 @@ namespace
         return { { Renderer::ShaderDataType::Float3, "a_Position" },
                  { Renderer::ShaderDataType::Float3, "a_Color" } };
     }
-}
+} // namespace
 
 GL_TEST_CASE("CreateVertexArray returns a valid handle to a GL vertex array")
 {
@@ -201,9 +202,11 @@ GL_TEST_CASE("One binding: every attribute reads the same interleaved buffer")
     for (GLuint attrib = 0; attrib < 2; ++attrib)
     {
         CAPTURE(attrib);
-        CHECK(AttribParam(vao, attrib, GL_VERTEX_ATTRIB_ARRAY_ENABLED) == GL_TRUE);
+        CHECK(AttribParam(vao, attrib, GL_VERTEX_ATTRIB_ARRAY_ENABLED)
+              == GL_TRUE);
         CHECK(AttribParam(vao, attrib, GL_VERTEX_ATTRIB_ARRAY_SIZE) == 3);
-        CHECK(AttribParam(vao, attrib, GL_VERTEX_ATTRIB_ARRAY_TYPE) == GL_FLOAT);
+        CHECK(AttribParam(vao, attrib, GL_VERTEX_ATTRIB_ARRAY_TYPE)
+              == GL_FLOAT);
         CHECK(AttribParam(vao, attrib, GL_VERTEX_ATTRIB_ARRAY_DIVISOR) == 0);
         CHECK(AttribBinding(vao, attrib) == 0);
     }
@@ -214,8 +217,8 @@ GL_TEST_CASE("One binding: every attribute reads the same interleaved buffer")
     // The index buffer is attached to the VAO
     GLint elementBuffer = 0;
     glGetVertexArrayiv(vao, GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementBuffer);
-    CHECK(static_cast<GLuint>(elementBuffer) ==
-          device.GetBuffer(buffers.indices)->id);
+    CHECK(static_cast<GLuint>(elementBuffer)
+          == device.GetBuffer(buffers.indices)->id);
 
     device.DestroyVertexArray(handle);
     device.DestroyBuffer(buffers.indices);
@@ -227,10 +230,10 @@ GL_TEST_CASE("Two bindings: per-instance attributes continue the numbering")
     Platform::OpenGLGraphicsDevice device;
     const TriangleBuffers buffers = CreateTriangleBuffers(device);
     // One mat4 (64 bytes) + one vec4 color per instance
-    const Renderer::BufferHandle instances = device.CreateBuffer(
-        { .type = Renderer::BufferType::Vertex,
-          .usage = Renderer::BufferUsage::Dynamic,
-          .size = 2 * 80 });
+    const Renderer::BufferHandle instances =
+        device.CreateBuffer({ .type = Renderer::BufferType::Vertex,
+                              .usage = Renderer::BufferUsage::Dynamic,
+                              .size = 2 * 80 });
 
     const Renderer::VertexArrayHandle handle = device.CreateVertexArray({
         .vertexBuffers = {
@@ -256,8 +259,8 @@ GL_TEST_CASE("Two bindings: per-instance attributes continue the numbering")
         CHECK(AttribBinding(vao, attrib) == 1);
         CHECK(AttribParam(vao, attrib, GL_VERTEX_ATTRIB_ARRAY_SIZE) == 4);
         CHECK(AttribParam(vao, attrib, GL_VERTEX_ATTRIB_ARRAY_DIVISOR) == 1);
-        CHECK(AttribParam(vao, attrib, GL_VERTEX_ATTRIB_RELATIVE_OFFSET) ==
-              static_cast<GLint>(16 * column));
+        CHECK(AttribParam(vao, attrib, GL_VERTEX_ATTRIB_RELATIVE_OFFSET)
+              == static_cast<GLint>(16 * column));
     }
 
     // The tint follows the matrix in the instance buffer
@@ -270,7 +273,8 @@ GL_TEST_CASE("Two bindings: per-instance attributes continue the numbering")
     device.DestroyBuffer(buffers.vertices);
 }
 
-GL_TEST_CASE("DestroyVertexArray deletes the GL vertex array and invalidates the handle")
+GL_TEST_CASE(
+    "DestroyVertexArray deletes the GL vertex array and invalidates the handle")
 {
     Platform::OpenGLGraphicsDevice device;
     const TriangleBuffers buffers = CreateTriangleBuffers(device);

@@ -1,100 +1,45 @@
 //
 // Path: tests/Scene/SceneRenderer.test.cpp
 //
-// The SceneRenderer draws a libecs registry through the CommandList
-// interface, one instanced draw per mesh. A recording CommandList (a test
-// double) stands in for the OpenGL one: it records the calls instead of
-// executing them, so the tests check *what* the renderer asks for. Only
-// possible because CommandList is an API-independent interface. Meshes,
-// uniform and instance buffers are real GPU objects.
+// The SceneRenderer draws a libecs registry through the CommandList, one
+// instanced draw per mesh. The CommandList only records: each draw becomes a
+// packet holding the state bound at that moment, so the tests read the
+// packets to check *what* the renderer asks for. Submit is only called where
+// the executed draw count matters. Meshes, uniform and instance buffers are
+// real GPU objects.
 //
 
-#include <doctest.h>
-
-#include "../Platform/OpenGL/GLTestContext.hpp"
-
-#include <Engine/Core/FileSystem.hpp>
-#include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
-#include <Engine/Renderer/LightingData.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-#include <Engine/Scene/Components.hpp>
 #include <Engine/Scene/SceneRenderer.hpp>
-
-#include <libecs/core/registry/Registry.hpp>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
 
 #include <cstdint>
 #include <filesystem>
 #include <map>
 #include <optional>
+#include <span>
 #include <vector>
+
+#include <doctest.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <libecs/core/registry/Registry.hpp>
+
+#include <Engine/Core/FileSystem.hpp>
+#include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
+#include <Engine/Renderer/CommandList.hpp>
+#include <Engine/Renderer/LightingData.hpp>
+#include <Engine/Renderer/Mesh.hpp>
+#include <Engine/Scene/Components.hpp>
+
+#include "../Platform/OpenGL/GLTestContext.hpp"
 
 using namespace GEF;
 using namespace GEF::Renderer;
 using namespace GEF::Scene;
 using Registry = libecs::core::registry::Registry;
+using DrawPacket = CommandList::DrawPacket;
 
 namespace
 {
-    // Records every call; a draw remembers the vertex array bound before it
-    class RecordingCommandList final : public CommandList
-    {
-    public:
-        struct Draw
-        {
-            VertexArrayHandle vertexArray;
-            uint32_t indexCount;
-            uint32_t instanceCount;
-            uint32_t baseInstance;
-        };
-
-        std::vector<PipelineHandle> pipelines;
-        std::map<uint32_t, BufferHandle> uniformBuffers; // binding -> buffer
-        std::vector<Draw> draws;
-
-        void SetClearColor(float, float, float, float) override {}
-        void Clear() override {}
-
-        void BindVertexArray(VertexArrayHandle handle) override
-        {
-            boundVertexArray_ = handle;
-        }
-
-        void BindPipeline(PipelineHandle handle) override
-        {
-            pipelines.push_back(handle);
-        }
-
-        void BindUniformBuffer(uint32_t binding, BufferHandle handle) override
-        {
-            uniformBuffers[binding] = handle;
-        }
-
-        void DrawIndexed(uint32_t indexCount) override
-        {
-            draws.push_back({ boundVertexArray_, indexCount, 1, 0 });
-        }
-
-        void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount,
-                                  uint32_t baseInstance) override
-        {
-            draws.push_back(
-                { boundVertexArray_, indexCount, instanceCount, baseInstance });
-        }
-
-        void Reset()
-        {
-            pipelines.clear();
-            uniformBuffers.clear();
-            draws.clear();
-        }
-
-    private:
-        VertexArrayHandle boundVertexArray_;
-    };
-
     // A flat polygon with `triangles` triangles: meshes are told apart by
     // their index count (3 per triangle)
     MeshData Fan(uint32_t triangles)
@@ -125,12 +70,12 @@ namespace
         std::vector<Mesh> meshes;
         Registry registry;
         Camera camera;
-        RecordingCommandList cmd;
+        CommandList cmd;
 
         SceneFixture()
         {
-            const auto dir = std::filesystem::path(GEF_SOURCE_DIR) /
-                "Application" / "assets" / "shaders";
+            const auto dir = std::filesystem::path(GEF_SOURCE_DIR)
+                / "Application" / "assets" / "shaders";
             const auto vertex = FileSystem::ReadTextFile(dir / "lit.vert");
             const auto fragment = FileSystem::ReadTextFile(dir / "lit.frag");
             REQUIRE(vertex.has_value());
@@ -157,7 +102,24 @@ namespace
             return meshes.back();
         }
 
-        void Render() { renderer->Render(registry, camera, cmd); }
+        // One frame: a fresh list, then the renderer records into it
+        void Render()
+        {
+            cmd.Reset();
+            renderer->Render(registry, camera, cmd);
+        }
+
+        std::span<const DrawPacket> Draws() const
+        {
+            return cmd.GetDrawPackets();
+        }
+
+        // What actually reached the GPU
+        uint32_t SubmittedDrawCalls()
+        {
+            device.Submit(cmd);
+            return device.GetLastSubmitStats().drawCalls;
+        }
 
         void AddRenderable(const Transform& transform,
                            const MeshRenderer& meshRenderer)
@@ -171,17 +133,17 @@ namespace
         T ReadUniforms(uint32_t binding) const
         {
             T value{};
-            const auto it = cmd.uniformBuffers.find(binding);
-            REQUIRE(it != cmd.uniformBuffers.end());
-            glGetNamedBufferSubData(device.GetBuffer(it->second)->id, 0,
-                                    sizeof(T), &value);
+            REQUIRE(!Draws().empty());
+            const BufferHandle buffer = Draws()[0].uniformBuffers[binding];
+            REQUIRE(device.GetBuffer(buffer) != nullptr);
+            glGetNamedBufferSubData(device.GetBuffer(buffer)->id, 0, sizeof(T),
+                                    &value);
             return value;
         }
 
         // The instances a draw reads: the buffer behind attribute 3 (a_Model),
         // the first per-instance attribute, on binding 1 of the draw's VAO
-        std::vector<InstanceData> ReadInstances(
-            const RecordingCommandList::Draw& draw) const
+        std::vector<InstanceData> ReadInstances(const DrawPacket& draw) const
         {
             const Platform::GLVertexArray* vao =
                 device.GetVertexArray(draw.vertexArray);
@@ -198,7 +160,8 @@ namespace
             glGetNamedBufferSubData(
                 static_cast<GLuint>(buffer),
                 static_cast<GLintptr>(draw.baseInstance * sizeof(InstanceData)),
-                static_cast<GLsizeiptr>(instances.size() * sizeof(InstanceData)),
+                static_cast<GLsizeiptr>(instances.size()
+                                        * sizeof(InstanceData)),
                 instances.data());
             return instances;
         }
@@ -208,7 +171,7 @@ namespace
     {
         return glm::all(glm::lessThan(glm::abs(a - b), glm::vec3(1e-4f)));
     }
-}
+} // namespace
 
 GL_TEST_CASE("An empty scene draws nothing")
 {
@@ -216,7 +179,7 @@ GL_TEST_CASE("An empty scene draws nothing")
 
     scene.Render();
 
-    CHECK(scene.cmd.draws.empty());
+    CHECK(scene.Draws().empty());
 }
 
 GL_TEST_CASE("Entities sharing a mesh are drawn in ONE instanced draw")
@@ -224,20 +187,21 @@ GL_TEST_CASE("Entities sharing a mesh are drawn in ONE instanced draw")
     SceneFixture scene;
     const Mesh mesh = scene.AddMesh(2);
     for (int i = 0; i < 25; ++i)
-        scene.AddRenderable({ .position = { float(i), 0, 0 } }, { .mesh = mesh });
+        scene.AddRenderable({ .position = { float(i), 0, 0 } },
+                            { .mesh = mesh });
 
     scene.Render();
 
-    REQUIRE(scene.cmd.draws.size() == 1);
-    CHECK(scene.cmd.draws[0].indexCount == mesh.indexCount);
-    CHECK(scene.cmd.draws[0].instanceCount == 25);
+    REQUIRE(scene.Draws().size() == 1);
+    CHECK(scene.Draws()[0].indexCount == mesh.indexCount);
+    CHECK(scene.Draws()[0].instanceCount == 25);
 }
 
 GL_TEST_CASE("One draw per mesh, with the right instance count each")
 {
     SceneFixture scene;
-    const Mesh small = scene.AddMesh(1);  // 3 indices
-    const Mesh large = scene.AddMesh(4);  // 12 indices
+    const Mesh small = scene.AddMesh(1); // 3 indices
+    const Mesh large = scene.AddMesh(4); // 12 indices
     for (int i = 0; i < 10; ++i)
         scene.AddRenderable({}, { .mesh = small });
     for (int i = 0; i < 3; ++i)
@@ -246,9 +210,9 @@ GL_TEST_CASE("One draw per mesh, with the right instance count each")
     scene.Render();
 
     // Batch iteration order is unspecified: index by index count
-    REQUIRE(scene.cmd.draws.size() == 2);
+    REQUIRE(scene.Draws().size() == 2);
     std::map<uint32_t, uint32_t> instancesByIndexCount;
-    for (const auto& draw : scene.cmd.draws)
+    for (const auto& draw : scene.Draws())
         instancesByIndexCount[draw.indexCount] = draw.instanceCount;
     CHECK(instancesByIndexCount[3] == 10);
     CHECK(instancesByIndexCount[12] == 3);
@@ -270,8 +234,8 @@ GL_TEST_CASE("Entities missing a Transform or a MeshRenderer are not drawn")
 
     scene.Render();
 
-    REQUIRE(scene.cmd.draws.size() == 1);
-    CHECK(scene.cmd.draws[0].instanceCount == 1);
+    REQUIRE(scene.Draws().size() == 1);
+    CHECK(scene.Draws()[0].instanceCount == 1);
 }
 
 GL_TEST_CASE("One pipeline, Frame and Light uniform buffers on their bindings")
@@ -281,15 +245,15 @@ GL_TEST_CASE("One pipeline, Frame and Light uniform buffers on their bindings")
 
     scene.Render();
 
-    CHECK(scene.cmd.pipelines.size() == 1);
-    CHECK(scene.cmd.pipelines[0].IsValid());
+    REQUIRE(scene.Draws().size() == 1);
+    const DrawPacket& draw = scene.Draws()[0];
+    CHECK(scene.device.GetPipeline(draw.pipeline) != nullptr);
     // Per-object data moved to the instance buffer: only per-frame UBOs left
-    for (const uint32_t binding : { UniformBinding::Frame, UniformBinding::Light })
+    for (const uint32_t binding :
+         { UniformBinding::Frame, UniformBinding::Light })
     {
         CAPTURE(binding);
-        REQUIRE(scene.cmd.uniformBuffers.contains(binding));
-        CHECK(scene.device.GetBuffer(scene.cmd.uniformBuffers[binding]) !=
-              nullptr);
+        CHECK(scene.device.GetBuffer(draw.uniformBuffers[binding]) != nullptr);
     }
 }
 
@@ -300,9 +264,10 @@ GL_TEST_CASE("The per-frame uniform buffers hold the camera and the light")
 
     const auto sun = scene.registry.CreateEntity();
     scene.registry.EmplaceComponent<DirectionalLight>(
-        sun, DirectionalLight{ .direction = { 0, -2, 0 },
-                               .color = { 1.0f, 0.5f, 0.25f },
-                               .intensity = 2.0f });
+        sun,
+        DirectionalLight{ .direction = { 0, -2, 0 },
+                          .color = { 1.0f, 0.5f, 0.25f },
+                          .intensity = 2.0f });
     scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
 
     scene.Render();
@@ -319,10 +284,10 @@ GL_TEST_CASE("The per-frame uniform buffers hold the camera and the light")
 GL_TEST_CASE("The instance buffer holds each entity's transform and material")
 {
     SceneFixture scene;
-    const Transform transform{
-        .position = { 4, 5, 6 },
-        .rotation = glm::angleAxis(glm::radians(30.0f), glm::vec3(0, 1, 0)),
-        .scale = { 2, 1, 0.5f } };
+    const Transform transform{ .position = { 4, 5, 6 },
+                               .rotation = glm::angleAxis(glm::radians(30.0f),
+                                                          glm::vec3(0, 1, 0)),
+                               .scale = { 2, 1, 0.5f } };
     scene.AddRenderable(transform,
                         { .mesh = scene.AddMesh(1),
                           .material = { .albedo = { 0.5f, 0.5f, 0.5f },
@@ -331,8 +296,8 @@ GL_TEST_CASE("The instance buffer holds each entity's transform and material")
 
     scene.Render();
 
-    REQUIRE(scene.cmd.draws.size() == 1);
-    const auto instances = scene.ReadInstances(scene.cmd.draws[0]);
+    REQUIRE(scene.Draws().size() == 1);
+    const auto instances = scene.ReadInstances(scene.Draws()[0]);
     REQUIRE(instances.size() == 1);
     const InstanceData& instance = instances[0];
 
@@ -350,31 +315,33 @@ GL_TEST_CASE("The instance buffer holds each entity's transform and material")
     CHECK(instance.params.y == doctest::Approx(0.25f));
 }
 
-GL_TEST_CASE("The instance buffer grows past its capacity without losing a frame")
+GL_TEST_CASE(
+    "The instance buffer grows past its capacity without losing a frame")
 {
     SceneFixture scene;
     const Mesh mesh = scene.AddMesh(1);
 
     // First frame: a few instances, the batch gets its initial capacity
     for (int i = 0; i < 3; ++i)
-        scene.AddRenderable({ .position = { float(i), 0, 0 } }, { .mesh = mesh });
+        scene.AddRenderable({ .position = { float(i), 0, 0 } },
+                            { .mesh = mesh });
     scene.Render();
-    REQUIRE(scene.cmd.draws.size() == 1);
-    REQUIRE(scene.cmd.draws[0].instanceCount == 3);
+    REQUIRE(scene.Draws().size() == 1);
+    REQUIRE(scene.Draws()[0].instanceCount == 3);
 
     // Far more than any reasonable initial capacity
     constexpr int Total = 3 + 1000;
     for (int i = 3; i < Total; ++i)
-        scene.AddRenderable({ .position = { float(i), 0, 0 } }, { .mesh = mesh });
-    scene.cmd.Reset();
+        scene.AddRenderable({ .position = { float(i), 0, 0 } },
+                            { .mesh = mesh });
     scene.Render();
 
     // The frame where the buffer grows must still draw every instance
-    REQUIRE(scene.cmd.draws.size() == 1);
-    CHECK(scene.cmd.draws[0].instanceCount == Total);
+    REQUIRE(scene.Draws().size() == 1);
+    CHECK(scene.Draws()[0].instanceCount == Total);
 
     // ...with the data of all of them, in the new buffer
-    const auto instances = scene.ReadInstances(scene.cmd.draws[0]);
+    const auto instances = scene.ReadInstances(scene.Draws()[0]);
     REQUIRE(instances.size() == Total);
     float maxX = -1.0f;
     for (const InstanceData& instance : instances)
@@ -392,10 +359,10 @@ GL_TEST_CASE("Instancing on: one draw per mesh, reading from the first slot")
     REQUIRE(scene.renderer->IsInstancingEnabled()); // the default
     scene.Render();
 
-    REQUIRE(scene.cmd.draws.size() == 1);
-    CHECK(scene.cmd.draws[0].instanceCount == 10);
-    CHECK(scene.cmd.draws[0].baseInstance == 0);
-    CHECK(scene.renderer->GetDrawCallCount() == 1);
+    REQUIRE(scene.Draws().size() == 1);
+    CHECK(scene.Draws()[0].instanceCount == 10);
+    CHECK(scene.Draws()[0].baseInstance == 0);
+    CHECK(scene.SubmittedDrawCalls() == 1);
 }
 
 GL_TEST_CASE("Instancing off: one draw per entity, each reading its own slot")
@@ -406,20 +373,21 @@ GL_TEST_CASE("Instancing off: one draw per entity, each reading its own slot")
     const Mesh mesh = scene.AddMesh(1);
     constexpr uint32_t Count = 10;
     for (uint32_t i = 0; i < Count; ++i)
-        scene.AddRenderable({ .position = { float(i), 0, 0 } }, { .mesh = mesh });
+        scene.AddRenderable({ .position = { float(i), 0, 0 } },
+                            { .mesh = mesh });
 
     scene.renderer->SetInstancingEnabled(false);
     scene.Render();
 
-    REQUIRE(scene.cmd.draws.size() == Count);
-    CHECK(scene.renderer->GetDrawCallCount() == Count);
+    REQUIRE(scene.Draws().size() == Count);
+    CHECK(scene.SubmittedDrawCalls() == Count);
 
     // Each draw reads its own slot, so each draw sees a different entity.
     // (Slot order follows the view's iteration order, which libecs leaves
     // unspecified (it walks backwards): don't assume slot i = entity i.)
     std::vector<bool> slotDrawn(Count, false);
     std::vector<bool> entityDrawn(Count, false);
-    for (const auto& draw : scene.cmd.draws)
+    for (const auto& draw : scene.Draws())
     {
         CHECK(draw.instanceCount == 1);
         REQUIRE(draw.baseInstance < Count);
@@ -442,7 +410,8 @@ GL_TEST_CASE("Instancing off: one draw per entity, each reading its own slot")
     }
 }
 
-GL_TEST_CASE("The draw call count follows the toggle from one frame to the next")
+GL_TEST_CASE(
+    "The draw call count follows the toggle from one frame to the next")
 {
     SceneFixture scene;
     const Mesh a = scene.AddMesh(1);
@@ -453,15 +422,13 @@ GL_TEST_CASE("The draw call count follows the toggle from one frame to the next"
         scene.AddRenderable({}, { .mesh = b });
 
     scene.Render();
-    CHECK(scene.renderer->GetDrawCallCount() == 2); // one per mesh
+    CHECK(scene.SubmittedDrawCalls() == 2); // one per mesh
 
     scene.renderer->SetInstancingEnabled(false);
-    scene.cmd.Reset();
     scene.Render();
-    CHECK(scene.renderer->GetDrawCallCount() == 8); // one per entity
+    CHECK(scene.SubmittedDrawCalls() == 8); // one per entity
 
     scene.renderer->SetInstancingEnabled(true);
-    scene.cmd.Reset();
     scene.Render();
-    CHECK(scene.renderer->GetDrawCallCount() == 2); // reset each frame
+    CHECK(scene.SubmittedDrawCalls() == 2); // reset each frame
 }

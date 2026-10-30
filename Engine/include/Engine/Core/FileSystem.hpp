@@ -13,8 +13,8 @@ namespace GEF::FileSystem
 {
     [[nodiscard]] const std::filesystem::path& GetExecutableDirectory();
     [[nodiscard]] std::filesystem::path AssetsDirectory();
-    [[nodiscard]] std::filesystem::path AssetPath(
-        const std::filesystem::path& relative);
-    [[nodiscard]] std::optional<std::string> ReadTextFile(
-        const std::filesystem::path& path);
-}
+    [[nodiscard]] std::filesystem::path
+    AssetPath(const std::filesystem::path& relative);
+    [[nodiscard]] std::optional<std::string>
+    ReadTextFile(const std::filesystem::path& path);
+} // namespace GEF::FileSystem

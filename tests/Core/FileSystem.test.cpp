@@ -5,13 +5,13 @@
 // GetExecutableDirectory (/proc/self/exe) is covered by the GCC/Clang jobs.
 //
 
-#include <doctest.h>
-
 #include <Engine/Core/FileSystem.hpp>
 
 #include <filesystem>
 #include <fstream>
 #include <string>
+
+#include <doctest.h>
 
 namespace fs = std::filesystem;
 using namespace GEF;
@@ -37,12 +37,15 @@ namespace
         TempFile(const TempFile&) = delete;
         TempFile& operator=(const TempFile&) = delete;
 
-        [[nodiscard]] const fs::path& Path() const { return path_; }
+        [[nodiscard]] const fs::path& Path() const
+        {
+            return path_;
+        }
 
     private:
         fs::path path_;
     };
-}
+} // namespace
 
 TEST_CASE("GetExecutableDirectory is the directory holding the test executable")
 {
@@ -71,13 +74,14 @@ TEST_CASE("GetExecutableDirectory is computed once and stays stable")
     CHECK(first == second);
 }
 
-TEST_CASE("AssetsDirectory and AssetPath are built from the executable directory")
+TEST_CASE(
+    "AssetsDirectory and AssetPath are built from the executable directory")
 {
     const fs::path assets = FileSystem::AssetsDirectory();
 
     CHECK(assets == FileSystem::GetExecutableDirectory() / "assets");
-    CHECK(FileSystem::AssetPath("shaders/basic.vert") ==
-          assets / "shaders" / "basic.vert");
+    CHECK(FileSystem::AssetPath("shaders/basic.vert")
+          == assets / "shaders" / "basic.vert");
 }
 
 TEST_CASE("ReadTextFile returns the exact content of a file")
@@ -99,7 +103,7 @@ TEST_CASE("ReadTextFile tells an empty file apart from a missing one")
     const auto read = FileSystem::ReadTextFile(empty.Path());
 
     REQUIRE(read.has_value()); // exists...
-    CHECK(read->empty());      // ...and is empty
+    CHECK(read->empty()); // ...and is empty
 }
 
 TEST_CASE("ReadTextFile returns nullopt for a missing file")

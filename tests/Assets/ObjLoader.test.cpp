@@ -5,15 +5,14 @@
 // CI job. The OBJ files are written inline, small enough to check by hand.
 //
 
-#include <doctest.h>
-
 #include <Engine/Assets/ObjLoader.hpp>
-
-#include <glm/glm.hpp>
 
 #include <filesystem>
 #include <fstream>
 #include <string>
+
+#include <doctest.h>
+#include <glm/glm.hpp>
 
 using namespace GEF::Renderer;
 using GEF::Assets::LoadObj;
@@ -79,7 +78,7 @@ f 5//4 1//4 4//4 8//4
 f 4//5 3//5 7//5 8//5
 f 5//6 6//6 2//6 1//6
 )";
-}
+} // namespace
 
 TEST_CASE("ParseObj reads a triangle")
 {
@@ -226,13 +225,15 @@ TEST_CASE("ParseObj rejects invalid files without crashing")
 {
     SUBCASE("zero index (OBJ indices start at 1): tinyobj reports an error")
     {
-        CHECK_FALSE(ParseObj("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 0 1 2\n").has_value());
+        CHECK_FALSE(
+            ParseObj("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 0 1 2\n").has_value());
     }
 
     SUBCASE("out of bounds index: tinyobj only warns, the loader must check")
     {
         // Reading position 9 of 3 would go past the end of the array
-        CHECK_FALSE(ParseObj("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 9\n").has_value());
+        CHECK_FALSE(
+            ParseObj("v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 9\n").has_value());
     }
 
     SUBCASE("nothing to draw")

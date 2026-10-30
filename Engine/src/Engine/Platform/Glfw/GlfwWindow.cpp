@@ -3,10 +3,11 @@
 // Path: Engine/src/Engine/Platform/Glfw/GlfwWindow.cpp
 //
 
-#include <Engine/Platform/OpenGL/OpenGlContext.hpp>
-#include <Engine/Event/ApplicationEvent.hpp>
-
 #include "GlfwWindow.hpp"
+
+#include <Engine/Event/ApplicationEvent.hpp>
+#include <Engine/Platform/OpenGL/OpenGlContext.hpp>
+
 #include "Commons.hpp"
 
 namespace GEF::Platform
@@ -16,7 +17,7 @@ namespace GEF::Platform
         // GLFW is initialized with the first window and terminated with the
         // last one, so windows can be created and destroyed in any order
         uint32_t s_WindowCount = 0;
-    }
+    } // namespace
 
     GlfwWindow::GlfwWindow(const WindowProps& props,
                            Renderer::RendererBackend backend)
@@ -144,9 +145,8 @@ namespace GEF::Platform
 #endif
 
         glfwWindowHint(GLFW_RESIZABLE,
-                       (props.flags & FLAGS_RESIZE_DISABLED)
-                       ? GLFW_FALSE
-                       : GLFW_TRUE);
+                       (props.flags & FLAGS_RESIZE_DISABLED) ? GLFW_FALSE
+                                                             : GLFW_TRUE);
 
         GLFWmonitor* monitor = nullptr;
         if (windowData_.windowMode == WindowMode::FULLSCREEN)
@@ -154,11 +154,9 @@ namespace GEF::Platform
             monitor = glfwGetPrimaryMonitor();
         }
 
-        GLFWwindow* window =
-            glfwCreateWindow(static_cast<int>(props.width),
-                             static_cast<int>(props.height),
-                             props.title.c_str(),
-                             monitor, nullptr);
+        GLFWwindow* window = glfwCreateWindow(
+            static_cast<int>(props.width), static_cast<int>(props.height),
+            props.title.c_str(), monitor, nullptr);
         if (!window)
         {
             GEF_ENGINE_ERROR("Failed to create GLFW window");
@@ -195,7 +193,8 @@ namespace GEF::Platform
 
     void GlfwWindow::Shutdown()
     {
-        // TODO multi-window: Engine owns N windows, per-window context/input/ImGui
+        // TODO multi-window: Engine owns N windows, per-window
+        // context/input/ImGui
         if (!window_)
             return;
 
@@ -225,8 +224,8 @@ namespace GEF::Platform
     void GlfwWindow::WindowResizeCallback(GLFWwindow* window, int width,
                                           int height)
     {
-        auto& data = *static_cast<WindowData*>(
-            glfwGetWindowUserPointer(window));
+        auto& data =
+            *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
 
         data.width = width;
         data.height = height;
@@ -237,23 +236,23 @@ namespace GEF::Platform
 
     void GlfwWindow::WindowCloseCallback(GLFWwindow* window)
     {
-        auto const& data = *static_cast<WindowData*>(
-            glfwGetWindowUserPointer(window));
+        auto const& data =
+            *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
 
         Events::WindowCloseEvent event;
         data.eventCallback(event);
     }
 
     void GlfwWindow::KeyCallback(GLFWwindow* window, int key,
-                                 [[maybe_unused]] int scancode,
-                                 int action, [[maybe_unused]] int mods)
+                                 [[maybe_unused]] int scancode, int action,
+                                 [[maybe_unused]] int mods)
     {
         // TODO SUPPORT MODS AND SCANCODE
         (void)scancode;
         (void)mods;
 
-        auto const& data = *static_cast<WindowData*>(
-            glfwGetWindowUserPointer(window));
+        auto const& data =
+            *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
 
         switch (action)
         {
@@ -279,14 +278,13 @@ namespace GEF::Platform
     }
 
     void GlfwWindow::MouseButtonCallback(GLFWwindow* window, int button,
-                                         int action,
-                                         [[maybe_unused]] int mods)
+                                         int action, [[maybe_unused]] int mods)
     {
         // TODO SUPPORT MODS
         (void)mods;
 
-        auto const& data = *static_cast<WindowData*>(
-            glfwGetWindowUserPointer(window));
+        auto const& data =
+            *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
 
         switch (action)
         {
@@ -310,8 +308,8 @@ namespace GEF::Platform
     void GlfwWindow::CursorPositionCallback(GLFWwindow* window, double xPos,
                                             double yPos)
     {
-        auto const& data = *static_cast<WindowData*>(
-            glfwGetWindowUserPointer(window));
+        auto const& data =
+            *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
 
         Events::MouseMovedEvent event(xPos, yPos);
         data.eventCallback(event);
@@ -320,10 +318,10 @@ namespace GEF::Platform
     void GlfwWindow::ScrollCallback(GLFWwindow* window, double xOffset,
                                     double yOffset)
     {
-        auto const& data = *static_cast<WindowData*>(
-            glfwGetWindowUserPointer(window));
+        auto const& data =
+            *static_cast<WindowData*>(glfwGetWindowUserPointer(window));
 
         Events::MouseScrolledEvent event(xOffset, yOffset);
         data.eventCallback(event);
     }
-}
+} // namespace GEF::Platform

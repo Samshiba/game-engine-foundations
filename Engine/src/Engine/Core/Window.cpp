@@ -4,6 +4,7 @@
 //
 
 #include <Engine/Core/Window.hpp>
+
 #include <Engine/Core/Engine.hpp>
 #include <Engine/Platform/Glfw/GlfwWindow.hpp>
 
@@ -21,4 +22,4 @@ namespace GEF
 
         return std::make_unique<Platform::GlfwWindow>(props, spec.backend);
     }
-}
+} // namespace GEF

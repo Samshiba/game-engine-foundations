@@ -22,4 +22,4 @@ namespace GEF::Platform
     private:
         GLFWwindow* windowHandle_;
     };
-}
+} // namespace GEF::Platform

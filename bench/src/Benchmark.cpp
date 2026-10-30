@@ -12,20 +12,6 @@
 //             (the numbers are not meaningful)
 //
 
-#include <Engine/Assets/ObjLoader.hpp>
-#include <Engine/Core/DedicatedGpu.hpp>
-#include <Engine/Core/Engine.hpp>
-#include <Engine/Core/FileSystem.hpp>
-#include <Engine/Renderer/Camera.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-#include <Engine/Scene/Components.hpp>
-#include <Engine/Scene/SceneRenderer.hpp>
-#include <Engine/Utils/FrameStatistics.hpp>
-
-#include <libecs/core/registry/Registry.hpp>
-
-#include <glm/glm.hpp>
-
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -41,6 +27,19 @@
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <glm/glm.hpp>
+#include <libecs/core/registry/Registry.hpp>
+
+#include <Engine/Assets/ObjLoader.hpp>
+#include <Engine/Core/DedicatedGpu.hpp>
+#include <Engine/Core/Engine.hpp>
+#include <Engine/Core/FileSystem.hpp>
+#include <Engine/Renderer/Camera.hpp>
+#include <Engine/Renderer/Mesh.hpp>
+#include <Engine/Scene/Components.hpp>
+#include <Engine/Scene/SceneRenderer.hpp>
+#include <Engine/Utils/FrameStatistics.hpp>
 
 // Laptops: measure the dedicated GPU, not the integrated one
 GEF_REQUEST_DEDICATED_GPU();
@@ -95,7 +94,7 @@ namespace
     {
         Scenario scenario;
         uint32_t triangles;
-        uint32_t drawCalls;
+        SubmitStats submit; // of the last measured frame
         Utils::FrameStatistics stats;
     };
 
@@ -127,10 +126,10 @@ namespace
                                            std::string_view name)
     {
         const std::string base = "shaders/" + std::string(name);
-        const auto vs = FileSystem::ReadTextFile(
-            FileSystem::AssetPath(base + ".vert"));
-        const auto fs = FileSystem::ReadTextFile(
-            FileSystem::AssetPath(base + ".frag"));
+        const auto vs =
+            FileSystem::ReadTextFile(FileSystem::AssetPath(base + ".vert"));
+        const auto fs =
+            FileSystem::ReadTextFile(FileSystem::AssetPath(base + ".frag"));
         if (!vs || !fs)
             return std::nullopt;
         const ShaderHandle shader = device.CreateShader({ *vs, *fs });
@@ -149,8 +148,8 @@ namespace
             max = glm::max(max, vertex.position);
         }
         const glm::vec3 center = (min + max) * 0.5f;
-        const float size = glm::max(max.x - min.x, glm::max(max.y - min.y,
-                                        max.z - min.z));
+        const float size =
+            glm::max(max.x - min.x, glm::max(max.y - min.y, max.z - min.z));
         for (Vertex& vertex : data.vertices)
             vertex.position = (vertex.position - center) / size;
     }
@@ -187,8 +186,8 @@ namespace
         std::ostringstream out;
         out << std::fixed;
         out << "## GEF rendering benchmark\n\n";
-        out << "- **GPU**: " << adapter.renderer << " (" << adapter.vendor <<
-            ")\n";
+        out << "- **GPU**: " << adapter.renderer << " (" << adapter.vendor
+            << ")\n";
         out << "- **Driver**: OpenGL " << adapter.version << '\n';
         out << "- **Build**: " << BuildType() << ", " << WindowWidth << "x"
             << WindowHeight << ", VSync off\n";
@@ -196,14 +195,15 @@ namespace
             << " s warm-up, then " << options.measureSeconds
             << " s measured per scenario (" << Today() << ")\n\n";
         if (options.quick)
-            out <<
-                "> Quick run: a sanity check, the numbers are not meaningful.\n\n";
+            out << "> Quick run: a sanity check, the numbers are not "
+                   "meaningful.\n\n";
         if (std::string_view(BuildType()) != "Release")
             out << "> Not a Release build: numbers are not representative.\n\n";
 
         out << "| Mesh | Triangles/mesh | Entities | Instancing | Draw calls "
-            "| FPS | Mean (ms) | p50 (ms) | p99 (ms) | Worst (ms) |\n";
-        out << "|---|---:|---:|:---:|---:|---:|---:|---:|---:|---:|\n";
+               "| Binds (pipeline/VAO/UBO) | FPS | Mean (ms) | p50 (ms) "
+               "| p99 (ms) | Worst (ms) |\n";
+        out << "|---|---:|---:|:---:|---:|:---:|---:|---:|---:|---:|---:|\n";
         for (const Result& r : results)
         {
             const std::string_view mesh =
@@ -211,26 +211,27 @@ namespace
             out << "| " << mesh << " | " << r.triangles << " | "
                 << r.scenario.entities << " | "
                 << (r.scenario.instancing ? "on" : "off") << " | "
-                << r.drawCalls << " | " << std::setprecision(1) << r.stats.fps
-                << " | " << std::setprecision(2) << r.stats.meanMs << " | "
+                << r.submit.drawCalls << " | " << r.submit.pipelineChanges
+                << "/" << r.submit.vertexArrayChanges << "/"
+                << r.submit.uniformBufferChanges << " | "
+                << std::setprecision(1) << r.stats.fps << " | "
+                << std::setprecision(2) << r.stats.meanMs << " | "
                 << r.stats.p50Ms << " | " << r.stats.p99Ms << " | "
                 << r.stats.worstMs << " |\n";
         }
         return out.str();
     }
-}
+} // namespace
 
 // A GEF::Game: runs each scenario in turn, then closes the window
 class Benchmark
 {
 public:
     explicit Benchmark(Options options)
-        : options_(std::move(options)),
-          scenarios_(options_.quick
-              ? std::span<const Scenario>(QuickScenarios)
-              : std::span<const Scenario>(Scenarios))
-    {
-    }
+        : options_(std::move(options))
+        , scenarios_(options_.quick ? std::span<const Scenario>(QuickScenarios)
+                                    : std::span<const Scenario>(Scenarios))
+    {}
 
     void OnInit(EngineContext& ctx)
     {
@@ -248,8 +249,8 @@ public:
 
         const auto sun = registry_.CreateEntity();
         registry_.EmplaceComponent<Scene::DirectionalLight>(
-            sun, Scene::DirectionalLight
-            { .direction = { -1.0f, -1.0f, -0.5f } });
+            sun,
+            Scene::DirectionalLight{ .direction = { -1.0f, -1.0f, -0.5f } });
 
         camera_.aspectRatio = float(WindowWidth) / float(WindowHeight);
         StartScenario(ctx, 0);
@@ -271,7 +272,7 @@ public:
         }
         else if (measuring_ && elapsed_ >= options_.measureSeconds)
         {
-            FinishScenario();
+            FinishScenario(ctx.device.GetLastSubmitStats());
             if (current_ + 1 < scenarios_.size())
             {
                 StartScenario(ctx, current_ + 1);
@@ -307,8 +308,8 @@ private:
             if (loaded == name)
                 return &mesh;
 
-        auto data = Assets::LoadObj(
-            FileSystem::AssetPath("models") / std::string(name));
+        auto data = Assets::LoadObj(FileSystem::AssetPath("models")
+                                    / std::string(name));
         if (!data)
             return nullptr;
         Normalize(*data);
@@ -343,11 +344,12 @@ private:
             const uint32_t z = i / side;
             const auto entity = registry_.CreateEntity();
             registry_.EmplaceComponent<Scene::Transform>(
-                entity, Scene::Transform{ .position = { float(x) * 2.0f - half,
-                    0.0f,
-                    float(z) * 2.0f - half } });
+                entity,
+                Scene::Transform{ .position = { float(x) * 2.0f - half, 0.0f,
+                                                float(z) * 2.0f - half } });
             registry_.EmplaceComponent<Scene::MeshRenderer>(
-                entity, Scene::MeshRenderer{
+                entity,
+                Scene::MeshRenderer{
                     .mesh = *mesh,
                     .material = { .albedo = { float(x) / float(side),
                                               float(z) / float(side),
@@ -369,17 +371,18 @@ private:
         frameTimesMs_.clear();
 
         std::cout << "[" << index + 1 << "/" << scenarios_.size() << "] "
-            << scenario.mesh << " x" << scenario.entities << ", instancing "
-            << (scenario.instancing ? "on" : "off") << std::endl;
+                  << scenario.mesh << " x" << scenario.entities
+                  << ", instancing " << (scenario.instancing ? "on" : "off")
+                  << std::endl;
     }
 
-    void FinishScenario()
+    void FinishScenario(const SubmitStats& submit)
     {
-        results_.push_back({ .scenario = scenarios_[current_],
-                             .triangles = triangles_,
-                             .drawCalls = renderer_->GetDrawCallCount(),
-                             .stats = Utils::ComputeFrameStatistics(
-                                 frameTimesMs_) });
+        results_.push_back(
+            { .scenario = scenarios_[current_],
+              .triangles = triangles_,
+              .submit = submit,
+              .stats = Utils::ComputeFrameStatistics(frameTimesMs_) });
     }
 
     void WriteResults(const AdapterInfo& adapter) const
@@ -390,7 +393,8 @@ private:
         std::ofstream file(options_.output, std::ios::binary);
         file << table;
         std::cout << "\nResults written to "
-            << std::filesystem::absolute(options_.output).string() << '\n';
+                  << std::filesystem::absolute(options_.output).string()
+                  << '\n';
     }
 
     Options options_;
@@ -399,7 +403,7 @@ private:
     Camera camera_;
     ShaderHandle shader_;
     std::optional<Scene::SceneRenderer> renderer_;
-    std::vector<std::pair<std::string, Mesh> > meshes_;
+    std::vector<std::pair<std::string, Mesh>> meshes_;
     std::vector<libecs::core::Entity> entities_;
 
     std::size_t current_ = 0;
@@ -414,11 +418,11 @@ int main(int argc, char** argv)
 {
     const Options options = ParseOptions(argc, argv);
 
-    Engine engine({ .title = "GEF Benchmark",
-                    .width = WindowWidth,
-                    .height = WindowHeight,
-                    .flags = Window::FLAGS_VISIBLE |
-                    Window::FLAGS_RESIZE_DISABLED });
+    Engine engine(
+        { .title = "GEF Benchmark",
+          .width = WindowWidth,
+          .height = WindowHeight,
+          .flags = Window::FLAGS_VISIBLE | Window::FLAGS_RESIZE_DISABLED });
     Benchmark benchmark(options);
     return engine.Run(benchmark);
 }

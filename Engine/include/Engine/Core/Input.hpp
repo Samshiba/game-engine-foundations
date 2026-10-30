@@ -25,10 +25,10 @@ namespace GEF
         [[nodiscard]] bool IsKeyJustReleased(Key::KeyCode key) const;
 
         [[nodiscard]] bool IsMouseButtonPressed(Key::MouseCode button) const;
-        [[nodiscard]] bool IsMouseButtonJustPressed(
-            Key::MouseCode button) const;
-        [[nodiscard]] bool IsMouseButtonJustReleased(
-            Key::MouseCode button) const;
+        [[nodiscard]] bool
+        IsMouseButtonJustPressed(Key::MouseCode button) const;
+        [[nodiscard]] bool
+        IsMouseButtonJustReleased(Key::MouseCode button) const;
 
         [[nodiscard]] std::pair<double, double> GetMousePosition() const;
         [[nodiscard]] std::pair<double, double> GetMouseDelta() const;
@@ -49,4 +49,4 @@ namespace GEF
         std::pair<double, double> mousePos_ = { 0.0, 0.0 };
         std::pair<double, double> prevMousePos_ = { 0.0, 0.0 };
     };
-}
+} // namespace GEF

@@ -4,10 +4,11 @@
 //
 
 #include <Engine/UI/ImGuiBackend.hpp>
+
 #include <Engine/Platform/ImGui/GlfwOpenGLImGuiBackend.hpp>
 
-std::unique_ptr<GEF::UI::ImGuiBackend> GEF::UI::ImGuiBackend::Create(
-    Window& window, Renderer::RendererBackend backend)
+std::unique_ptr<GEF::UI::ImGuiBackend>
+GEF::UI::ImGuiBackend::Create(Window& window, Renderer::RendererBackend backend)
 {
     switch (backend)
     {

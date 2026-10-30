@@ -4,11 +4,12 @@
 //
 
 #include <Engine/Core/Input.hpp>
-#include <Engine/Core/Window.hpp>
+
+#include <cstring>
 
 #include <GLFW/glfw3.h>
 
-#include <cstring>
+#include <Engine/Core/Window.hpp>
 
 #include "Commons.hpp"
 
@@ -28,7 +29,7 @@ namespace GEF
         {
             return static_cast<int>(e);
         }
-    }
+    } // namespace
 
     void Input::Update(const Window& window)
     {
@@ -79,8 +80,7 @@ namespace GEF
             GEF_ENGINE_WARN("Invalid key code: {}", ToSz(key));
             return false;
         }
-        return keyData_[ToSz(key)] &&
-            !prevKeyData_[ToSz(key)];
+        return keyData_[ToSz(key)] && !prevKeyData_[ToSz(key)];
     }
 
     bool Input::IsKeyJustReleased(Key::KeyCode key) const
@@ -90,16 +90,14 @@ namespace GEF
             GEF_ENGINE_WARN("Invalid key code: {}", ToSz(key));
             return false;
         }
-        return !keyData_[ToSz(key)] &&
-            prevKeyData_[ToSz(key)];
+        return !keyData_[ToSz(key)] && prevKeyData_[ToSz(key)];
     }
 
     bool Input::IsMouseButtonPressed(Key::MouseCode button) const
     {
         if (button > Key::MouseCode::MOUSE_BUTTON_LAST)
         {
-            GEF_ENGINE_WARN("Invalid mouse button code: {}",
-                            ToSz(button));
+            GEF_ENGINE_WARN("Invalid mouse button code: {}", ToSz(button));
             return false;
         }
 
@@ -110,26 +108,22 @@ namespace GEF
     {
         if (button > Key::MouseCode::MOUSE_BUTTON_LAST)
         {
-            GEF_ENGINE_WARN("Invalid mouse button code: {}",
-                            ToSz(button));
+            GEF_ENGINE_WARN("Invalid mouse button code: {}", ToSz(button));
             return false;
         }
 
-        return mouseButtons_[ToSz(button)] &&
-            !prevMouseButtons_[ToSz(button)];
+        return mouseButtons_[ToSz(button)] && !prevMouseButtons_[ToSz(button)];
     }
 
     bool Input::IsMouseButtonJustReleased(Key::MouseCode button) const
     {
         if (button > Key::MouseCode::MOUSE_BUTTON_LAST)
         {
-            GEF_ENGINE_WARN("Invalid mouse button code: {}",
-                            ToSz(button));
+            GEF_ENGINE_WARN("Invalid mouse button code: {}", ToSz(button));
             return false;
         }
 
-        return !mouseButtons_[ToSz(button)] &&
-            prevMouseButtons_[ToSz(button)];
+        return !mouseButtons_[ToSz(button)] && prevMouseButtons_[ToSz(button)];
     }
 
     std::pair<double, double> Input::GetMousePosition() const
@@ -142,4 +136,4 @@ namespace GEF
         return { mousePos_.first - prevMousePos_.first,
                  mousePos_.second - prevMousePos_.second };
     }
-}
+} // namespace GEF

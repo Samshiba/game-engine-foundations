@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include <glm/glm.hpp>
-
 #include <cstdint>
+
+#include <glm/glm.hpp>
 
 namespace GEF::Renderer
 {
@@ -16,7 +16,9 @@ namespace GEF::Renderer
     {
         constexpr uint32_t Frame = 0;
         constexpr uint32_t Light = 1;
-    }
+    } // namespace UniformBinding
+
+    constexpr uint32_t MaxUniformBindings = 2;
 
     // std140 mirrors: vec4 / mat4 only
 
@@ -28,7 +30,6 @@ namespace GEF::Renderer
 
     static_assert(sizeof(FrameUniforms) == 80);
 
-
     struct LightUniforms // binding 2: once per frame
     {
         glm::vec4 direction; // xyz = direction the light travels, w unused
@@ -37,4 +38,4 @@ namespace GEF::Renderer
     };
 
     static_assert(sizeof(LightUniforms) == 48);
-}
+} // namespace GEF::Renderer

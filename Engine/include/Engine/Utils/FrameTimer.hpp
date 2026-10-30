@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include "FrameStatistics.hpp"
-
 #include <vector>
+
+#include "FrameStatistics.hpp"
 
 namespace GEF::Utils
 {
@@ -56,4 +56,4 @@ namespace GEF::Utils
         std::vector<float> frameTimesMs_;
         FrameStatistics stats_;
     };
-}
+} // namespace GEF::Utils

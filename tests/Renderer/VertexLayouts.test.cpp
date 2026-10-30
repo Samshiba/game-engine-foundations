@@ -30,14 +30,14 @@ TEST_CASE("Mesh and instance attributes fit in the 16 attribute slots")
         int count = 0;
         for (const BufferElement& element : layout)
         {
-            const bool isMatrix = element.type == ShaderDataType::Mat3 ||
-                element.type == ShaderDataType::Mat4;
+            const bool isMatrix = element.type == ShaderDataType::Mat3
+                || element.type == ShaderDataType::Mat4;
             count += isMatrix ? element.GetComponentCount() : 1;
         }
         return count;
     };
 
     const int total = slots(Vertex::Layout()) + slots(InstanceData::Layout());
-    CHECK(total == 12);   // 3 per vertex + 4 (model) + 3 (normal) + 2
-    CHECK(total <= 16);   // GL_MAX_VERTEX_ATTRIBS is at least 16
+    CHECK(total == 12); // 3 per vertex + 4 (model) + 3 (normal) + 2
+    CHECK(total <= 16); // GL_MAX_VERTEX_ATTRIBS is at least 16
 }

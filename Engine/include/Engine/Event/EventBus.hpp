@@ -5,20 +5,17 @@
 
 #pragma once
 
-#include <memory>
-#include <utility>
-#include <functional>
-
-#include <vector>
 #include <deque>
-#include <unordered_map>
-
+#include <functional>
+#include <memory>
 #include <typeinfo>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include <Engine/Core/Log.hpp>
 
 #include "Event.hpp"
-
 
 namespace GEF::Events
 {
@@ -36,8 +33,8 @@ namespace GEF::Events
             EventCallbackFunction callback;
         };
 
-        std::deque<std::unique_ptr<Event> > eventQueue_;
-        std::unordered_map<EventType, std::vector<Subscriber> > subscribers_;
+        std::deque<std::unique_ptr<Event>> eventQueue_;
+        std::unordered_map<EventType, std::vector<Subscriber>> subscribers_;
         SubscriberID nextSubscriberId_ = 0;
 
     public:
@@ -64,7 +61,6 @@ namespace GEF::Events
     {
         GEF_ENGINE_DEBUG("EventBus: Queuing event of type {}",
                          typeid(T).name());
-        eventQueue_.
-            push_back(std::make_unique<T>(std::forward<Args>(args)...));
+        eventQueue_.push_back(std::make_unique<T>(std::forward<Args>(args)...));
     }
-}
+} // namespace GEF::Events

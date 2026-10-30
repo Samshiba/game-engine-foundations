@@ -8,12 +8,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
+#include <string>
 #include <utility>
 #include <vector>
-#include <string>
 
-#include "Engine/Core/Log.hpp"
 #include "Engine/Core/Base.hpp"
+#include "Engine/Core/Log.hpp"
 
 namespace GEF::Renderer
 {
@@ -73,11 +73,12 @@ namespace GEF::Renderer
     inline BufferElement::BufferElement(ShaderDataType elementType,
                                         std::string elementName,
                                         bool isNormalized)
-        : name(std::move(elementName)), type(elementType),
-          size(GetSizeOfType(elementType)), offset(0),
-          normalized(isNormalized)
-    {
-    }
+        : name(std::move(elementName))
+        , type(elementType)
+        , size(GetSizeOfType(elementType))
+        , offset(0)
+        , normalized(isNormalized)
+    {}
 
     inline uint32_t BufferElement::GetSizeOfType(ShaderDataType type)
     {
@@ -140,7 +141,7 @@ namespace GEF::Renderer
         case Bool:
             return 1;
         default:
-            //TODO ASSERT
+            // TODO ASSERT
             GEF_ENGINE_ERROR("Unknown ShaderDataType");
             return 0;
         }
@@ -196,4 +197,4 @@ namespace GEF::Renderer
             stride_ += element.size;
         }
     }
-}
+} // namespace GEF::Renderer

@@ -4,13 +4,14 @@
 //
 
 #include <Engine/Event/EventBus.hpp>
+
 #include <Engine/Core/Log.hpp>
 
 namespace GEF::Events
 {
-    EventBus::SubscriberID EventBus::Subscribe(EventType eventType,
-                                               const EventCallbackFunction&
-                                               callback)
+    EventBus::SubscriberID
+    EventBus::Subscribe(EventType eventType,
+                        const EventCallbackFunction& callback)
     {
         SubscriberID id = nextSubscriberId_++;
         subscribers_[eventType].emplace_back(id, callback);
@@ -23,10 +24,9 @@ namespace GEF::Events
             return;
 
         auto& subscribers = subscribers_[eventType];
-        std::erase_if(subscribers,
-                      [subscriberID](const Subscriber& s) {
-                          return subscriberID == s.id;
-                      });
+        std::erase_if(subscribers, [subscriberID](const Subscriber& s) {
+            return subscriberID == s.id;
+        });
     }
 
     void EventBus::TriggerEvent(Event& event)
@@ -50,4 +50,4 @@ namespace GEF::Events
             eventQueue_.pop_front();
         }
     }
-}
+} // namespace GEF::Events

@@ -6,9 +6,10 @@
 
 #include <doctest.h>
 
-// glad must come before GLFW, which would otherwise pull the system gl.h
-#include <glad/glad.h>
+// GLFW_INCLUDE_NONE (tests/CMakeLists.txt): GLFW never pulls the system gl.h,
+// so the order of these two does not matter
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
 namespace GEF::Tests
 {
@@ -43,7 +44,8 @@ namespace GEF::Tests
 
             glfwMakeContextCurrent(window_);
             available_ = gladLoadGLLoader(
-                reinterpret_cast<GLADloadproc>(glfwGetProcAddress)) != 0;
+                             reinterpret_cast<GLADloadproc>(glfwGetProcAddress))
+                != 0;
         }
 
         ~GLTestContext()
@@ -56,9 +58,9 @@ namespace GEF::Tests
         GLFWwindow* window_ = nullptr;
         bool available_ = false;
     };
-}
+} // namespace GEF::Tests
 
 // A test case that needs an OpenGL 4.5 context. Without one (e.g. GPU-less CI
 // runners), it is reported as skipped instead of silently passing.
 #define GL_TEST_CASE(name)                                                     \
-    TEST_CASE(name * doctest::skip(!GEF::Tests::GLTestContext::Available()))
+    TEST_CASE(name* doctest::skip(!GEF::Tests::GLTestContext::Available()))

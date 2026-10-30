@@ -4,19 +4,20 @@
 //
 
 #include <Engine/Core/FileSystem.hpp>
-#include "Commons.hpp"
 
 #include <fstream>
 #include <sstream>
 
+#include "Commons.hpp"
+
 #if defined(_WIN32)
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
+#    ifndef WIN32_LEAN_AND_MEAN
+#        define WIN32_LEAN_AND_MEAN
+#    endif
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <windows.h>
 #endif
 
 namespace GEF::FileSystem
@@ -29,9 +30,10 @@ namespace GEF::FileSystem
             std::wstring buffer(MAX_PATH, L'\0');
             DWORD length = 0;
 
-            while ((length = GetModuleFileNameW(nullptr, buffer.data(),
-                                                static_cast<DWORD>(buffer.
-                                                    size()))) == buffer.size())
+            while (
+                (length = GetModuleFileNameW(nullptr, buffer.data(),
+                                             static_cast<DWORD>(buffer.size())))
+                == buffer.size())
             {
                 buffer.resize(buffer.size() * 2);
             }
@@ -47,15 +49,15 @@ namespace GEF::FileSystem
 
             return error ? std::filesystem::path{} : path;
 #else
-#error "GetExecutableDirectory is not implemented on this platform"
+#    error "GetExecutableDirectory is not implemented on this platform"
 #endif
         }
-    }
+    } // namespace
 
     const std::filesystem::path& GetExecutableDirectory()
     {
-        static const std::filesystem::path directory = QueryExecutablePath().
-            parent_path();
+        static const std::filesystem::path directory =
+            QueryExecutablePath().parent_path();
         return directory;
     }
 
@@ -82,4 +84,4 @@ namespace GEF::FileSystem
         buffer << file.rdbuf();
         return buffer.str();
     }
-}
+} // namespace GEF::FileSystem

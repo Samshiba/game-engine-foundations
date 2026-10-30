@@ -5,15 +5,16 @@
 
 #pragma once
 
-#include "RendererAPI.hpp"
-#include "CommandList.hpp"
-#include "Buffer.hpp"
-#include "Handle.hpp"
-
+#include <array>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include "Buffer.hpp"
+#include "CommandList.hpp"
+#include "Handle.hpp"
+#include "RendererAPI.hpp"
 
 namespace GEF::Renderer
 {
@@ -82,11 +83,20 @@ namespace GEF::Renderer
         CullMode cull = CullMode::Back;
     };
 
+    // Infos
     struct AdapterInfo
     {
         std::string vendor;
         std::string renderer; // the GPU model
         std::string version; // API + driver version
+    };
+
+    struct SubmitStats
+    {
+        uint32_t drawCalls = 0;
+        uint32_t pipelineChanges = 0;
+        uint32_t vertexArrayChanges = 0;
+        uint32_t uniformBufferChanges = 0;
     };
 
     class GraphicsDevice
@@ -95,34 +105,33 @@ namespace GEF::Renderer
         virtual ~GraphicsDevice() = default;
 
         // Buffer
-        [[nodiscard]] virtual BufferHandle CreateBuffer(const BufferDesc& desc)
-        = 0;
+        [[nodiscard]] virtual BufferHandle
+        CreateBuffer(const BufferDesc& desc) = 0;
         virtual void DestroyBuffer(BufferHandle handle) = 0;
         virtual bool UpdateBuffer(BufferHandle handle, uint32_t offset,
-                                  const void* data,
-                                  uint32_t size) = 0;
+                                  const void* data, uint32_t size) = 0;
 
         // Vertex Array
-        [[nodiscard]] virtual VertexArrayHandle CreateVertexArray(
-            const VertexArrayDesc& desc) = 0;
+        [[nodiscard]] virtual VertexArrayHandle
+        CreateVertexArray(const VertexArrayDesc& desc) = 0;
         virtual void DestroyVertexArray(VertexArrayHandle handle) = 0;
 
         // Shader
-        [[nodiscard]] virtual ShaderHandle CreateShader(const ShaderDesc& desc)
-        = 0;
+        [[nodiscard]] virtual ShaderHandle
+        CreateShader(const ShaderDesc& desc) = 0;
         virtual void DestroyShader(ShaderHandle handle) = 0;
 
         // Pipeline
-        [[nodiscard]] virtual PipelineHandle CreatePipeline(
-            const PipelineDesc& desc) = 0;
+        [[nodiscard]] virtual PipelineHandle
+        CreatePipeline(const PipelineDesc& desc) = 0;
         virtual void DestroyPipeline(PipelineHandle handle) = 0;
 
+        // Infos
         [[nodiscard]] virtual const AdapterInfo& GetAdapterInfo() const = 0;
+        [[nodiscard]] virtual const SubmitStats& GetLastSubmitStats() const = 0;
 
         static std::unique_ptr<GraphicsDevice> Create(RendererBackend backend);
 
-        virtual std::shared_ptr<CommandList> BeginCommandList() = 0;
-        virtual void SubmitCommandList(
-            const std::shared_ptr<CommandList>& commandList) = 0;
+        virtual void Submit(CommandList& cmd) = 0;
     };
-}
+} // namespace GEF::Renderer

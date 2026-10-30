@@ -87,11 +87,11 @@ namespace GEF
 
         virtual void Close() = 0;
 
-        virtual void SetEventCallback(const EventCallbackFunction& callback) =
-        0;
+        virtual void
+        SetEventCallback(const EventCallbackFunction& callback) = 0;
 
         [[nodiscard]] virtual void* GetNativeWindow() const = 0;
 
         static std::unique_ptr<Window> Create(const EngineSpecification& spec);
     };
-}
+} // namespace GEF

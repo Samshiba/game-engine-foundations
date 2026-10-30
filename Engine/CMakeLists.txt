@@ -24,7 +24,6 @@ set(ENGINE_SOURCES
         "src/Engine/Platform/OpenGL/OpenGlContext.cpp"
         "src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp"
         "src/Engine/Platform/OpenGL/OpenGLGraphicsDevice.cpp"
-        "src/Engine/Platform/OpenGL/OpenGLCommandList.hpp"
         "src/Engine/Platform/Glfw/GlfwWindow.hpp"
         "src/Engine/Platform/Glfw/GlfwWindow.cpp"
         "src/Engine/Platform/ImGui/GlfwOpenGLImGuiBackend.hpp"
@@ -37,6 +36,7 @@ set(ENGINE_SOURCES
         "src/Engine/Renderer/ResourcePool.hpp"
         "src/Engine/Renderer/Camera.cpp"
         "src/Engine/Renderer/Mesh.cpp"
+        "src/Engine/Renderer/CommandList.cpp"
 
         # Assets
         "src/Engine/Assets/ObjLoader.cpp"
@@ -55,6 +55,7 @@ set(ENGINE_HEADERS
         "include/Engine/Utils/FNV-1a.hpp"
         "include/Engine/Utils/FrameTimer.hpp"
         "include/Engine/Utils/FrameStatistics.hpp"
+        "include/Engine/Utils/Overloaded.hpp"
 
         # Core
         "include/Engine/Core/Engine.hpp"
@@ -124,6 +125,10 @@ target_link_libraries(GEF_Engine
 gef_set_warnings(GEF_Engine)
 
 # Compile Definitions
+
+# Omit GLFW from loading GL headers : prevent include orders problems with Glad
+target_compile_definitions(GEF_Engine PRIVATE GLFW_INCLUDE_NONE)
+
 target_compile_definitions(GEF_Engine PUBLIC
         # Platform
         $<$<PLATFORM_ID:Windows>:GEF_PLATFORM_WINDOWS>

@@ -4,26 +4,18 @@
 
 #include <doctest.h>
 
-#include "GLTestContext.hpp"
-
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
+#include <Engine/Renderer/CommandList.hpp>
+#include <Engine/Renderer/Mesh.hpp>
 
-#include <string_view>
+#include "GLDrawHelpers.hpp"
+#include "GLTestContext.hpp"
 
 using namespace GEF;
 using Renderer::CullMode;
 
 namespace
 {
-    constexpr std::string_view VertexSource = R"(
-        #version 450 core
-        layout (location = 0) in vec3 a_Position;
-        void main() { gl_Position = vec4(a_Position, 1.0); })";
-
-    constexpr std::string_view FragmentSource = R"(
-        #version 450 core
-        out vec4 o_Color;
-        void main() { o_Color = vec4(1.0); })";
 
     // The GL state a pipeline is supposed to set
     struct GLState
@@ -52,11 +44,19 @@ namespace
     struct PipelineFixture
     {
         Platform::OpenGLGraphicsDevice device;
-        Renderer::ShaderHandle shader =
-            device.CreateShader({ VertexSource, FragmentSource });
+        Renderer::ShaderHandle shader = device.CreateShader(
+            { Tests::MinimalVertexSource, Tests::MinimalFragmentSource });
+        Renderer::Mesh triangle = Tests::UploadTriangle(device);
 
-        PipelineFixture() { REQUIRE(shader.IsValid()); }
-        ~PipelineFixture() { device.DestroyShader(shader); }
+        PipelineFixture()
+        {
+            REQUIRE(shader.IsValid());
+        }
+        ~PipelineFixture()
+        {
+            DestroyMesh(device, triangle);
+            device.DestroyShader(shader);
+        }
 
         PipelineFixture(const PipelineFixture&) = delete;
         PipelineFixture& operator=(const PipelineFixture&) = delete;
@@ -64,18 +64,21 @@ namespace
         Renderer::PipelineHandle Create(bool depthTest, bool depthWrite,
                                         CullMode cull)
         {
-            return device.CreatePipeline({ .shader = shader,
-                                           .depth = { .test = depthTest,
-                                                      .write = depthWrite },
-                                           .cull = cull });
+            return device.CreatePipeline(
+                { .shader = shader,
+                  .depth = { .test = depthTest, .write = depthWrite },
+                  .cull = cull });
         }
 
-        // Records then submits: stays valid once the list records (GEF-38)
+        // A pipeline reaches GL with a draw: a zero-index one applies its
+        // state without drawing anything
         void Bind(Renderer::PipelineHandle pipeline)
         {
-            auto cmd = device.BeginCommandList();
-            cmd->BindPipeline(pipeline);
-            device.SubmitCommandList(cmd);
+            Renderer::CommandList cmd;
+            cmd.BindPipeline(pipeline);
+            cmd.BindVertexArray(triangle.vertexArray);
+            cmd.DrawIndexed(0);
+            device.Submit(cmd);
         }
 
         GLint Program() const
@@ -83,7 +86,7 @@ namespace
             return static_cast<GLint>(device.GetShader(shader)->program);
         }
     };
-}
+} // namespace
 
 GL_TEST_CASE("CreatePipeline returns a valid handle")
 {
@@ -174,7 +177,8 @@ GL_TEST_CASE("Switching pipelines leaves no state from the previous one")
     fixture.device.DestroyPipeline(overlay);
 }
 
-GL_TEST_CASE("Clear resets the depth buffer even after a pipeline without depth write")
+GL_TEST_CASE(
+    "Clear resets the depth buffer even after a pipeline without depth write")
 {
     // glClear(GL_DEPTH_BUFFER_BIT) obeys glDepthMask: if the last pipeline of
     // a frame disabled depth writes, a naive Clear would leave the old depth
@@ -191,8 +195,8 @@ GL_TEST_CASE("Clear resets the depth buffer even after a pipeline without depth 
                                    GL_RENDERBUFFER, depthBuffer);
     glNamedFramebufferDrawBuffer(framebuffer, GL_NONE);
     glNamedFramebufferReadBuffer(framebuffer, GL_NONE);
-    REQUIRE(glCheckNamedFramebufferStatus(framebuffer, GL_FRAMEBUFFER) ==
-            GL_FRAMEBUFFER_COMPLETE);
+    REQUIRE(glCheckNamedFramebufferStatus(framebuffer, GL_FRAMEBUFFER)
+            == GL_FRAMEBUFFER_COMPLETE);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
     const auto readDepth = [] {
@@ -213,9 +217,9 @@ GL_TEST_CASE("Clear resets the depth buffer even after a pipeline without depth 
 
     // Next frame's clear must still reset the depth buffer
     glClearDepth(1.0);
-    auto cmd = fixture.device.BeginCommandList();
-    cmd->Clear();
-    fixture.device.SubmitCommandList(cmd);
+    Renderer::CommandList cmd;
+    cmd.Clear();
+    fixture.device.Submit(cmd);
 
     CHECK(readDepth() == doctest::Approx(1.0f));
 

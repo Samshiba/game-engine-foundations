@@ -5,9 +5,9 @@
 
 #include "FreeFlyController.hpp"
 
-#include <Engine/Core/Window.hpp>
-
 #include <algorithm>
+
+#include <Engine/Core/Window.hpp>
 
 #include "imgui.h"
 
@@ -15,14 +15,15 @@ void FreeFlyController::Update(GEF::Renderer::Camera& camera,
                                const GEF::Input& input, GEF::Window& window,
                                float dt)
 {
-    if (!ImGui::GetIO().WantCaptureMouse && input.IsMouseButtonJustPressed(
-        GEF::Key::MouseCode::MOUSE_BUTTON_RIGHT))
+    if (!ImGui::GetIO().WantCaptureMouse
+        && input.IsMouseButtonJustPressed(
+            GEF::Key::MouseCode::MOUSE_BUTTON_RIGHT))
     {
         capturing_ = true;
         window.SetCursorMode(GEF::Window::CursorMode::DISABLED);
     }
     else if (input.IsMouseButtonJustReleased(
-        GEF::Key::MouseCode::MOUSE_BUTTON_RIGHT))
+                 GEF::Key::MouseCode::MOUSE_BUTTON_RIGHT))
     {
         capturing_ = false;
         window.SetCursorMode(GEF::Window::CursorMode::NORMAL);
@@ -35,8 +36,8 @@ void FreeFlyController::Update(GEF::Renderer::Camera& camera,
         camera.pitch -= static_cast<float>(dy) * sensitivity;
         camera.pitch = std::clamp(camera.pitch, -89.0f, 89.0f);
 
-        const auto shift = input.
-            IsKeyPressed(GEF::Key::KeyCode::KEY_LEFT_SHIFT);
+        const auto shift =
+            input.IsKeyPressed(GEF::Key::KeyCode::KEY_LEFT_SHIFT);
 
         glm::vec3 direction(0.0f);
 

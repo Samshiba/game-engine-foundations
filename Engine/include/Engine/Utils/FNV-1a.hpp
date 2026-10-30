@@ -30,4 +30,4 @@ namespace GEF::Utils
     {
         return HashFNV1a(s);
     }
-}
+} // namespace GEF::Utils

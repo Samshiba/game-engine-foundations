@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include <Engine/Core/Window.hpp>
-
 #include <memory>
+
+#include <Engine/Core/Window.hpp>
 
 namespace GEF::UI
 {
@@ -19,7 +19,7 @@ namespace GEF::UI
         virtual void BeginFrame() = 0;
         virtual void EndFrame() = 0;
 
-        static std::unique_ptr<ImGuiBackend> Create(
-            Window& window, Renderer::RendererBackend backend);
+        static std::unique_ptr<ImGuiBackend>
+        Create(Window& window, Renderer::RendererBackend backend);
     };
-}
+} // namespace GEF::UI

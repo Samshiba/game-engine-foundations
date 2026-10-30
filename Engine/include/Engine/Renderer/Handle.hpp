@@ -31,23 +31,23 @@ namespace GEF::Renderer
     struct ShaderTag;
     struct PipelineTag;
 
-
     using BufferHandle = Handle<BufferTag>;
     using TextureHandle = Handle<TextureTag>;
     using VertexArrayHandle = Handle<VertexArrayTag>;
     using ShaderHandle = Handle<ShaderTag>;
     using PipelineHandle = Handle<PipelineTag>;
-}
+} // namespace GEF::Renderer
 
 template <typename Tag>
-struct std::hash<GEF::Renderer::Handle<Tag> >
+struct std::hash<GEF::Renderer::Handle<Tag>>
 {
-    std::size_t operator()(
-        const GEF::Renderer::Handle<Tag>& handle) const noexcept
+    std::size_t
+    operator()(const GEF::Renderer::Handle<Tag>& handle) const noexcept
     {
-        // index in the high 32 bits, generation in the low 32: unique per handle
-        const uint64_t key = (static_cast<uint64_t>(handle.index) << 32) |
-            handle.generation;
+        // index in the high 32 bits, generation in the low 32: unique per
+        // handle
+        const uint64_t key =
+            (static_cast<uint64_t>(handle.index) << 32) | handle.generation;
         return std::hash<uint64_t>{}(key);
     }
 };

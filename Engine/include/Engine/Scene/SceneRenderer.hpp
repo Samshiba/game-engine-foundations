@@ -5,13 +5,12 @@
 
 #pragma once
 
-#include <Engine/Renderer/GraphicsDevice.hpp>
-#include <Engine/Renderer/CommandList.hpp>
-#include <Engine/Renderer/Camera.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-
 #include <libecs/core/registry/Registry.hpp>
 
+#include <Engine/Renderer/Camera.hpp>
+#include <Engine/Renderer/CommandList.hpp>
+#include <Engine/Renderer/GraphicsDevice.hpp>
+#include <Engine/Renderer/Mesh.hpp>
 
 namespace GEF::Scene
 {
@@ -40,12 +39,10 @@ namespace GEF::Scene
         SceneRenderer& operator=(const SceneRenderer&) = delete;
 
         void Render(const libecs::core::registry::Registry& registry,
-                    const Renderer::Camera& camera,
-                    Renderer::CommandList& cmd);
+                    const Renderer::Camera& camera, Renderer::CommandList& cmd);
 
         void SetInstancingEnabled(bool enabled);
         [[nodiscard]] bool IsInstancingEnabled() const;
-        [[nodiscard]] uint32_t GetDrawCallCount() const;
 
     private:
         Batch CreateBatch(const Renderer::Mesh& mesh, uint32_t capacity);
@@ -60,6 +57,5 @@ namespace GEF::Scene
         Renderer::BufferHandle lightUBO_;
 
         bool instancing_ = true;
-        uint32_t drawCalls_ = 0;
     };
-}
+} // namespace GEF::Scene

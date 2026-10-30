@@ -8,8 +8,8 @@
 #include <cstdint>
 #include <vector>
 
-#include <Engine/Renderer/Handle.hpp>
 #include <Engine/Core/Assert.hpp>
+#include <Engine/Renderer/Handle.hpp>
 
 namespace GEF::Renderer
 {
@@ -26,7 +26,7 @@ namespace GEF::Renderer
 
         void Remove(Handle<Tag> h);
 
-        [[nodiscard]] std::vector<Handle<Tag> > GetAliveHandles() const;
+        [[nodiscard]] std::vector<Handle<Tag>> GetAliveHandles() const;
 
     private:
         struct Slot
@@ -85,8 +85,8 @@ namespace GEF::Renderer
     template <typename T, typename Tag>
     bool ResourcePool<T, Tag>::IsValid(Handle<Tag> h) const
     {
-        return h.index < slots_.size() && slots_[h.index].alive && slots_[h.
-            index].generation == h.generation;
+        return h.index < slots_.size() && slots_[h.index].alive
+            && slots_[h.index].generation == h.generation;
     }
 
     template <typename T, typename Tag>
@@ -101,9 +101,9 @@ namespace GEF::Renderer
     }
 
     template <typename T, typename Tag>
-    std::vector<Handle<Tag> > ResourcePool<T, Tag>::GetAliveHandles() const
+    std::vector<Handle<Tag>> ResourcePool<T, Tag>::GetAliveHandles() const
     {
-        std::vector<Handle<Tag> > ret;
+        std::vector<Handle<Tag>> ret;
         for (uint32_t i = 0; i < slots_.size(); ++i)
         {
             if (slots_[i].alive)
@@ -113,4 +113,4 @@ namespace GEF::Renderer
         }
         return ret;
     }
-}
+} // namespace GEF::Renderer

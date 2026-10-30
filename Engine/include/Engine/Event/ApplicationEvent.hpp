@@ -133,6 +133,6 @@ namespace GEF::Events
         double xOffset_;
         double yOffset_;
     };
-}
+} // namespace GEF::Events
 
 #include "ApplicationEvent.inl"
