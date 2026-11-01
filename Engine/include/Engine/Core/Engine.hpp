@@ -14,6 +14,7 @@
 #include <Engine/Core/Window.hpp>
 #include <Engine/Event/EventBus.hpp>
 #include <Engine/Renderer/CommandList.hpp>
+#include <Engine/Renderer/FrameCapture.hpp>
 #include <Engine/Renderer/GraphicsDevice.hpp>
 #include <Engine/UI/ImGuiBackend.hpp>
 
@@ -39,6 +40,7 @@ namespace GEF
         Input& input;
         Renderer::GraphicsDevice& device;
         Events::EventBus& events;
+        Renderer::FrameCapture& capture;
     };
 
     // Any type with these member functions can be run by the Engine.
@@ -78,6 +80,7 @@ namespace GEF
         Input input_;
         Events::EventBus event_bus_;
         Renderer::CommandList frame_commands_;
+        Renderer::FrameCapture frame_capture_;
 
         bool is_running_ = true;
     };
@@ -87,7 +90,8 @@ namespace GEF
     {
         using Clock = std::chrono::steady_clock;
 
-        EngineContext ctx{ *window_, input_, *graphics_device_, event_bus_ };
+        EngineContext ctx{ *window_, input_, *graphics_device_, event_bus_,
+                           frame_capture_ };
 
         if constexpr (requires { game.OnInit(ctx); })
             game.OnInit(ctx);
@@ -96,9 +100,10 @@ namespace GEF
         while (is_running_)
         {
             const auto now = Clock::now();
-            const float dt =
-                std::chrono::duration<float>(now - previous).count();
+            float dt = std::chrono::duration<float>(now - previous).count();
             previous = now;
+            if (frame_capture_.IsCapturing())
+                dt = 1.0f / Renderer::FrameCapture::SequenceFrameRate;
 
             input_.Update(*window_);
             game.OnUpdate(ctx, dt);

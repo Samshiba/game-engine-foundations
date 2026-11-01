@@ -17,6 +17,7 @@ add_executable(GEF_Tests
         "Platform/OpenGL/OpenGLGraphicsDevice.test.cpp"
         "Platform/OpenGL/OpenGLMesh.test.cpp"
         "Platform/OpenGL/OpenGLPipeline.test.cpp"
+        "Platform/OpenGL/OpenGLReadFramebuffer.test.cpp"
         "Platform/OpenGL/OpenGLShader.test.cpp"
         "Platform/OpenGL/OpenGLSubmit.test.cpp"
         "Platform/OpenGL/OpenGLUniformBuffer.test.cpp"

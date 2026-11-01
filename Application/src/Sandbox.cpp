@@ -181,6 +181,15 @@ struct Sandbox
 
         UpdateSpin(registry, dt);
         freeFlyController.Update(camera, ctx.input, ctx.window, dt);
+
+        if (ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_F12))
+        {
+            ctx.capture.RequestScreenshot();
+        }
+        if (ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_F11))
+        {
+            ctx.capture.RequestSequence(50);
+        }
     }
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)

@@ -485,4 +485,13 @@ namespace GEF::Platform
             GL_TRIANGLES, static_cast<GLsizei>(indexCount), GL_UNSIGNED_INT,
             nullptr, static_cast<GLsizei>(instanceCount), baseInstance);
     }
+
+    const std::vector<uint8_t>
+    OpenGLGraphicsDevice::ReadFramebuffer(uint32_t width, uint32_t height) const
+    {
+        std::vector<uint8_t> data(width * height * 4);
+        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
+                     data.data());
+        return data;
+    }
 } // namespace GEF::Platform

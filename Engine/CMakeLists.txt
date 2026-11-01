@@ -6,6 +6,10 @@ add_library(GEF_Engine STATIC)
 
 add_subdirectory("vendor/glad")
 
+set(STB_IMAGE_SOURCES
+        "vendor/stb_image/stb_image_write.h"
+)
+
 set(ENGINE_SOURCES
         "src/Commons.hpp"
 
@@ -37,6 +41,7 @@ set(ENGINE_SOURCES
         "src/Engine/Renderer/Camera.cpp"
         "src/Engine/Renderer/Mesh.cpp"
         "src/Engine/Renderer/CommandList.cpp"
+        "src/Engine/Renderer/FrameCapture.cpp"
 
         # Assets
         "src/Engine/Assets/ObjLoader.cpp"
@@ -46,6 +51,10 @@ set(ENGINE_SOURCES
 
         # UI
         "src/Engine/UI/ImGuiBackend.cpp"
+
+        # Utils
+        "src/Engine/Utils/Image.hpp"
+        "src/Engine/Utils/Image.cpp"
 )
 
 set(ENGINE_HEADERS
@@ -83,6 +92,7 @@ set(ENGINE_HEADERS
         "include/Engine/Renderer/Camera.hpp"
         "include/Engine/Renderer/Mesh.hpp"
         "include/Engine/Renderer/LightingData.hpp"
+        "include/Engine/Renderer/FrameCapture.hpp"
 
         # Assets
         "include/Engine/Assets/ObjLoader.hpp"
@@ -98,6 +108,7 @@ set(ENGINE_HEADERS
 target_sources(GEF_Engine PRIVATE
         ${ENGINE_SOURCES}
         ${ENGINE_HEADERS}
+        ${STB_IMAGE_SOURCES}
 )
 
 target_include_directories(GEF_Engine
@@ -106,6 +117,9 @@ target_include_directories(GEF_Engine
 
         PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
+
+        SYSTEM PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb_image"
 )
 
 target_link_libraries(GEF_Engine
@@ -123,6 +137,11 @@ target_link_libraries(GEF_Engine
 
 # Compile Options (optimization flags come from the build type, see root CMakeLists)
 gef_set_warnings(GEF_Engine)
+# Image.cpp compiles the stb_image_write implementation: silence the warnings
+# it triggers (sprintf, partial struct init) instead of dropping -Werror
+set_source_files_properties("src/Engine/Utils/Image.cpp" PROPERTIES
+        COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/wd4996,-Wno-missing-field-initializers>"
+)
 
 # Compile Definitions
 
