@@ -51,6 +51,7 @@ namespace GEF
     {
         graphics_device_->Submit(frame_commands_);
         imgui_->EndFrame();
+        frame_capture_.OnEndFrame(*graphics_device_, spec_.width, spec_.height);
         window_->OnUpdate(); // swap buffers + poll events
     }
 

@@ -129,6 +129,8 @@ namespace GEF::Renderer
         // Infos
         [[nodiscard]] virtual const AdapterInfo& GetAdapterInfo() const = 0;
         [[nodiscard]] virtual const SubmitStats& GetLastSubmitStats() const = 0;
+        [[nodiscard]] virtual const std::vector<uint8_t>
+        ReadFramebuffer(uint32_t width, uint32_t height) const = 0;
 
         static std::unique_ptr<GraphicsDevice> Create(RendererBackend backend);
 
