@@ -106,6 +106,7 @@ namespace GEF
                 dt = 1.0f / Renderer::FrameCapture::SequenceFrameRate;
 
             input_.Update(*window_);
+            event_bus_.DispatchEvent();
             game.OnUpdate(ctx, dt);
 
             BeginFrame();
