@@ -486,7 +486,7 @@ namespace GEF::Platform
             nullptr, static_cast<GLsizei>(instanceCount), baseInstance);
     }
 
-    const std::vector<uint8_t>
+    std::vector<uint8_t>
     OpenGLGraphicsDevice::ReadFramebuffer(uint32_t width, uint32_t height) const
     {
         std::vector<uint8_t> data(width * height * 4);

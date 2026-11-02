@@ -30,7 +30,7 @@ namespace GEF::Renderer
 
     static_assert(sizeof(FrameUniforms) == 80);
 
-    struct LightUniforms // binding 2: once per frame
+    struct LightUniforms // binding 1: once per frame
     {
         glm::vec4 direction; // xyz = direction the light travels, w unused
         glm::vec4 color;

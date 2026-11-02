@@ -2,7 +2,7 @@
 
 add_executable(GEF_Bench "src/Benchmark.cpp")
 
-target_link_libraries(GEF_Bench PRIVATE GEF_Engine)
+target_link_libraries(GEF_Bench PRIVATE GEF::Engine)
 
 gef_set_warnings(GEF_Bench)
 

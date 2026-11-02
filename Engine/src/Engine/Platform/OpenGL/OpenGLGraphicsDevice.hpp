@@ -88,7 +88,7 @@ namespace GEF::Platform
         GetAdapterInfo() const override;
         [[nodiscard]] const Renderer::SubmitStats&
         GetLastSubmitStats() const override;
-        [[nodiscard]] const std::vector<uint8_t>
+        [[nodiscard]] std::vector<uint8_t>
         ReadFramebuffer(uint32_t width, uint32_t height) const override;
 
         void Submit(Renderer::CommandList& cmd) override;

@@ -1,8 +1,12 @@
 # Engine/CMakeLists.txt
 
-project(GEF_Engine)
-
 add_library(GEF_Engine STATIC)
+add_library(GEF::Engine ALIAS GEF_Engine)
+
+set_target_properties(GEF_Engine PROPERTIES EXPORT_NAME Engine)
+
+# The public headers need C++20 (concepts, designated initializers)
+target_compile_features(GEF_Engine PUBLIC cxx_std_20)
 
 add_subdirectory("vendor/glad")
 
@@ -105,16 +109,19 @@ set(ENGINE_HEADERS
         "include/Engine/UI/ImGuiBackend.hpp"
 )
 
-target_sources(GEF_Engine PRIVATE
+target_sources(GEF_Engine
+        PRIVATE
         ${ENGINE_SOURCES}
-        ${ENGINE_HEADERS}
         ${STB_IMAGE_SOURCES}
+
+        # FILE_SET: sets the public include directory and lists the public headers
+        PUBLIC
+        FILE_SET HEADERS
+        BASE_DIRS "include"
+        FILES ${ENGINE_HEADERS}
 )
 
 target_include_directories(GEF_Engine
-        PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
-
         PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
 
