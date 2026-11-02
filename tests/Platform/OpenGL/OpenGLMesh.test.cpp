@@ -75,7 +75,7 @@ GL_TEST_CASE("UploadMesh describes position, normal and uv to the vertex array")
         return value;
     };
 
-    // Same locations as mesh.vert: 0 = position, 1 = normal, 2 = uv
+    // Same locations as lit.vert: 0 = position, 1 = normal, 2 = uv
     CHECK(attrib(0, GL_VERTEX_ATTRIB_ARRAY_SIZE) == 3);
     CHECK(attrib(1, GL_VERTEX_ATTRIB_ARRAY_SIZE) == 3);
     CHECK(attrib(2, GL_VERTEX_ATTRIB_ARRAY_SIZE) == 2);
