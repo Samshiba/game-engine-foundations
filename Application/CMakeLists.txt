@@ -1,13 +1,11 @@
 # Application/CMakeLists.txt
 
-project(Application)
-
 add_executable(Application
         "src/Sandbox.cpp"
         "src/FreeFlyController.cpp"
 )
 
-target_link_libraries(Application PRIVATE GEF_Engine)
+target_link_libraries(Application PRIVATE GEF::Engine)
 
 gef_set_warnings(Application)
 

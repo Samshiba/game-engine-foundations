@@ -117,3 +117,28 @@ jobs:
             test-console.txt
           if-no-files-found: warn
           retention-days: 14
+
+  # Builds tests/consumer: a separate project that pulls GEF with FetchContent,
+  # as the README shows. Checks that GEF works as a subproject (only the
+  # library is built, no -Werror imposed, GEF::Engine links).
+  consumer:
+    name: FetchContent consumer (GCC 14)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build xorg-dev libwayland-dev libxkbcommon-dev
+
+      - name: Configure
+        run: >
+          cmake -S tests/consumer -B build-consumer -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=gcc-14
+          -DCMAKE_CXX_COMPILER=g++-14
+
+      - name: Build
+        run: cmake --build build-consumer --parallel

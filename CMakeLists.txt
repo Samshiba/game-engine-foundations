@@ -1,52 +1,67 @@
 # CMakeList.txt : Top-level CMake project file
 
 cmake_minimum_required(VERSION 3.28)
-project(GameEngineFoundations VERSION 0.1.0 LANGUAGES C CXX)
+project(GameEngineFoundations
+        VERSION 0.1.0
+        DESCRIPTION "A small C++20 rendering engine on OpenGL 4.5"
+        LANGUAGES C CXX)
 
-# Global settings
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# Options: everything but the engine library is off when GEF is used as a
+# subproject (FetchContent or add_subdirectory)
+option(GEF_BUILD_APPLICATION "Build the demo (Application)" ${PROJECT_IS_TOP_LEVEL})
+option(GEF_BUILD_BENCHMARKS "Build the rendering benchmark (GEF_Bench)" ${PROJECT_IS_TOP_LEVEL})
+option(GEF_BUILD_TESTS "Build the unit tests" ${PROJECT_IS_TOP_LEVEL})
+option(GEF_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ${PROJECT_IS_TOP_LEVEL})
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+# Top-level only settings: as a subproject, the parent project decides
+if (PROJECT_IS_TOP_LEVEL)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Set up Build Types
-get_property(multi GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-if (multi)
-    set(CMAKE_CONFIGURATION_TYPES "Debug;Profile;Release" CACHE STRING "" FORCE)
-else ()
-    if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+    # Build Types
+    get_property(multi GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if (multi)
+        set(CMAKE_CONFIGURATION_TYPES "Debug;Profile;Release" CACHE STRING "" FORCE)
+    elseif (NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
         set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Profile" "Release")
     endif ()
+
+    # Profile = optimized build with debug info. CMake has no defaults for custom
+    # configurations, so it borrows the RelWithDebInfo flags (for dependencies too).
+    foreach (lang C CXX)
+        set(CMAKE_${lang}_FLAGS_PROFILE "${CMAKE_${lang}_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
+    endforeach ()
+    set(CMAKE_EXE_LINKER_FLAGS_PROFILE "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
+    set(CMAKE_STATIC_LINKER_FLAGS_PROFILE "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
+    set(CMAKE_MAP_IMPORTED_CONFIG_PROFILE RelWithDebInfo Release)
+
+    # Same MSVC runtime for every target, dependencies included
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 endif ()
-
-# Profile = optimized build with debug info. CMake has no defaults for custom
-# configurations, so it borrows the RelWithDebInfo flags (for dependencies too).
-foreach (lang C CXX)
-    set(CMAKE_${lang}_FLAGS_PROFILE "${CMAKE_${lang}_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
-endforeach ()
-set(CMAKE_EXE_LINKER_FLAGS_PROFILE "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
-set(CMAKE_STATIC_LINKER_FLAGS_PROFILE "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO}" CACHE STRING "" FORCE)
-set(CMAKE_MAP_IMPORTED_CONFIG_PROFILE RelWithDebInfo Release)
-
-# Same MSVC runtime for every target, dependencies included
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 
 # Strict warnings, applied to our own targets only
 function(gef_set_warnings target)
     target_compile_options(${target} PRIVATE
-            $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX /permissive- /Zc:preprocessor /utf-8>
+            $<$<CXX_COMPILER_ID:MSVC>:
+            /W4 /permissive- /Zc:preprocessor /utf-8
+            $<$<BOOL:${GEF_WARNINGS_AS_ERRORS}>:/WX>
+            >
             $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
-            -Wall -Wextra -Wpedantic -Werror
-            -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual>
+            -Wall -Wextra -Wpedantic
+            -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual
+            $<$<BOOL:${GEF_WARNINGS_AS_ERRORS}>:-Werror>
+            >
     )
 endfunction()
 
-# Setup libraries (SYSTEM: their headers don't trigger our warnings)
+# Setup libraries (SYSTEM: their headers don't trigger our warnings).
+# FetchContent keeps the first declaration of a name: a parent project that
+# already declares glfw, glm, spdlog, ... before adding GEF shares its version.
 include(FetchContent)
 FetchContent_Declare(glfw GIT_REPOSITORY https://github.com/glfw/glfw.git GIT_TAG 3.4 SYSTEM)
 FetchContent_Declare(glm GIT_REPOSITORY https://github.com/g-truc/glm.git GIT_TAG 1.0.3 SYSTEM)
@@ -68,37 +83,45 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(glfw glm spdlog tinyobjloader libecs)
 
 # ImGui has no CMake project: it's fetch the sources and build them here, with
-# the GLFW + OpenGL 3 backends
-FetchContent_Declare(imgui
-        GIT_REPOSITORY https://github.com/ocornut/imgui.git
-        GIT_TAG v1.92.9)
-FetchContent_MakeAvailable(imgui)
+# the GLFW + OpenGL 3 backends. Skipped if the parent project already has an
+# imgui target.
+if (NOT TARGET imgui)
+    FetchContent_Declare(imgui
+            GIT_REPOSITORY https://github.com/ocornut/imgui.git
+            GIT_TAG v1.92.9)
+    FetchContent_MakeAvailable(imgui)
 
-add_library(imgui STATIC
-        "${imgui_SOURCE_DIR}/imgui.cpp"
-        "${imgui_SOURCE_DIR}/imgui_demo.cpp"
-        "${imgui_SOURCE_DIR}/imgui_draw.cpp"
-        "${imgui_SOURCE_DIR}/imgui_tables.cpp"
-        "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
-        "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
-        "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp"
-)
-target_include_directories(imgui SYSTEM PUBLIC
-        "${imgui_SOURCE_DIR}"
-        "${imgui_SOURCE_DIR}/backends"
-)
-target_link_libraries(imgui PRIVATE glfw ${CMAKE_DL_LIBS})
+    add_library(imgui STATIC
+            "${imgui_SOURCE_DIR}/imgui.cpp"
+            "${imgui_SOURCE_DIR}/imgui_demo.cpp"
+            "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+            "${imgui_SOURCE_DIR}/imgui_tables.cpp"
+            "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+            "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
+            "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp"
+    )
+    target_include_directories(imgui SYSTEM PUBLIC
+            "${imgui_SOURCE_DIR}"
+            "${imgui_SOURCE_DIR}/backends"
+    )
+    target_link_libraries(imgui PRIVATE glfw ${CMAKE_DL_LIBS})
+endif ()
 
 # Projects
 add_subdirectory(Engine)
-add_subdirectory(Application)
 
-option(GEF_BUILD_BENCHMARKS "Build the rendering benchmark (GEF_Bench)" ${PROJECT_IS_TOP_LEVEL})
+if (GEF_BUILD_APPLICATION)
+    add_subdirectory(Application)
+endif ()
+
+# The benchmark uses the Application's assets (shaders, models)
 if (GEF_BUILD_BENCHMARKS)
+    if (NOT GEF_BUILD_APPLICATION)
+        message(FATAL_ERROR "GEF_BUILD_BENCHMARKS needs GEF_BUILD_APPLICATION (shared assets)")
+    endif ()
     add_subdirectory(bench)
 endif ()
 
-option(GEF_BUILD_TESTS "Build the unit tests" ${PROJECT_IS_TOP_LEVEL})
 if (GEF_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)

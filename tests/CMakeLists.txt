@@ -5,6 +5,7 @@ add_executable(GEF_Tests
         "Assets/ObjLoader.test.cpp"
         "Core/FileSystem.test.cpp"
         "Core/PublicApi.test.cpp"
+        "Event/EventBus.test.cpp"
         "Renderer/Camera.test.cpp"
         "Renderer/CommandList.test.cpp"
         "Renderer/ResourcePool.test.cpp"
@@ -33,7 +34,7 @@ target_include_directories(GEF_Tests
         "${PROJECT_SOURCE_DIR}/Engine/src"
 )
 
-target_link_libraries(GEF_Tests PRIVATE GEF_Engine glad glfw)
+target_link_libraries(GEF_Tests PRIVATE GEF::Engine glad glfw)
 
 gef_set_warnings(GEF_Tests)
 
