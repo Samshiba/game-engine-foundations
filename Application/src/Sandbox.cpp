@@ -188,7 +188,7 @@ struct Sandbox
         }
         if (ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_F11))
         {
-            ctx.capture.RequestSequence(50);
+            ctx.capture.RequestSequence(200);
         }
     }
 
