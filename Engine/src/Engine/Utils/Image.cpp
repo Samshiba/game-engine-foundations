@@ -7,8 +7,9 @@
 
 #include <algorithm>
 
+#include <Engine/Core/Log.hpp>
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "Engine/Core/Log.hpp"
 #include "stb_image_write.h"
 
 namespace GEF::Utils
