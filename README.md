@@ -238,6 +238,13 @@ Short-term work, before the next features:
 - [ ] Ship the lit shader inside the engine library (embedded at build time), so `SceneRenderer`
   works without copying shaders into the game.
 - [ ] Install rules and `find_package(GEF)` support, as an alternative to FetchContent.
+- [ ] GPU frame time in the overlay and the benchmark (`GL_TIME_ELAPSED` queries).
+- [ ] CPU time per stage (game update, scene extraction, submit) in the overlay and the
+  benchmark.
+- [ ] Cache the FetchContent downloads in CI.
+- [ ] Remove the remaining `TODO` comments in the code, or turn them into tickets.
+- [ ] Boids with a uniform spatial grid in the demo, as a heavier ECS workload than the current
+  spin.
 
 ## Roadmap
 
@@ -251,6 +258,17 @@ Short-term work, before the next features:
 - More lighting: several lights, point lights, shadow maps, textures and normal maps.
 - glTF loading, shader hot reload, asynchronous framebuffer readback.
 - Multi-window support, and a second backend (Vulkan) to test the graphics device abstraction.
+
+## Credits
+
+- Stanford bunny: [Stanford 3D Scanning Repository](https://graphics.stanford.edu/data/3Dscanrep/),
+  Stanford University Computer Graphics Laboratory. Converted to OBJ with MeshLab.
+- Libraries: [GLFW](https://www.glfw.org/), [glad](https://github.com/Dav1dde/glad),
+  [glm](https://github.com/g-truc/glm), [spdlog](https://github.com/gabime/spdlog),
+  [Dear ImGui](https://github.com/ocornut/imgui),
+  [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader),
+  [stb_image_write](https://github.com/nothings/stb),
+  [doctest](https://github.com/doctest/doctest).
 
 ## License
 

@@ -80,8 +80,8 @@ TEST_CASE(
     const fs::path assets = FileSystem::AssetsDirectory();
 
     CHECK(assets == FileSystem::GetExecutableDirectory() / "assets");
-    CHECK(FileSystem::AssetPath("shaders/basic.vert")
-          == assets / "shaders" / "basic.vert");
+    CHECK(FileSystem::AssetPath("shaders/lit.vert")
+          == assets / "shaders" / "lit.vert");
 }
 
 TEST_CASE("ReadTextFile returns the exact content of a file")
