@@ -33,24 +33,6 @@ GEF_REQUEST_DEDICATED_GPU();
 
 namespace
 {
-    std::optional<ShaderHandle> LoadShader(GraphicsDevice& device,
-                                           std::string_view name)
-    {
-        using GEF::FileSystem::AssetPath;
-        using GEF::FileSystem::ReadTextFile;
-
-        const std::string base = "shaders/" + std::string(name);
-        const auto vs = ReadTextFile(AssetPath(base + ".vert"));
-        const auto fs = ReadTextFile(AssetPath(base + ".frag"));
-        if (!vs || !fs)
-            return std::nullopt;
-
-        const ShaderHandle shader = device.CreateShader({ *vs, *fs });
-        if (!shader.IsValid())
-            return std::nullopt;
-        return shader;
-    }
-
     struct Spin
     {
         float speed = 1.0f;
@@ -78,7 +60,6 @@ struct Sandbox
     FreeFlyController freeFlyController;
     GEF::Events::EventBus::SubscriberID resizeSubscription{};
 
-    ShaderHandle meshShader;
     Mesh mesh;
 
     std::optional<GEF::Scene::SceneRenderer> renderer;
@@ -148,20 +129,13 @@ struct Sandbox
                 camera.aspectRatio =
                     float(resize.GetWidth()) / float(resize.GetHeight());
             });
-
-        if (const auto shader = LoadShader(ctx.device, "lit"))
-        {
-            meshShader = *shader;
-        }
-
         const auto path = GEF::FileSystem::AssetPath("models/cube.obj");
         if (const auto data = GEF::Assets::LoadObj(path))
             mesh = UploadMesh(ctx.device, *data);
         else
             GEF_ERROR("Failed to load mesh: {}", path.string());
 
-        if (meshShader.IsValid())
-            renderer.emplace(ctx.device, meshShader);
+        renderer.emplace(ctx.device);
 
         light = registry.CreateEntity();
         registry.EmplaceComponent<GEF::Scene::DirectionalLight>(
@@ -208,8 +182,6 @@ struct Sandbox
 
         if (mesh.indexCount != 0)
             DestroyMesh(ctx.device, mesh);
-        if (meshShader.IsValid())
-            ctx.device.DestroyShader(meshShader);
     }
 
     void OnImGui(GEF::EngineContext& ctx)

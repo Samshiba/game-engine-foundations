@@ -122,20 +122,6 @@ namespace
         return options;
     }
 
-    std::optional<ShaderHandle> LoadShader(GraphicsDevice& device,
-                                           std::string_view name)
-    {
-        const std::string base = "shaders/" + std::string(name);
-        const auto vs =
-            FileSystem::ReadTextFile(FileSystem::AssetPath(base + ".vert"));
-        const auto fs =
-            FileSystem::ReadTextFile(FileSystem::AssetPath(base + ".frag"));
-        if (!vs || !fs)
-            return std::nullopt;
-        const ShaderHandle shader = device.CreateShader({ *vs, *fs });
-        return shader.IsValid() ? std::optional(shader) : std::nullopt;
-    }
-
     // Centers the mesh on the origin and scales it to ~1 unit, so cubes and
     // bunnies fill the same grid cells
     void Normalize(MeshData& data)
@@ -237,15 +223,7 @@ public:
     {
         ctx.window.SetVSync(false);
 
-        const auto shader = LoadShader(ctx.device, "lit");
-        if (!shader)
-        {
-            std::cerr << "Failed to load the lit shader\n";
-            ctx.window.Close();
-            return;
-        }
-        shader_ = *shader;
-        renderer_.emplace(ctx.device, shader_);
+        renderer_.emplace(ctx.device);
 
         const auto sun = registry_.CreateEntity();
         registry_.EmplaceComponent<Scene::DirectionalLight>(
@@ -297,8 +275,6 @@ public:
         renderer_.reset();
         for (const auto& [name, mesh] : meshes_)
             DestroyMesh(ctx.device, mesh);
-        if (shader_.IsValid())
-            ctx.device.DestroyShader(shader_);
     }
 
 private:
@@ -401,7 +377,6 @@ private:
     std::span<const Scenario> scenarios_;
     libecs::core::registry::Registry registry_;
     Camera camera_;
-    ShaderHandle shader_;
     std::optional<Scene::SceneRenderer> renderer_;
     std::vector<std::pair<std::string, Mesh>> meshes_;
     std::vector<libecs::core::Entity> entities_;

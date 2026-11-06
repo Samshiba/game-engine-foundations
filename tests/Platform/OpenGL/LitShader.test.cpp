@@ -1,20 +1,17 @@
 //
 // Path: tests/Platform/OpenGL/LitShader.test.cpp
 //
-// The real lit shaders (Application/assets/shaders/lit.*) against the C++
+// The embedded lit shaders (Engine/embed/shaders/lit.*) against the C++
 // mirrors in LightingData.hpp. A block whose binding, size or member offset
 // drifts from its struct renders garbage without any GL error: this catches
 // it before the screen does (e.g. two blocks bound to each other's slot).
 //
 
 #include <cstddef>
-#include <filesystem>
-#include <optional>
-#include <string>
 
 #include <doctest.h>
 
-#include <Engine/Core/FileSystem.hpp>
+#include <Engine/Core/Embedded.hpp>
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
 #include <Engine/Renderer/LightingData.hpp>
 
@@ -25,13 +22,6 @@ using namespace GEF::Renderer;
 
 namespace
 {
-    std::optional<std::string> ReadShader(const char* fileName)
-    {
-        return FileSystem::ReadTextFile(std::filesystem::path(GEF_SOURCE_DIR)
-                                        / "Application" / "assets" / "shaders"
-                                        / fileName);
-    }
-
     struct BlockInfo
     {
         GLint binding = -1;
@@ -68,7 +58,7 @@ namespace
         return static_cast<GLint>(sizeof(T));
     }
 
-    // The lit shader, compiled once per test from the real files
+    // The lit shader, compiled once per test from the embedded sources
     struct LitShaderFixture
     {
         Platform::OpenGLGraphicsDevice device;
@@ -77,12 +67,8 @@ namespace
 
         LitShaderFixture()
         {
-            const auto vertex = ReadShader("lit.vert");
-            const auto fragment = ReadShader("lit.frag");
-            REQUIRE(vertex.has_value());
-            REQUIRE(fragment.has_value());
-
-            shader = device.CreateShader({ *vertex, *fragment });
+            shader = device.CreateShader(
+                { Embedded::LitVertexSource(), Embedded::LitFragmentSource() });
             REQUIRE(shader.IsValid());
             program = device.GetShader(shader)->program;
         }
