@@ -33,6 +33,7 @@ namespace GEF::Scene
     public:
         SceneRenderer(Renderer::GraphicsDevice& device,
                       Renderer::ShaderHandle litShader);
+        explicit SceneRenderer(Renderer::GraphicsDevice& device);
         ~SceneRenderer();
 
         SceneRenderer(const SceneRenderer&) = delete;
@@ -57,5 +58,7 @@ namespace GEF::Scene
         Renderer::BufferHandle lightUBO_;
 
         bool instancing_ = true;
+
+        Renderer::ShaderHandle litShader_{};
     };
 } // namespace GEF::Scene
