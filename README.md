@@ -41,23 +41,34 @@ Measured with `GEF_Bench` on an RTX 3060 Laptop GPU, Release build, 1280×720, V
 scenario after a 2 s warm-up. The full table and the method are in
 [docs/benchmark-results.md](docs/benchmark-results.md).
 
-| Scene                          | Entities | Instancing | Draw calls | Mean frame |      p99 |
-|--------------------------------|---------:|:----------:|-----------:|-----------:|---------:|
-| Cubes (12 triangles)           |   10,000 |    off     |     10,000 |    3.12 ms |  3.77 ms |
-| Cubes (12 triangles)           |   10,000 |     on     |          1 |    1.81 ms |  2.51 ms |
-| Cubes (12 triangles)           |   50,000 |    off     |     50,000 |   14.63 ms | 16.04 ms |
-| Cubes (12 triangles)           |   50,000 |     on     |          1 |    5.28 ms |  6.31 ms |
-| Stanford bunny (69k triangles) |    1,000 |    off     |      1,000 |   16.48 ms | 17.05 ms |
-| Stanford bunny (69k triangles) |    1,000 |     on     |          1 |   16.58 ms | 17.23 ms |
+| Scene                          | Entities | Instancing | Draw calls | Mean frame |      p99 | Submit CPU | Submit GPU |
+|--------------------------------|---------:|:----------:|-----------:|-----------:|---------:|-----------:|-----------:|
+| Cubes (12 triangles)           |   10,000 |    off     |     10,000 |    3.18 ms |  3.99 ms |    1.65 ms |    0.29 ms |
+| Cubes (12 triangles)           |   10,000 |     on     |          1 |    1.99 ms |  2.81 ms |    0.03 ms |    0.05 ms |
+| Cubes (12 triangles)           |   50,000 |    off     |     50,000 |   14.81 ms | 15.87 ms |    8.57 ms |    6.01 ms |
+| Cubes (12 triangles)           |   50,000 |     on     |          1 |    5.35 ms |  6.13 ms |    0.04 ms |    0.24 ms |
+| Stanford bunny (69k triangles) |    1,000 |    off     |      1,000 |   16.61 ms | 17.72 ms |    0.25 ms |   16.56 ms |
+| Stanford bunny (69k triangles) |    1,000 |     on     |          1 |   16.95 ms | 17.93 ms |    0.05 ms |   16.90 ms |
 
 With instancing off, the engine still uses the same per-instance data and the same shader, it
 only issues one draw per entity. The difference between the two modes is therefore the cost of
-the draw calls themselves. For small meshes that cost dominates: instancing brings 50,000 cubes
-from 14.6 ms down to 5.3 ms per frame.
+the draw calls themselves.
 
-The bunnies show the opposite case. A thousand of them is 69 million triangles per frame, the
-GPU is busy with geometry, and the number of draw calls no longer matters. Instancing reduces CPU
-and driver work; it does nothing for a scene limited by the GPU.
+The last two columns split the work of `Submit`: the time the CPU spends issuing the commands to
+the driver, and the time the GPU takes to execute them. For small meshes, the CPU side
+dominates. With 50,000 cubes and no instancing, issuing the draws takes 8.6 ms and the GPU needs
+6.0 ms. Instancing brings both down to almost nothing (0.04 ms and 0.24 ms), and the frame goes
+from 14.8 ms to 5.4 ms.
+
+That frame still takes 5.4 ms while `Submit` takes almost no time, so the rest is spent
+elsewhere. The likely cause is the scene renderer, which computes the matrices of 50,000
+entities and uploads their instance data, about 6 MB per frame. This is not timed yet, which is
+why timing the other stages is in the to-do list.
+
+The bunnies show the opposite case. A thousand of them is 69 million triangles per frame. The
+GPU needs 16.6 ms for them, around 4 billion triangles per second, while the CPU spends 0.25 ms
+issuing the draws. Instancing changes nothing: the frame is limited by the GPU, and the number of
+draw calls no longer matters.
 
 In every scenario, the bind counters stay at one pipeline, one vertex array and two uniform
 buffers per frame, whatever the number of draws.
@@ -87,13 +98,13 @@ cmake --build build
 Then run `build/bin/Application` (`Application.exe` on Windows). The assets are copied next to
 the executable, so it can be started from any directory.
 
-| Input                   | Action                                               |
-|-------------------------|------------------------------------------------------|
-| Hold right mouse button | look around and enable movement                      |
-| W, A, S, D              | move                                                 |
-| Space, Left Ctrl        | up, down                                             |
-| Left Shift              | move faster                                          |
-| F12                     | save a screenshot in `bin/screenshots/`              |
+| Input                   | Action                                                |
+|-------------------------|-------------------------------------------------------|
+| Hold right mouse button | look around and enable movement                       |
+| W, A, S, D              | move                                                  |
+| Space, Left Ctrl        | up, down                                              |
+| Left Shift              | move faster                                           |
+| F12                     | save a screenshot in `bin/screenshots/`               |
 | F11                     | save 200 frames at a fixed 30 fps step, to make a GIF |
 
 The ImGui window sets the number of entities (up to 50,000), toggles instancing and VSync, moves
@@ -146,10 +157,9 @@ int main()
 ```
 
 `OnInit`, `OnImGui` and `OnShutdown` are optional. The engine looks for assets in an `assets/`
-directory next to the executable (`GEF::FileSystem::AssetPath`). The scene renderer expects a lit
-shader from the game: [`Application/assets/shaders/lit.vert`](Application/assets/shaders/lit.vert)
-and `lit.frag` can be copied as they are. [`Application/src/Sandbox.cpp`](Application/src/Sandbox.cpp)
-is the complete demo and the best example of the API.
+directory next to the executable (`GEF::FileSystem::AssetPath`). `SceneRenderer` carries its own lit
+shader, embedded in the library, so `SceneRenderer renderer(ctx.device);` is all it needs.
+[`Application/src/Sandbox.cpp`](Application/src/Sandbox.cpp) is the complete demo and the best example of the API.
 
 ### Build options
 
@@ -209,7 +219,8 @@ the rules the code relies on.
 Engine/
   include/Engine/   public headers: Core, Event, Renderer, Scene, Assets, UI, Utils
   src/Engine/       implementation; Platform/ holds the GLFW, OpenGL and ImGui code
-Application/        the demo and its assets (shaders, OBJ models)
+  embed/            files compiled into the library
+Application/        the demo and its assets (OBJ models)
 bench/              GEF_Bench
 tests/              tests, organized like Engine/
 docs/               architecture, benchmark results, media
@@ -229,20 +240,20 @@ GEF v0.1.0 is a base to build on, not a complete renderer:
 - Commands are recorded on one thread.
 - OBJ is the only model format, materials are a color and two specular values, and shaders are
   only loaded at startup.
-- The lit shader is not shipped with the engine library: games provide it (see above).
 
 ## To do
 
 Short-term work, before the next features:
 
-- [ ] Ship the lit shader inside the engine library (embedded at build time), so `SceneRenderer`
+- [x] Ship the lit shader inside the engine library (embedded at build time), so `SceneRenderer`
   works without copying shaders into the game.
 - [ ] Install rules and `find_package(GEF)` support, as an alternative to FetchContent.
-- [ ] GPU frame time in the overlay and the benchmark (`GL_TIME_ELAPSED` queries).
-- [ ] CPU time per stage (game update, scene extraction, submit) in the overlay and the
-  benchmark.
-- [ ] Cache the FetchContent downloads in CI.
-- [ ] Remove the remaining `TODO` comments in the code, or turn them into tickets.
+- [x] GPU frame time in the overlay and the benchmark (`GL_TIME_ELAPSED` queries).
+- [x] CPU time per submit in the overlay and the benchmark.
+- [ ] Time the other CPU stages (game update, scene extraction and instance upload) in the
+  overlay and the benchmark: with 50,000 instanced cubes, most of the frame is spent there.
+- [x] Cache the FetchContent downloads in CI.
+- [x] Remove the remaining `TODO` comments in the code, or turn them into tickets.
 - [ ] Boids with a uniform spatial grid in the demo, as a heavier ECS workload than the current
   spin.
 

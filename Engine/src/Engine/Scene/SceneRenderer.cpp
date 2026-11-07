@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <ranges>
 
+#include <Engine/Core/Assert.hpp>
+#include <Engine/Core/Embedded.hpp>
 #include <Engine/Renderer/LightingData.hpp>
 #include <Engine/Scene/Components.hpp>
 
@@ -16,6 +18,29 @@ GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device,
     : device_(device)
 {
     pipeline_ = device_.CreatePipeline({ .shader = litShader,
+                                         .depth = { true, true },
+                                         .cull = Renderer::CullMode::Back });
+    frameUBO_ =
+        device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
+                              .usage = Renderer::BufferUsage::Dynamic,
+                              .size = sizeof(Renderer::FrameUniforms) });
+
+    lightUBO_ =
+        device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
+                              .usage = Renderer::BufferUsage::Dynamic,
+                              .size = sizeof(Renderer::LightUniforms) });
+}
+
+GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device)
+    : device_(device)
+{
+    const Renderer::ShaderHandle shader = device.CreateShader(
+        { Embedded::LitVertexSource(), Embedded::LitFragmentSource() });
+    GEF_CORE_ASSERT(shader.IsValid(), "Failed to create shader");
+
+    litShader_ = shader;
+
+    pipeline_ = device_.CreatePipeline({ .shader = shader,
                                          .depth = { true, true },
                                          .cull = Renderer::CullMode::Back });
     frameUBO_ =
@@ -39,6 +64,11 @@ GEF::Scene::SceneRenderer::~SceneRenderer()
     {
         device_.DestroyVertexArray(batch.vertexArray);
         device_.DestroyBuffer(batch.instanceBuffer);
+    }
+
+    if (litShader_.IsValid())
+    {
+        device_.DestroyShader(litShader_);
     }
 }
 

@@ -12,8 +12,9 @@
 #include <utility>
 #include <vector>
 
-#include "Engine/Core/Base.hpp"
-#include "Engine/Core/Log.hpp"
+#include <Engine/Core/Assert.hpp>
+#include <Engine/Core/Base.hpp>
+#include <Engine/Core/Log.hpp>
 
 namespace GEF::Renderer
 {
@@ -141,7 +142,7 @@ namespace GEF::Renderer
         case Bool:
             return 1;
         default:
-            // TODO ASSERT
+            GEF_CORE_ASSERT("Unknown ShaderDataType");
             GEF_ENGINE_ERROR("Unknown ShaderDataType");
             return 0;
         }

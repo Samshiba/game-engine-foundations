@@ -28,8 +28,7 @@ namespace GEF
         Window::WindowMode windowMode = Window::WindowMode::WINDOWED;
         Window::CursorMode cursorMode = Window::CursorMode::NORMAL;
         Renderer::RendererBackend backend = Renderer::RendererBackend::OpenGL;
-        Window::WindowInitialPosition position =
-            Window::WindowInitialPosition::CENTER_PRIMARY_SCREEN;
+        Window::WindowPositionConfig windowPositionConfig{};
         uint32_t flags = Window::FLAGS_VISIBLE;
     };
 

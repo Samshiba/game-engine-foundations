@@ -2,6 +2,20 @@
 
 All notable changes to GEF are listed here. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `SubmitStats::cpuSubmitTimeMs` and `gpuFrameTimeMs`: CPU time spent issuing the commands, and
+  GPU time between two timestamp queries around them. Shown in the demo's overlay and as two
+  columns of the benchmark.
+
+### Changed
+
+- `SceneRenderer(GraphicsDevice&)` creates and owns the lit shader, now embedded in the library at
+  build time (`Engine/embed/shaders`, `cmake/Embed.cmake`). Games no longer ship `lit.vert` and
+  `lit.frag`. The constructor taking a `ShaderHandle` is still there for custom shaders.
+
 ## [0.1.0] - 2026-11-02
 
 First release: a small rendering engine on OpenGL 4.5, driven by an ECS.

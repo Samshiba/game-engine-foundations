@@ -12,11 +12,12 @@ namespace GEF
 {
     std::unique_ptr<Window> Window::Create(const EngineSpecification& spec)
     {
-        // TODO IMPLEMENT WindowInitialPosition
         const WindowProps props{ .title = spec.title,
                                  .width = spec.width,
                                  .height = spec.height,
                                  .windowMode = spec.windowMode,
+                                 .windowPositionConfig =
+                                     spec.windowPositionConfig,
                                  .cursorMode = spec.cursorMode,
                                  .flags = spec.flags };
 

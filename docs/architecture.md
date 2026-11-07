@@ -150,13 +150,13 @@ the frame capture. To give games access to a new engine service, a field is adde
 
 Ownership is kept simple:
 
-| What | Owned by | Lives until |
-|---|---|---|
-| Window, graphics device, ImGui backend | `Engine` | the engine is destroyed (the window last, since the device needs its context) |
-| The frame's `CommandList` | `Engine` | the end of the run; it is reset every frame but keeps its memory |
-| GPU objects | `GraphicsDevice` | the game calls `Destroy*` on the handle |
-| `SceneRenderer`, meshes, shaders | the game | usually created in `OnInit`, destroyed in `OnShutdown` |
-| Entities and components | the game's registry | the game destroys them |
+| What                                   | Owned by            | Lives until                                                                   |
+|----------------------------------------|---------------------|-------------------------------------------------------------------------------|
+| Window, graphics device, ImGui backend | `Engine`            | the engine is destroyed (the window last, since the device needs its context) |
+| The frame's `CommandList`              | `Engine`            | the end of the run; it is reset every frame but keeps its memory              |
+| GPU objects                            | `GraphicsDevice`    | the game calls `Destroy*` on the handle                                       |
+| `SceneRenderer`, meshes, shaders       | the game            | usually created in `OnInit`, destroyed in `OnShutdown`                        |
+| Entities and components                | the game's registry | the game destroys them                                                        |
 
 ## A frame from start to finish
 
@@ -247,9 +247,9 @@ in any order.
 Each packet also gets a 64-bit sort key. Sorting the keys puts the packets in the order that
 minimizes state changes:
 
-| Bits | 63 to 60 | 59 to 48 | 47 to 36 | 35 to 20 | 19 to 0 |
-|---|---|---|---|---|---|
-| Field | pass | pipeline | vertex array | depth | sequence |
+| Bits  | 63 to 60 | 59 to 48 | 47 to 36     | 35 to 20 | 19 to 0  |
+|-------|----------|----------|--------------|----------|----------|
+| Field | pass     | pipeline | vertex array | depth    | sequence |
 
 - The most expensive change, the pipeline, is in the high bits, so all draws with the same
   pipeline end up together, then grouped by mesh inside it.
@@ -283,6 +283,15 @@ The device counts what it really did in `SubmitStats`: draw calls, pipeline chan
 changes and uniform buffer changes. The demo's overlay and the benchmark read them with
 `GetLastSubmitStats()`.
 
+It also times the replay twice. `cpuSubmitTimeMs` is the CPU time spent issuing the commands to
+the driver (the sort is not included). `gpuFrameTimeMs` is the time the GPU takes between two
+timestamp queries placed around the same commands. The GPU time is read a few frames later, when
+the result is available, because asking for it right away would make the CPU wait for the GPU.
+Comparing the two tells which side limits `Submit`. When the CPU time is the larger, the driver
+cannot take the draw calls fast enough. When the GPU time is the larger, the CPU is done long
+before the GPU. If both are small next to the frame time, the frame is limited elsewhere, for
+example by the scene renderer building and uploading the instance data.
+
 Buffer updates are the exception to "record first": `UpdateBuffer` writes immediately. This works
 because each buffer is written once per frame, before `Submit` (see the
 [rules](#rules-the-code-relies-on)).
@@ -291,11 +300,11 @@ because each buffer is written once per frame, before `Submit` (see the
 
 The components are plain structs:
 
-| Component | Content |
-|---|---|
-| `Transform` | position, rotation (quaternion), scale |
-| `MeshRenderer` | a `Mesh` (handles and index count) and a `Material` (color, shininess, specular strength) |
-| `DirectionalLight` | direction, color, intensity, ambient color |
+| Component          | Content                                                                                   |
+|--------------------|-------------------------------------------------------------------------------------------|
+| `Transform`        | position, rotation (quaternion), scale                                                    |
+| `MeshRenderer`     | a `Mesh` (handles and index count) and a `Material` (color, shininess, specular strength) |
+| `DirectionalLight` | direction, color, intensity, ambient color                                                |
 
 `SceneRenderer::Render(registry, camera, cmd)` does the following each frame:
 
@@ -319,7 +328,8 @@ shader, which is why the demo's toggle and the benchmark measure the cost of dra
 
 ## Lighting
 
-The lit shader (`lit.vert`, `lit.frag`) uses the Blinn-Phong model with one directional light:
+The lit shader (`lit.vert`, `lit.frag`, embedded in the library from `Engine/embed/shaders`) uses the Blinn-Phong model
+with one directional light:
 an ambient term, a diffuse term proportional to the angle between the surface and the light, and
 a specular highlight whose size depends on the shininess. Colors are picked in sRGB, converted to
 linear on the CPU, lit in linear space, then gamma corrected by the shader before being written.

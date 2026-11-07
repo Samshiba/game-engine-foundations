@@ -12,7 +12,6 @@
 #include <Engine/Scene/SceneRenderer.hpp>
 
 #include <cstdint>
-#include <filesystem>
 #include <map>
 #include <optional>
 #include <span>
@@ -23,7 +22,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <libecs/core/registry/Registry.hpp>
 
-#include <Engine/Core/FileSystem.hpp>
+#include <Engine/Core/Embedded.hpp>
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
 #include <Engine/Renderer/CommandList.hpp>
 #include <Engine/Renderer/LightingData.hpp>
@@ -61,11 +60,10 @@ namespace
         return data;
     }
 
-    // A device, the real lit shader and a SceneRenderer, per test
+    // A device and a SceneRenderer (with its embedded lit shader), per test
     struct SceneFixture
     {
         Platform::OpenGLGraphicsDevice device;
-        ShaderHandle shader;
         std::optional<SceneRenderer> renderer;
         std::vector<Mesh> meshes;
         Registry registry;
@@ -74,15 +72,7 @@ namespace
 
         SceneFixture()
         {
-            const auto dir = std::filesystem::path(GEF_SOURCE_DIR)
-                / "Application" / "assets" / "shaders";
-            const auto vertex = FileSystem::ReadTextFile(dir / "lit.vert");
-            const auto fragment = FileSystem::ReadTextFile(dir / "lit.frag");
-            REQUIRE(vertex.has_value());
-            REQUIRE(fragment.has_value());
-            shader = device.CreateShader({ *vertex, *fragment });
-            REQUIRE(shader.IsValid());
-            renderer.emplace(device, shader);
+            renderer.emplace(device);
         }
 
         ~SceneFixture()
@@ -90,7 +80,6 @@ namespace
             renderer.reset(); // its batches use the meshes' buffers
             for (const Mesh& mesh : meshes)
                 DestroyMesh(device, mesh);
-            device.DestroyShader(shader);
         }
 
         SceneFixture(const SceneFixture&) = delete;
@@ -431,4 +420,20 @@ GL_TEST_CASE(
     scene.renderer->SetInstancingEnabled(true);
     scene.Render();
     CHECK(scene.SubmittedDrawCalls() == 2); // reset each frame
+}
+
+GL_TEST_CASE("A renderer given a shader does not destroy it")
+{
+    Platform::OpenGLGraphicsDevice device;
+    const ShaderHandle shader = device.CreateShader(
+        { Embedded::LitVertexSource(), Embedded::LitFragmentSource() });
+    REQUIRE(shader.IsValid());
+
+    {
+        SceneRenderer renderer(device, shader);
+    }
+
+    // The shader belongs to whoever created it
+    CHECK(device.GetShader(shader) != nullptr);
+    device.DestroyShader(shader);
 }

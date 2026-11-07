@@ -164,3 +164,32 @@ GL_TEST_CASE("Frame commands set the viewport and the clear color")
     // The GL context is shared by every test: leave the viewport as it was
     glViewport(previous[0], previous[1], previous[2], previous[3]);
 }
+
+
+GL_TEST_CASE("Submit times the replay on the CPU and on the GPU")
+{
+    Tests::DrawFixture fixture;
+    Renderer::CommandList cmd;
+
+    // The GPU time comes from timestamp queries read two frames later: the
+    // first frames have none yet, and must report 0 rather than garbage
+    for (int frame = 0; frame < 6; ++frame)
+    {
+        cmd.Reset();
+        for (int i = 0; i < 100; ++i)
+            fixture.RecordDraw(cmd);
+        fixture.device.Submit(cmd);
+        glFinish(); // what the swap does in the engine: the queries complete
+
+        const auto& stats = fixture.device.GetLastSubmitStats();
+        CAPTURE(frame);
+        CHECK(stats.cpuSubmitTimeMs > 0.0);
+        CHECK(stats.cpuSubmitTimeMs < 1000.0);
+        CHECK(stats.gpuFrameTimeMs >= 0.0);
+        CHECK(stats.gpuFrameTimeMs < 1000.0);
+        if (frame < 2)
+            CHECK(stats.gpuFrameTimeMs == 0.0);
+    }
+
+    CHECK(fixture.device.GetLastSubmitStats().gpuFrameTimeMs > 0.0);
+}

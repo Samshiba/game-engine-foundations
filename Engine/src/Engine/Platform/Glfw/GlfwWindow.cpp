@@ -110,6 +110,127 @@ namespace GEF::Platform
         return window_;
     }
 
+    namespace
+    {
+        GLFWmonitor* GetMonitorByIndex(uint8_t index)
+        {
+            int count;
+            GLFWmonitor** monitors =
+                glfwGetMonitors(&count); // first is always main monitor
+            if (index < static_cast<uint8_t>(count))
+            {
+                return monitors[index];
+            }
+            return glfwGetPrimaryMonitor();
+        }
+
+        void CenterWindowOnMonitor(GLFWwindow* window, GLFWmonitor* monitor,
+                                   int width, int height)
+        {
+            if (!monitor)
+                return;
+
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+            if (!mode)
+                return;
+
+            int monitorX;
+            int monitorY;
+            glfwGetMonitorPos(monitor, &monitorX, &monitorY);
+
+            int posX = monitorX + (mode->width - width) / 2;
+            int posY = monitorY + (mode->height - height) / 2;
+
+            glfwSetWindowPos(window, posX, posY);
+        }
+    } // namespace
+
+    GLFWwindow* GlfwWindow::CreateWindow(const WindowProps& props)
+    {
+        GLFWmonitor* monitor = nullptr;
+
+        if (props.windowPositionConfig.type
+            == WindowInitialPosition::CENTER_OTHER_SCREEN)
+        {
+            monitor = GetMonitorByIndex(1);
+        }
+        else if (props.windowPositionConfig.type
+                 == WindowInitialPosition::CENTER_MONITOR_INDEX)
+        {
+            monitor =
+                GetMonitorByIndex(props.windowPositionConfig.monitorIndex);
+        }
+        else
+        {
+            monitor = glfwGetPrimaryMonitor();
+        }
+
+        if (props.windowMode == WindowMode::MAXIMIZED)
+        {
+            glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+        }
+        if (props.windowMode == WindowMode::MINIMIZED
+            || props.windowMode == WindowMode::WINDOWED)
+        {
+            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        }
+
+        GLFWmonitor* windowMonitorArg = nullptr;
+        if (props.windowMode == WindowMode::FULLSCREEN
+            || props.windowMode == WindowMode::EXCLUSIVE)
+        {
+            windowMonitorArg = monitor;
+
+            if (props.windowMode == WindowMode::FULLSCREEN)
+            {
+                const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+                glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+                glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+                glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+                glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+            }
+        }
+
+        GLFWwindow* window = glfwCreateWindow(
+            static_cast<int>(props.width), static_cast<int>(props.height),
+            props.title.c_str(), windowMonitorArg, nullptr);
+
+        if (!window)
+        {
+            GEF_ENGINE_ERROR("Failed to create GLFW window");
+            if (s_WindowCount == 0)
+                glfwTerminate();
+            return nullptr;
+        }
+
+        if (props.windowMode == WindowMode::WINDOWED)
+        {
+            switch (props.windowPositionConfig.type)
+            {
+            case WindowInitialPosition::ABSOLUTE:
+                glfwSetWindowPos(window, props.windowPositionConfig.absoluteX,
+                                 props.windowPositionConfig.absoluteY);
+                break;
+
+            case WindowInitialPosition::CENTER_PRIMARY_SCREEN:
+            case WindowInitialPosition::CENTER_OTHER_SCREEN:
+            case WindowInitialPosition::CENTER_MONITOR_INDEX:
+                CenterWindowOnMonitor(window, monitor,
+                                      static_cast<int>(props.width),
+                                      static_cast<int>(props.height));
+                break;
+            }
+            glfwShowWindow(window);
+        }
+        else if (props.windowMode == WindowMode::MINIMIZED)
+        {
+            glfwIconifyWindow(window);
+            glfwShowWindow(window);
+        }
+
+        return window;
+    }
+
     void GlfwWindow::Init(const WindowProps& props,
                           Renderer::RendererBackend backend)
     {
@@ -148,15 +269,7 @@ namespace GEF::Platform
                        (props.flags & FLAGS_RESIZE_DISABLED) ? GLFW_FALSE
                                                              : GLFW_TRUE);
 
-        GLFWmonitor* monitor = nullptr;
-        if (windowData_.windowMode == WindowMode::FULLSCREEN)
-        {
-            monitor = glfwGetPrimaryMonitor();
-        }
-
-        GLFWwindow* window = glfwCreateWindow(
-            static_cast<int>(props.width), static_cast<int>(props.height),
-            props.title.c_str(), monitor, nullptr);
+        auto window = CreateWindow(props);
         if (!window)
         {
             GEF_ENGINE_ERROR("Failed to create GLFW window");
@@ -193,8 +306,6 @@ namespace GEF::Platform
 
     void GlfwWindow::Shutdown()
     {
-        // TODO multi-window: Engine owns N windows, per-window
-        // context/input/ImGui
         if (!window_)
             return;
 
@@ -247,7 +358,6 @@ namespace GEF::Platform
                                  [[maybe_unused]] int scancode, int action,
                                  [[maybe_unused]] int mods)
     {
-        // TODO SUPPORT MODS AND SCANCODE
         (void)scancode;
         (void)mods;
 
@@ -280,7 +390,6 @@ namespace GEF::Platform
     void GlfwWindow::MouseButtonCallback(GLFWwindow* window, int button,
                                          int action, [[maybe_unused]] int mods)
     {
-        // TODO SUPPORT MODS
         (void)mods;
 
         auto const& data =

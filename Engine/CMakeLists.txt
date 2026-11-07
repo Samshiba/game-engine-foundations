@@ -23,6 +23,7 @@ set(ENGINE_SOURCES
         "src/Engine/Core/Input.cpp"
         "src/Engine/Core/Window.cpp"
         "src/Engine/Core/FileSystem.cpp"
+        "src/Engine/Core/Embedded.hpp"
 
         # Event
         "src/Engine/Event/EventBus.cpp"
@@ -108,6 +109,11 @@ set(ENGINE_HEADERS
         # UI
         "include/Engine/UI/ImGuiBackend.hpp"
 )
+
+# Embed
+include(${PROJECT_SOURCE_DIR}/cmake/Embed.cmake)
+gef_embed_text(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/lit.vert" LitVertexSource)
+gef_embed_text(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/lit.frag" LitFragmentSource)
 
 target_sources(GEF_Engine
         PRIVATE
