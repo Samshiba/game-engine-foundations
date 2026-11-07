@@ -41,23 +41,34 @@ Measured with `GEF_Bench` on an RTX 3060 Laptop GPU, Release build, 1280×720, V
 scenario after a 2 s warm-up. The full table and the method are in
 [docs/benchmark-results.md](docs/benchmark-results.md).
 
-| Scene                          | Entities | Instancing | Draw calls | Mean frame |      p99 |
-|--------------------------------|---------:|:----------:|-----------:|-----------:|---------:|
-| Cubes (12 triangles)           |   10,000 |    off     |     10,000 |    3.12 ms |  3.77 ms |
-| Cubes (12 triangles)           |   10,000 |     on     |          1 |    1.81 ms |  2.51 ms |
-| Cubes (12 triangles)           |   50,000 |    off     |     50,000 |   14.63 ms | 16.04 ms |
-| Cubes (12 triangles)           |   50,000 |     on     |          1 |    5.28 ms |  6.31 ms |
-| Stanford bunny (69k triangles) |    1,000 |    off     |      1,000 |   16.48 ms | 17.05 ms |
-| Stanford bunny (69k triangles) |    1,000 |     on     |          1 |   16.58 ms | 17.23 ms |
+| Scene                          | Entities | Instancing | Draw calls | Mean frame |      p99 | Submit CPU | Submit GPU |
+|--------------------------------|---------:|:----------:|-----------:|-----------:|---------:|-----------:|-----------:|
+| Cubes (12 triangles)           |   10,000 |    off     |     10,000 |    3.18 ms |  3.99 ms |    1.65 ms |    0.29 ms |
+| Cubes (12 triangles)           |   10,000 |     on     |          1 |    1.99 ms |  2.81 ms |    0.03 ms |    0.05 ms |
+| Cubes (12 triangles)           |   50,000 |    off     |     50,000 |   14.81 ms | 15.87 ms |    8.57 ms |    6.01 ms |
+| Cubes (12 triangles)           |   50,000 |     on     |          1 |    5.35 ms |  6.13 ms |    0.04 ms |    0.24 ms |
+| Stanford bunny (69k triangles) |    1,000 |    off     |      1,000 |   16.61 ms | 17.72 ms |    0.25 ms |   16.56 ms |
+| Stanford bunny (69k triangles) |    1,000 |     on     |          1 |   16.95 ms | 17.93 ms |    0.05 ms |   16.90 ms |
 
 With instancing off, the engine still uses the same per-instance data and the same shader, it
 only issues one draw per entity. The difference between the two modes is therefore the cost of
-the draw calls themselves. For small meshes that cost dominates: instancing brings 50,000 cubes
-from 14.6 ms down to 5.3 ms per frame.
+the draw calls themselves.
 
-The bunnies show the opposite case. A thousand of them is 69 million triangles per frame, the
-GPU is busy with geometry, and the number of draw calls no longer matters. Instancing reduces CPU
-and driver work; it does nothing for a scene limited by the GPU.
+The last two columns split the work of `Submit`: the time the CPU spends issuing the commands to
+the driver, and the time the GPU takes to execute them. For small meshes, the CPU side
+dominates. With 50,000 cubes and no instancing, issuing the draws takes 8.6 ms and the GPU needs
+6.0 ms. Instancing brings both down to almost nothing (0.04 ms and 0.24 ms), and the frame goes
+from 14.8 ms to 5.4 ms.
+
+That frame still takes 5.4 ms while `Submit` takes almost no time, so the rest is spent
+elsewhere. The likely cause is the scene renderer, which computes the matrices of 50,000
+entities and uploads their instance data, about 6 MB per frame. This is not timed yet, which is
+why timing the other stages is in the to-do list.
+
+The bunnies show the opposite case. A thousand of them is 69 million triangles per frame. The
+GPU needs 16.6 ms for them, around 4 billion triangles per second, while the CPU spends 0.25 ms
+issuing the draws. Instancing changes nothing: the frame is limited by the GPU, and the number of
+draw calls no longer matters.
 
 In every scenario, the bind counters stay at one pipeline, one vertex array and two uniform
 buffers per frame, whatever the number of draws.
@@ -237,9 +248,10 @@ Short-term work, before the next features:
 - [x] Ship the lit shader inside the engine library (embedded at build time), so `SceneRenderer`
   works without copying shaders into the game.
 - [ ] Install rules and `find_package(GEF)` support, as an alternative to FetchContent.
-- [ ] GPU frame time in the overlay and the benchmark (`GL_TIME_ELAPSED` queries).
-- [ ] CPU time per stage (game update, scene extraction, submit) in the overlay and the
-  benchmark.
+- [x] GPU frame time in the overlay and the benchmark (`GL_TIME_ELAPSED` queries).
+- [x] CPU time per submit in the overlay and the benchmark.
+- [ ] Time the other CPU stages (game update, scene extraction and instance upload) in the
+  overlay and the benchmark: with 50,000 instanced cubes, most of the frame is spent there.
 - [ ] Cache the FetchContent downloads in CI.
 - [ ] Remove the remaining `TODO` comments in the code, or turn them into tickets.
 - [ ] Boids with a uniform spatial grid in the demo, as a heavier ECS workload than the current

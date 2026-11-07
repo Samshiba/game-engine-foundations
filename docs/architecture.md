@@ -283,6 +283,15 @@ The device counts what it really did in `SubmitStats`: draw calls, pipeline chan
 changes and uniform buffer changes. The demo's overlay and the benchmark read them with
 `GetLastSubmitStats()`.
 
+It also times the replay twice. `cpuSubmitTimeMs` is the CPU time spent issuing the commands to
+the driver (the sort is not included). `gpuFrameTimeMs` is the time the GPU takes between two
+timestamp queries placed around the same commands. The GPU time is read a few frames later, when
+the result is available, because asking for it right away would make the CPU wait for the GPU.
+Comparing the two tells which side limits `Submit`. When the CPU time is the larger, the driver
+cannot take the draw calls fast enough. When the GPU time is the larger, the CPU is done long
+before the GPU. If both are small next to the frame time, the frame is limited elsewhere, for
+example by the scene renderer building and uploading the instance data.
+
 Buffer updates are the exception to "record first": `UpdateBuffer` writes immediately. This works
 because each buffer is written once per frame, before `Submit` (see the
 [rules](#rules-the-code-relies-on)).

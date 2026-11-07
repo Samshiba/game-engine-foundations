@@ -4,6 +4,12 @@ All notable changes to GEF are listed here. Versions follow [Semantic Versioning
 
 ## [Unreleased]
 
+### Added
+
+- `SubmitStats::cpuSubmitTimeMs` and `gpuFrameTimeMs`: CPU time spent issuing the commands, and
+  GPU time between two timestamp queries around them. Shown in the demo's overlay and as two
+  columns of the benchmark.
+
 ### Changed
 
 - `SceneRenderer(GraphicsDevice&)` creates and owns the lit shader, now embedded in the library at
