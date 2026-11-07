@@ -97,10 +97,19 @@ namespace GEF::Renderer
         uint32_t pipelineChanges = 0;
         uint32_t vertexArrayChanges = 0;
         uint32_t uniformBufferChanges = 0;
+        double gpuFrameTimeMs = 0;
+        // CPU time spent issuing the same commands (the sort excluded).
+        // About equal to gpuFrameTimeMs: the GPU keeps up with the CPU
+        // (draw call bound). Much lower: the GPU is still working once the
+        // CPU is done (GPU bound).
+        double cpuSubmitTimeMs = 0;
     };
 
     class GraphicsDevice
     {
+    protected:
+        static constexpr std::size_t GpuTimerCount = 3;
+
     public:
         virtual ~GraphicsDevice() = default;
 

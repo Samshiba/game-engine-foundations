@@ -5,6 +5,9 @@
 
 #include "OpenGLGraphicsDevice.hpp"
 
+#include <algorithm>
+#include <chrono>
+
 #include <Engine/Utils/Overloaded.hpp>
 
 namespace GEF::Platform
@@ -26,6 +29,12 @@ namespace GEF::Platform
     {
         GEF_ENGINE_INFO("GPU: {} ({}), OpenGL {}", adapterInfo_.renderer,
                         adapterInfo_.vendor, adapterInfo_.version);
+
+        for (auto& gpuTimer : gpuTimers_)
+        {
+            glCreateQueries(GL_TIMESTAMP, 1, &gpuTimer.start);
+            glCreateQueries(GL_TIMESTAMP, 1, &gpuTimer.end);
+        }
     }
 
     const Renderer::AdapterInfo& OpenGLGraphicsDevice::GetAdapterInfo() const
@@ -41,6 +50,11 @@ namespace GEF::Platform
 
     OpenGLGraphicsDevice::~OpenGLGraphicsDevice()
     {
+        for (const auto& gpuTimer : gpuTimers_)
+        {
+            glDeleteQueries(1, &gpuTimer.start);
+            glDeleteQueries(1, &gpuTimer.end);
+        }
         // Clean vertex arrays first, they reference buffers
         const auto vertexArrays = vertexArrays_.GetAliveHandles();
         if (!vertexArrays.empty())
@@ -349,6 +363,30 @@ namespace GEF::Platform
         lastSubmitStats_ = {};
         BoundState bound{};
 
+        // GPU and CPU fram time
+        GpuTimer& timer = gpuTimers_[gpuTimerIndex_];
+        gpuTimerIndex_ = (gpuTimerIndex_ + 1) % gpuTimers_.size();
+        if (timer.pending)
+        {
+            GLint available = 0;
+            glGetQueryObjectiv(timer.end, GL_QUERY_RESULT_AVAILABLE,
+                               &available);
+            if (available)
+            {
+                GLint64 start = 0;
+                GLint64 end = 0;
+                glGetQueryObjecti64v(timer.start, GL_QUERY_RESULT, &start);
+                glGetQueryObjecti64v(timer.end, GL_QUERY_RESULT, &end);
+                gpuFrameTimeMs_ = ((end - start) / 1'000'000.0);
+            }
+        }
+        lastSubmitStats_.gpuFrameTimeMs = gpuFrameTimeMs_;
+
+        glQueryCounter(timer.start, GL_TIMESTAMP);
+
+        const auto cpuStart = std::chrono::steady_clock::now();
+
+        // Frame command
         const auto visitor = Utils::Overloaded{
             [this](const Renderer::CommandList::SetClearColorCommand& command) {
                 SetClearColor(command.r, command.g, command.b, command.a);
@@ -365,6 +403,7 @@ namespace GEF::Platform
             std::visit(visitor, command);
         }
 
+        // Packets
         const auto& drawPackets = cmd.GetDrawPackets();
         for (const uint64_t key : cmd.GetSortKeys())
         {
@@ -400,6 +439,15 @@ namespace GEF::Platform
                                  packet.baseInstance);
             ++lastSubmitStats_.drawCalls;
         }
+
+        // Before the query readback: CPU can wait for the GPU, which is not
+        // work
+        lastSubmitStats_.cpuSubmitTimeMs =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - cpuStart)
+                .count();
+        glQueryCounter(timer.end, GL_TIMESTAMP);
+        timer.pending = true;
     }
 
     void OpenGLGraphicsDevice::SetClearColor(float r, float g, float b, float a)

@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <array>
+
 #include <glad/glad.h>
 
 #include <Engine/Renderer/GraphicsDevice.hpp>
@@ -45,6 +47,13 @@ namespace GEF::Platform
             Renderer::VertexArrayHandle vertexArray;
             std::array<Renderer::BufferHandle, Renderer::MaxUniformBindings>
                 uniformBuffers;
+        };
+
+        struct GpuTimer
+        {
+            GLuint start = 0;
+            GLuint end = 0;
+            bool pending = false; // issued, result not read yet
         };
 
     public:
@@ -110,6 +119,9 @@ namespace GEF::Platform
         // Infos
         Renderer::AdapterInfo adapterInfo_;
         Renderer::SubmitStats lastSubmitStats_;
+        std::array<GpuTimer, GpuTimerCount> gpuTimers_{};
+        std::size_t gpuTimerIndex_ = 0;
+        double gpuFrameTimeMs_ = 0;
 
         // Pools
         Renderer::ResourcePool<GLBuffer, Renderer::BufferTag> buffers_;
