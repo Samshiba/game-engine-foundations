@@ -59,7 +59,6 @@ namespace GEF
 
         struct WindowPositionConfig
         {
-            // TODO : Handle DPI scaling
             WindowInitialPosition type =
                 WindowInitialPosition::CENTER_PRIMARY_SCREEN;
 

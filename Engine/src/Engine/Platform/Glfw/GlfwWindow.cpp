@@ -306,8 +306,6 @@ namespace GEF::Platform
 
     void GlfwWindow::Shutdown()
     {
-        // TODO multi-window: Engine owns N windows, per-window
-        // context/input/ImGui
         if (!window_)
             return;
 
@@ -360,7 +358,6 @@ namespace GEF::Platform
                                  [[maybe_unused]] int scancode, int action,
                                  [[maybe_unused]] int mods)
     {
-        // TODO SUPPORT MODS AND SCANCODE
         (void)scancode;
         (void)mods;
 
@@ -393,7 +390,6 @@ namespace GEF::Platform
     void GlfwWindow::MouseButtonCallback(GLFWwindow* window, int button,
                                          int action, [[maybe_unused]] int mods)
     {
-        // TODO SUPPORT MODS
         (void)mods;
 
         auto const& data =

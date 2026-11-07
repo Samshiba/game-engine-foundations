@@ -253,7 +253,7 @@ Short-term work, before the next features:
 - [ ] Time the other CPU stages (game update, scene extraction and instance upload) in the
   overlay and the benchmark: with 50,000 instanced cubes, most of the frame is spent there.
 - [x] Cache the FetchContent downloads in CI.
-- [ ] Remove the remaining `TODO` comments in the code, or turn them into tickets.
+- [x] Remove the remaining `TODO` comments in the code, or turn them into tickets.
 - [ ] Boids with a uniform spatial grid in the demo, as a heavier ECS workload than the current
   spin.
 
