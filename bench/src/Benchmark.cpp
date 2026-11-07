@@ -21,6 +21,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <numeric>
 #include <optional>
 #include <span>
 #include <sstream>
@@ -95,6 +96,8 @@ namespace
         Scenario scenario;
         uint32_t triangles;
         SubmitStats submit; // of the last measured frame
+        double submitCpuMs; // mean over the measured frames
+        double submitGpuMs;
         Utils::FrameStatistics stats;
     };
 
@@ -151,6 +154,14 @@ namespace
 #endif
     }
 
+    double Mean(const std::vector<double>& values)
+    {
+        return values.empty()
+            ? 0.0
+            : std::accumulate(values.begin(), values.end(), 0.0)
+                / static_cast<double>(values.size());
+    }
+
     std::string Today()
     {
         const std::time_t now = std::time(nullptr);
@@ -188,8 +199,10 @@ namespace
 
         out << "| Mesh | Triangles/mesh | Entities | Instancing | Draw calls "
                "| Binds (pipeline/VAO/UBO) | FPS | Mean (ms) | p50 (ms) "
-               "| p99 (ms) | Worst (ms) |\n";
-        out << "|---|---:|---:|:---:|---:|:---:|---:|---:|---:|---:|---:|\n";
+               "| p99 (ms) | Worst (ms) | Submit CPU (ms) | Submit GPU (ms) "
+               "|\n";
+        out << "|---|---:|---:|:---:|---:|:---:|---:|---:|---:|---:|---:|---:|-"
+               "--:|\n";
         for (const Result& r : results)
         {
             const std::string_view mesh =
@@ -203,8 +216,15 @@ namespace
                 << std::setprecision(1) << r.stats.fps << " | "
                 << std::setprecision(2) << r.stats.meanMs << " | "
                 << r.stats.p50Ms << " | " << r.stats.p99Ms << " | "
-                << r.stats.worstMs << " |\n";
+                << r.stats.worstMs << " | " << r.submitCpuMs << " | "
+                << r.submitGpuMs << " |\n";
         }
+        out << "\n**Submit CPU**: time spent issuing the frame's commands "
+               "to the driver. "
+               "**Submit GPU**: time the GPU takes to execute them, between "
+               "two timestamps. "
+               "The larger of the two limits Submit. When both are small next "
+               "to the mean frame time, the frame is limited outside Submit.\n";
         return out.str();
     }
 } // namespace
@@ -241,7 +261,13 @@ public:
 
         elapsed_ += dt;
         if (measuring_)
+        {
             frameTimesMs_.push_back(dt * 1000.0f);
+            // Of the previous frame (the GPU time, of two frames before)
+            const SubmitStats& submit = ctx.device.GetLastSubmitStats();
+            submitCpuMs_.push_back(submit.cpuSubmitTimeMs);
+            submitGpuMs_.push_back(submit.gpuFrameTimeMs);
+        }
 
         if (!measuring_ && elapsed_ >= options_.warmupSeconds)
         {
@@ -345,6 +371,8 @@ private:
         measuring_ = false;
         elapsed_ = 0.0f;
         frameTimesMs_.clear();
+        submitCpuMs_.clear();
+        submitGpuMs_.clear();
 
         std::cout << "[" << index + 1 << "/" << scenarios_.size() << "] "
                   << scenario.mesh << " x" << scenario.entities
@@ -358,6 +386,8 @@ private:
             { .scenario = scenarios_[current_],
               .triangles = triangles_,
               .submit = submit,
+              .submitCpuMs = Mean(submitCpuMs_),
+              .submitGpuMs = Mean(submitGpuMs_),
               .stats = Utils::ComputeFrameStatistics(frameTimesMs_) });
     }
 
@@ -386,6 +416,8 @@ private:
     float elapsed_ = 0.0f;
     uint32_t triangles_ = 0;
     std::vector<float> frameTimesMs_;
+    std::vector<double> submitCpuMs_;
+    std::vector<double> submitGpuMs_;
     std::vector<Result> results_;
 };
 
