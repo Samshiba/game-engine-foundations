@@ -195,6 +195,10 @@ struct Sandbox
                     frameTimer.GetStatistics().p99Ms);
         ImGui::Text("Worst Frame Time: %.2f ms",
                     frameTimer.GetWorstFrameTime() * 1000.0f);
+        ImGui::Text("GPU Frame Time: %.2f ms",
+                    ctx.device.GetLastSubmitStats().gpuFrameTimeMs);
+        ImGui::Text("CPU Submit Time: %.2f ms",
+                    ctx.device.GetLastSubmitStats().cpuSubmitTimeMs);
 
         // VSync
         bool vsync = ctx.window.IsVSync();

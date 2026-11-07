@@ -99,9 +99,9 @@ namespace GEF::Renderer
         uint32_t uniformBufferChanges = 0;
         double gpuFrameTimeMs = 0;
         // CPU time spent issuing the same commands (the sort excluded).
-        // About equal to gpuFrameTimeMs: the GPU keeps up with the CPU
-        // (draw call bound). Much lower: the GPU is still working once the
-        // CPU is done (GPU bound).
+        // Compared with gpuFrameTimeMs, the larger one limits Submit: CPU,
+        // the driver cannot take the draw calls fast enough; GPU, the CPU
+        // is done long before the GPU.
         double cpuSubmitTimeMs = 0;
     };
 
