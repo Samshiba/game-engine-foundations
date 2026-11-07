@@ -37,7 +37,7 @@ namespace GEF::Platform
 
     public:
         GlfwWindow(const WindowProps& props, Renderer::RendererBackend backend);
-        ~GlfwWindow();
+        ~GlfwWindow() override;
 
         void OnUpdate() override;
 
@@ -59,6 +59,7 @@ namespace GEF::Platform
 
     private:
         void Init(const WindowProps& props, Renderer::RendererBackend backend);
+        GLFWwindow* CreateWindow(const WindowProps& props);
         void Shutdown();
 
         static void ErrorCallback(int error, const char* description);

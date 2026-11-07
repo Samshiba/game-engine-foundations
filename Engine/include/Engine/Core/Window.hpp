@@ -57,12 +57,25 @@ namespace GEF
             DISABLED
         };
 
+        struct WindowPositionConfig
+        {
+            // TODO : Handle DPI scaling
+            WindowInitialPosition type =
+                WindowInitialPosition::CENTER_PRIMARY_SCREEN;
+
+            int32_t absoluteX = 0;
+            int32_t absoluteY = 0;
+
+            uint8_t monitorIndex = 0;
+        };
+
         struct WindowProps
         {
             std::string title;
             uint32_t width;
             uint32_t height;
             WindowMode windowMode;
+            WindowPositionConfig windowPositionConfig;
             CursorMode cursorMode;
             uint32_t flags;
         };

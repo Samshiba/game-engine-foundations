@@ -231,7 +231,12 @@ struct Sandbox
 
 int main()
 {
-    GEF::Engine engine({ .title = "Sandbox" });
+    GEF::Engine engine(
+        { .title = "Sandbox",
+          .windowPositionConfig = {
+              .type = GEF::Window::WindowInitialPosition::ABSOLUTE,
+              .absoluteX = 500,
+              .absoluteY = 500 } });
     Sandbox game;
     const int status = engine.Run(game);
 
