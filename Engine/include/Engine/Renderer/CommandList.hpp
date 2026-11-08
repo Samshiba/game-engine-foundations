@@ -11,7 +11,6 @@
 #include <vector>
 
 #include <Engine/Renderer/Handle.hpp>
-#include <Engine/Renderer/LightingData.hpp>
 
 namespace GEF::Renderer
 {
@@ -45,6 +44,8 @@ namespace GEF::Renderer
     class CommandList
     {
     public:
+        static constexpr uint32_t MaxUniformBindings = 3;
+
         struct DrawPacket
         {
             PipelineHandle pipeline;

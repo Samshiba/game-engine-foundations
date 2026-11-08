@@ -71,6 +71,8 @@ struct Sandbox
     int entityCount = 10000;
     std::vector<libecs::core::Entity> spawned;
 
+    GEF::Scene::Environment environment = { .ambient = { 0.1f, 0.1f, 0.1f } };
+
     void SpawnAt(int index)
     {
         int x = index / 250;
@@ -169,7 +171,7 @@ struct Sandbox
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
         if (renderer)
-            renderer->Render(registry, camera, cmd);
+            renderer->Render(registry, camera, environment, cmd);
     }
 
     void OnShutdown(GEF::EngineContext& ctx)
@@ -223,8 +225,14 @@ struct Sandbox
                 .direction;
         ImGui::SliderFloat3("Light Direction", glm::value_ptr(direction), -1.0f,
                             1.0f);
+        float intensity =
+            registry.GetComponent<GEF::Scene::DirectionalLight>(light)
+                .intensity;
+        ImGui::SliderFloat("Light Intensity", &intensity, 0.0f, 20.0f);
         registry.GetComponent<GEF::Scene::DirectionalLight>(light).direction =
             direction;
+        registry.GetComponent<GEF::Scene::DirectionalLight>(light).intensity =
+            intensity;
         ImGui::End();
     }
 };

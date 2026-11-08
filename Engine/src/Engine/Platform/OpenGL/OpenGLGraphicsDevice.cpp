@@ -424,7 +424,8 @@ namespace GEF::Platform
                 ++lastSubmitStats_.vertexArrayChanges;
             }
 
-            for (uint32_t i = 0; i < Renderer::MaxUniformBindings; ++i)
+            for (uint32_t i = 0; i < Renderer::CommandList::MaxUniformBindings;
+                 ++i)
             {
                 const auto buffer = packet.uniformBuffers[i];
                 if (buffer.IsValid() && buffer != bound.uniformBuffers[i])

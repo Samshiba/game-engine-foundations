@@ -45,7 +45,8 @@ namespace GEF::Platform
         {
             Renderer::PipelineHandle pipeline;
             Renderer::VertexArrayHandle vertexArray;
-            std::array<Renderer::BufferHandle, Renderer::MaxUniformBindings>
+            std::array<Renderer::BufferHandle,
+                       Renderer::CommandList::MaxUniformBindings>
                 uniformBuffers;
         };
 

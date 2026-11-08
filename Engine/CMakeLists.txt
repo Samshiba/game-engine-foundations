@@ -96,8 +96,9 @@ set(ENGINE_HEADERS
         "include/Engine/Renderer/Handle.hpp"
         "include/Engine/Renderer/Camera.hpp"
         "include/Engine/Renderer/Mesh.hpp"
-        "include/Engine/Renderer/LightingData.hpp"
         "include/Engine/Renderer/FrameCapture.hpp"
+        # Layout
+        "include/Engine/Renderer/Layout/LitShaderLayout.hpp"
 
         # Assets
         "include/Engine/Assets/ObjLoader.hpp"

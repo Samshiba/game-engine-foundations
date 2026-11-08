@@ -18,6 +18,10 @@ layout (std140, binding = 1) uniform Light
 {
     vec4 u_Direction;
     vec4 u_Color;
+};
+
+layout (std140, binding = 2) uniform Environment
+{
     vec4 u_Ambient;
 };
 

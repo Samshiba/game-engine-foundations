@@ -31,7 +31,7 @@
 #include "Engine/Renderer/CommandList.hpp"
 #include "Engine/Renderer/GraphicsDevice.hpp"
 #include "Engine/Renderer/Handle.hpp"
-#include "Engine/Renderer/LightingData.hpp"
+#include "Engine/Renderer/Layout/LitShaderLayout.hpp"
 #include "Engine/Renderer/Mesh.hpp"
 
 // Assets

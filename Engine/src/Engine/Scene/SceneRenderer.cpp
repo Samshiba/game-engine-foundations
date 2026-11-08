@@ -8,9 +8,10 @@
 #include <algorithm>
 #include <ranges>
 
+#include <../../../include/Engine/Renderer/Layout/LitShaderLayout.hpp>
+
 #include <Engine/Core/Assert.hpp>
 #include <Engine/Core/Embedded.hpp>
-#include <Engine/Renderer/LightingData.hpp>
 #include <Engine/Scene/Components.hpp>
 
 GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device,
@@ -20,15 +21,20 @@ GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device,
     pipeline_ = device_.CreatePipeline({ .shader = litShader,
                                          .depth = { true, true },
                                          .cull = Renderer::CullMode::Back });
-    frameUBO_ =
-        device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
-                              .usage = Renderer::BufferUsage::Dynamic,
-                              .size = sizeof(Renderer::FrameUniforms) });
+    frameUBO_ = device.CreateBuffer(
+        { .type = Renderer::BufferType::Uniform,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = sizeof(Renderer::Layout::FrameUniforms) });
 
-    lightUBO_ =
-        device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
-                              .usage = Renderer::BufferUsage::Dynamic,
-                              .size = sizeof(Renderer::LightUniforms) });
+    lightUBO_ = device.CreateBuffer(
+        { .type = Renderer::BufferType::Uniform,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = sizeof(Renderer::Layout::LightUniforms) });
+
+    environmentUBO_ = device.CreateBuffer(
+        { .type = Renderer::BufferType::Uniform,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = sizeof(Renderer::Layout::EnvironmentUniforms) });
 }
 
 GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device)
@@ -43,15 +49,20 @@ GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device)
     pipeline_ = device_.CreatePipeline({ .shader = shader,
                                          .depth = { true, true },
                                          .cull = Renderer::CullMode::Back });
-    frameUBO_ =
-        device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
-                              .usage = Renderer::BufferUsage::Dynamic,
-                              .size = sizeof(Renderer::FrameUniforms) });
+    frameUBO_ = device.CreateBuffer(
+        { .type = Renderer::BufferType::Uniform,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = sizeof(Renderer::Layout::FrameUniforms) });
 
-    lightUBO_ =
-        device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
-                              .usage = Renderer::BufferUsage::Dynamic,
-                              .size = sizeof(Renderer::LightUniforms) });
+    lightUBO_ = device.CreateBuffer(
+        { .type = Renderer::BufferType::Uniform,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = sizeof(Renderer::Layout::LightUniforms) });
+
+    environmentUBO_ = device.CreateBuffer(
+        { .type = Renderer::BufferType::Uniform,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = sizeof(Renderer::Layout::EnvironmentUniforms) });
 }
 
 GEF::Scene::SceneRenderer::~SceneRenderer()
@@ -59,6 +70,7 @@ GEF::Scene::SceneRenderer::~SceneRenderer()
     device_.DestroyPipeline(pipeline_);
     device_.DestroyBuffer(frameUBO_);
     device_.DestroyBuffer(lightUBO_);
+    device_.DestroyBuffer(environmentUBO_);
 
     for (const auto& [key, batch] : batches_)
     {
@@ -74,11 +86,20 @@ GEF::Scene::SceneRenderer::~SceneRenderer()
 
 void GEF::Scene::SceneRenderer::Render(
     const libecs::core::registry::Registry& registry,
-    const Renderer::Camera& camera, Renderer::CommandList& cmd)
+    const Renderer::Camera& camera, const Environment& environment,
+    Renderer::CommandList& cmd)
 {
     cmd.BindPipeline(pipeline_);
-    cmd.BindUniformBuffer(Renderer::UniformBinding::Frame, frameUBO_);
-    cmd.BindUniformBuffer(Renderer::UniformBinding::Light, lightUBO_);
+    cmd.BindUniformBuffer(Renderer::Layout::UniformBinding::Frame, frameUBO_);
+    cmd.BindUniformBuffer(Renderer::Layout::UniformBinding::Light, lightUBO_);
+    cmd.BindUniformBuffer(Renderer::Layout::UniformBinding::Environment,
+                          environmentUBO_);
+
+    // ----- Environment -----
+    const Renderer::Layout::EnvironmentUniforms envU{
+        .ambient = glm::vec4(environment.ambient, 0.0f)
+    };
+    device_.UpdateBuffer(environmentUBO_, 0, &envU, sizeof(envU));
 
     // ----- Light -----
     DirectionalLight light;
@@ -86,15 +107,14 @@ void GEF::Scene::SceneRenderer::Render(
         [&](libecs::core::Entity, const DirectionalLight& directionalLight) {
             light = directionalLight;
         });
-    const Renderer::LightUniforms lightU{
+    const Renderer::Layout::LightUniforms lightU{
         .direction = glm::vec4(glm::normalize(light.direction), 1.0f),
         .color = glm::vec4(light.color * light.intensity, 1.0f),
-        .ambient = glm::vec4(light.ambient, 1.0f),
     };
     device_.UpdateBuffer(lightUBO_, 0, &lightU, sizeof(lightU));
 
     // ----- Frame -----
-    const Renderer::FrameUniforms frameU{
+    const Renderer::Layout::FrameUniforms frameU{
         .viewProjection = camera.GetViewProjection(),
         .cameraPosition = glm::vec4(camera.position, 1.0f),
     };

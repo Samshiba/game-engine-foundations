@@ -12,6 +12,8 @@
 #include <Engine/Renderer/GraphicsDevice.hpp>
 #include <Engine/Renderer/Mesh.hpp>
 
+#include "Components.hpp"
+
 namespace GEF::Scene
 {
     class SceneRenderer
@@ -40,7 +42,8 @@ namespace GEF::Scene
         SceneRenderer& operator=(const SceneRenderer&) = delete;
 
         void Render(const libecs::core::registry::Registry& registry,
-                    const Renderer::Camera& camera, Renderer::CommandList& cmd);
+                    const Renderer::Camera& camera,
+                    const Environment& environment, Renderer::CommandList& cmd);
 
         void SetInstancingEnabled(bool enabled);
         [[nodiscard]] bool IsInstancingEnabled() const;
@@ -56,6 +59,7 @@ namespace GEF::Scene
         Renderer::PipelineHandle pipeline_;
         Renderer::BufferHandle frameUBO_;
         Renderer::BufferHandle lightUBO_;
+        Renderer::BufferHandle environmentUBO_;
 
         bool instancing_ = true;
 
