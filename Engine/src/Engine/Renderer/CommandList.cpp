@@ -19,6 +19,7 @@ namespace GEF::Renderer
         pipeline_ = PipelineHandle();
         vertexArray_ = VertexArrayHandle();
         uniformBuffers_.fill(BufferHandle{});
+        shaderStorageBuffers_.fill(BufferHandle{});
     }
 
     void CommandList::Clear()
@@ -55,6 +56,14 @@ namespace GEF::Renderer
         uniformBuffers_[bindingPoint] = handle;
     }
 
+    void CommandList::BindShaderStorageBuffer(uint32_t bindingPoint,
+                                              BufferHandle handle)
+    {
+        GEF_CORE_ASSERT(bindingPoint < MaxShaderStorageBindings,
+                        "bindingPoint out of range");
+        shaderStorageBuffers_[bindingPoint] = handle;
+    }
+
     void CommandList::DrawIndexed(uint32_t indexCount)
     {
         DrawIndexedInstanced(indexCount, 1, 0);
@@ -78,7 +87,8 @@ namespace GEF::Renderer
                           static_cast<uint32_t>(drawPackets_.size())));
 
         drawPackets_.emplace_back(pipeline_, vertexArray_, uniformBuffers_,
-                                  indexCount, instanceCount, baseInstance);
+                                  shaderStorageBuffers_, indexCount,
+                                  instanceCount, baseInstance);
     }
 
     void CommandList::SortPackets()

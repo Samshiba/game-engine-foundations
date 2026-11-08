@@ -51,9 +51,25 @@ namespace GEF::Scene
 
     struct DirectionalLight
     {
-        glm::vec3 direction{ 0.0f, -1.0f, 0.0f };
         glm::vec3 color{ 1.0f };
         float intensity = 1.0f;
+    };
+
+    struct PointLight
+    {
+        glm::vec3 color{ 1.0f };
+        float intensity{ 1.0f };
+        float range{ 100.0f };
+    };
+
+    struct SpotLight
+    {
+        glm::vec3 color{ 1.0f };
+        float intensity{ 1.0f };
+        float range{ 100.0f };
+        // Half-angles in degrees, from the light direction to the cone edge
+        float innerConeAngle{ 30.0f };
+        float outerConeAngle{ 45.0f };
     };
 
     struct Environment
