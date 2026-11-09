@@ -103,13 +103,17 @@ void GEF::Scene::SceneRenderer::Render(
     registry.GetView<const Transform, const SpotLight>().Each(
         [&](libecs::core::Entity, const Transform& transform,
             const SpotLight& light) {
+            GEF_CORE_ASSERT(
+                light.innerConeAngle < light.outerConeAngle,
+                "Inner cone angle must be less than outer cone angle");
+            const float inner = light.innerConeAngle;
+            const float outer = glm::max(light.outerConeAngle, inner + 0.01f);
             spotLights_.push_back({
                 .positionRange = glm::vec4(transform.position, light.range),
                 .direction = glm::vec4(Forward(transform), 0.0f),
                 .color = glm::vec4(light.color * light.intensity, 0.0f),
-                .coneCos = glm::vec4(
-                    glm::cos(glm::radians(light.innerConeAngle)),
-                    glm::cos(glm::radians(light.outerConeAngle)), 0.0f, 0.0f),
+                .coneCos = glm::vec4(glm::cos(glm::radians(inner)),
+                                     glm::cos(glm::radians(outer)), 0.0f, 0.0f),
             });
         });
 
