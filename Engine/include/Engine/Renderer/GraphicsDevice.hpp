@@ -98,7 +98,7 @@ namespace GEF::Renderer
         uint32_t pipelineChanges = 0;
         uint32_t vertexArrayChanges = 0;
         uint32_t uniformBufferChanges = 0;
-        uint32_t shaderStorageChanges = 0;
+        uint32_t shaderStorageBufferChanges = 0;
         double gpuFrameTimeMs = 0;
         // CPU time spent issuing the same commands (the sort excluded).
         // Compared with gpuFrameTimeMs, the larger one limits Submit: CPU,

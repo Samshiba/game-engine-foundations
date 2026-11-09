@@ -448,7 +448,7 @@ namespace GEF::Platform
                 {
                     BindShaderStorageBuffer(i, buffer);
                     bound.shaderStorageBuffers[i] = buffer;
-                    ++lastSubmitStats_.shaderStorageChanges;
+                    ++lastSubmitStats_.shaderStorageBufferChanges;
                 }
             }
 
