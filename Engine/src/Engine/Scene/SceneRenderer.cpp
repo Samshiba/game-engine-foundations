@@ -296,7 +296,7 @@ void GEF::Scene::SceneRenderer::UploadLights(
             CreateLightBuffer<GpuLight>(std::max(count, buffer.capacity * 2));
     }
 
-    const Renderer::Layout::LightListHeader header{ .count = count };
+    const Renderer::Layout::LightListHeader header{ .count = count, .pad = {} };
     device_.UpdateBuffer(buffer.handle, 0, &header, sizeof(header));
     if (count > 0)
     {
