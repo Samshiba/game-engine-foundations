@@ -80,3 +80,19 @@ namespace GEF::Renderer::Layout
     };
     static_assert(sizeof(GpuSpotLight) == 64);
 } // namespace GEF::Renderer::Layout
+
+// ---------- Texture ----------
+namespace GEF::Renderer::Layout
+{
+    namespace TextureBinding
+    {
+        constexpr uint32_t Albedo = 0;
+        constexpr uint32_t Normal = 1;
+        // constexpr uint32_t Specular = 2;
+        // constexpr uint32_t Roughness = 3;
+        // constexpr uint32_t Metallic = 4;
+        // constexpr uint32_t Emissive = 5;
+        // constexpr uint32_t AO = 6;
+        // constexpr uint32_t Height = 7;
+    } // namespace TextureBinding
+} // namespace GEF::Renderer::Layout

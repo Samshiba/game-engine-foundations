@@ -84,6 +84,22 @@ namespace GEF::Renderer
         CullMode cull = CullMode::Back;
     };
 
+    // Texture
+    enum class TextureFormat
+    {
+        RGBA8,
+        SRGBA8
+    };
+
+    struct TextureDesc
+    {
+        uint32_t width = 0;
+        uint32_t height = 0;
+        bool generateMipmaps = true;
+        TextureFormat format = TextureFormat::RGBA8;
+        const void* data = nullptr;
+    };
+
     // Infos
     struct AdapterInfo
     {
@@ -99,6 +115,7 @@ namespace GEF::Renderer
         uint32_t vertexArrayChanges = 0;
         uint32_t uniformBufferChanges = 0;
         uint32_t shaderStorageBufferChanges = 0;
+        uint32_t textureChanges = 0;
         double gpuFrameTimeMs = 0;
         // CPU time spent issuing the same commands (the sort excluded).
         // Compared with gpuFrameTimeMs, the larger one limits Submit: CPU,
@@ -136,6 +153,11 @@ namespace GEF::Renderer
         [[nodiscard]] virtual PipelineHandle
         CreatePipeline(const PipelineDesc& desc) = 0;
         virtual void DestroyPipeline(PipelineHandle handle) = 0;
+
+        // Texture
+        [[nodiscard]] virtual TextureHandle
+        CreateTexture(const TextureDesc& desc) = 0;
+        virtual void DestroyTexture(TextureHandle handle) = 0;
 
         // Infos
         [[nodiscard]] virtual const AdapterInfo& GetAdapterInfo() const = 0;

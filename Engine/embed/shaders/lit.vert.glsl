@@ -16,6 +16,7 @@ layout (std140, binding = 0) uniform Frame
 
 out vec3 v_Normal;
 out vec3 v_WorldPos;
+out vec2 v_UV;
 flat out vec3 v_Albedo;
 flat out vec2 v_Params;
 
@@ -23,6 +24,7 @@ void main()
 {
     v_Normal = mat3(a_NormalMatrix) * a_Normal;
     v_WorldPos = vec3(a_Model * vec4(a_Position, 1.0));
+    v_UV = a_UV;
     v_Albedo = a_Albedo;
     v_Params = a_Params;
     gl_Position = u_ViewProjection * a_Model * vec4(a_Position, 1.0);

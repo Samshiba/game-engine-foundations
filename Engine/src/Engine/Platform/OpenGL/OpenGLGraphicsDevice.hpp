@@ -38,6 +38,15 @@ namespace GEF::Platform
         Renderer::CullMode cull;
     };
 
+    struct GLTexture
+    {
+        GLuint id;
+        uint32_t width;
+        uint32_t height;
+        GLenum format;
+        GLint level;
+    };
+
     class OpenGLGraphicsDevice : public Renderer::GraphicsDevice
     {
     private:
@@ -51,6 +60,9 @@ namespace GEF::Platform
             std::array<Renderer::BufferHandle,
                        Renderer::CommandList::MaxShaderStorageBindings>
                 shaderStorageBuffers;
+            std::array<Renderer::TextureHandle,
+                       Renderer::CommandList::MaxTextureBindings>
+                textures;
         };
 
         struct GpuTimer
@@ -86,6 +98,11 @@ namespace GEF::Platform
         CreatePipeline(const Renderer::PipelineDesc& desc) override;
         void DestroyPipeline(Renderer::PipelineHandle handle) override;
 
+        // Texture
+        [[nodiscard]] Renderer::TextureHandle
+        CreateTexture(const Renderer::TextureDesc& desc) override;
+        void DestroyTexture(Renderer::TextureHandle handle) override;
+
         // Backend-side lookup (command list execution, tests), nullptr if stale
         [[nodiscard]] const GLBuffer*
         GetBuffer(Renderer::BufferHandle handle) const;
@@ -117,6 +134,7 @@ namespace GEF::Platform
                                Renderer::BufferHandle handle);
         void BindShaderStorageBuffer(uint32_t bindingPoint,
                                      Renderer::BufferHandle handle);
+        void BindTexture(uint32_t unit, Renderer::TextureHandle handle);
 
         void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount,
                                   uint32_t baseInstance);
@@ -135,5 +153,6 @@ namespace GEF::Platform
             vertexArrays_;
         Renderer::ResourcePool<GLShader, Renderer::ShaderTag> shaders_;
         Renderer::ResourcePool<GLPipeline, Renderer::PipelineTag> pipelines_;
+        Renderer::ResourcePool<GLTexture, Renderer::TextureTag> textures_;
     };
 } // namespace GEF::Platform

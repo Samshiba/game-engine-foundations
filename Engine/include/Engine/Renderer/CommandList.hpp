@@ -46,6 +46,7 @@ namespace GEF::Renderer
     public:
         static constexpr uint32_t MaxUniformBindings = 2;
         static constexpr uint32_t MaxShaderStorageBindings = 3;
+        static constexpr uint32_t MaxTextureBindings = 2;
 
         struct DrawPacket
         {
@@ -54,6 +55,7 @@ namespace GEF::Renderer
             std::array<BufferHandle, MaxUniformBindings> uniformBuffers;
             std::array<BufferHandle, MaxShaderStorageBindings>
                 shaderStorageBuffers;
+            std::array<TextureHandle, MaxTextureBindings> textures;
             uint32_t indexCount;
             uint32_t instanceCount;
             uint32_t baseInstance;
@@ -99,6 +101,7 @@ namespace GEF::Renderer
         void BindUniformBuffer(uint32_t bindingPoint, BufferHandle handle);
         void BindShaderStorageBuffer(uint32_t bindingPoint,
                                      BufferHandle handle);
+        void BindTexture(uint32_t unit, TextureHandle handle);
 
         void DrawIndexed(uint32_t indexCount);
         void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount,
@@ -121,5 +124,6 @@ namespace GEF::Renderer
         std::array<BufferHandle, MaxUniformBindings> uniformBuffers_;
         std::array<BufferHandle, MaxShaderStorageBindings>
             shaderStorageBuffers_;
+        std::array<TextureHandle, MaxTextureBindings> textures_;
     };
 } // namespace GEF::Renderer

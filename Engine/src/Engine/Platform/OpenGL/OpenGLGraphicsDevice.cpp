@@ -6,6 +6,7 @@
 #include "OpenGLGraphicsDevice.hpp"
 
 #include <algorithm>
+#include <bit>
 #include <chrono>
 
 #include <Engine/Utils/Overloaded.hpp>
@@ -88,6 +89,15 @@ namespace GEF::Platform
                             pipelines.size());
             for (const auto& handle : pipelines)
                 OpenGLGraphicsDevice::DestroyPipeline(handle);
+        }
+
+        const auto textures = textures_.GetAliveHandles();
+        if (!textures.empty())
+        {
+            GEF_ENGINE_WARN("{} textures leaked! Destroy them!",
+                            textures.size());
+            for (const auto& handle : textures)
+                OpenGLGraphicsDevice::DestroyTexture(handle);
         }
     }
 
@@ -332,6 +342,43 @@ namespace GEF::Platform
         pipelines_.Remove(handle);
     }
 
+    Renderer::TextureHandle
+    OpenGLGraphicsDevice::CreateTexture(const Renderer::TextureDesc& desc)
+    {
+        int level = std::bit_width(std::max(desc.width, desc.height));
+        GLenum format = desc.format == Renderer::TextureFormat::RGBA8
+            ? GL_RGBA8
+            : GL_SRGB8_ALPHA8;
+
+        GLuint id = 0;
+        glCreateTextures(GL_TEXTURE_2D, 1, &id);
+        glTextureStorage2D(id, level, format, desc.width,
+                           desc.height); // immutable
+        glTextureSubImage2D(id, 0, 0, 0, desc.width, desc.height, GL_RGBA,
+                            GL_UNSIGNED_BYTE, desc.data);
+
+        if (desc.generateMipmaps)
+        {
+            glGenerateTextureMipmap(id);
+        }
+
+        glTextureParameteri(id, GL_TEXTURE_MIN_FILTER,
+                            GL_LINEAR_MIPMAP_LINEAR); // + MAG, WRAP_S/T
+
+        return textures_.Insert(
+            GLTexture{ id, desc.width, desc.height, format, level });
+    }
+
+    void OpenGLGraphicsDevice::DestroyTexture(Renderer::TextureHandle handle)
+    {
+        auto texture = textures_.Get(handle);
+        if (texture)
+        {
+            glDeleteTextures(1, &texture->id);
+            textures_.Remove(handle);
+        }
+    }
+
     const GLBuffer*
     OpenGLGraphicsDevice::GetBuffer(Renderer::BufferHandle handle) const
     {
@@ -452,6 +499,19 @@ namespace GEF::Platform
                 }
             }
 
+            // Texture
+            for (uint32_t i = 0; i < Renderer::CommandList::MaxTextureBindings;
+                 ++i)
+            {
+                const auto texture = packet.textures[i];
+                if (texture.IsValid() && texture != bound.textures[i])
+                {
+                    BindTexture(i, texture);
+                    bound.textures[i] = texture;
+                    ++lastSubmitStats_.textureChanges;
+                }
+            }
+
             DrawIndexedInstanced(packet.indexCount, packet.instanceCount,
                                  packet.baseInstance);
             ++lastSubmitStats_.drawCalls;
@@ -551,6 +611,15 @@ namespace GEF::Platform
         GEF_CORE_ASSERT(buffer->type == Renderer::BufferType::ShaderStorage,
                         "Buffer is not a shader storage buffer");
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingPoint, buffer->id);
+    }
+
+    void OpenGLGraphicsDevice::BindTexture(uint32_t unit,
+                                           Renderer::TextureHandle handle)
+    {
+        const GLTexture* texture =
+            textures_.IsValid(handle) ? textures_.Get(handle) : nullptr;
+        GEF_CORE_ASSERT(texture, "Invalid texture handle");
+        glBindTextureUnit(unit, texture->id);
     }
 
     void OpenGLGraphicsDevice::DrawIndexedInstanced(uint32_t indexCount,
