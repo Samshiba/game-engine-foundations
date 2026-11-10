@@ -48,10 +48,14 @@ namespace GEF::Assets
             return std::nullopt;
         }
 
+        std::vector<uint8_t> pixels;
+        pixels.assign(data, data + (width * height * 4));
+        FlipInplace(pixels, width, height);
+
         Renderer::ImageData imageData;
         imageData.width = static_cast<uint32_t>(width);
         imageData.height = static_cast<uint32_t>(height);
-        imageData.pixels.assign(data, data + (width * height * 4));
+        imageData.pixels = std::move(pixels);
 
         stbi_image_free(data);
 
