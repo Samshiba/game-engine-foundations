@@ -39,16 +39,6 @@ namespace GEF::Renderer
         uint32_t indexCount = 0;
     };
 
-    struct InstanceData
-    {
-        glm::mat4 model; // attributes 3-6  (one vec4 per column)
-        glm::mat3 normalMatrix; // attributes 7-9  (one vec3 per column)
-        glm::vec3 albedo; // attribute 10
-        glm::vec2 params; // attribute 11
-
-        static BufferLayout Layout();
-    };
-
     Mesh UploadMesh(GraphicsDevice& device, const MeshData& data);
     void DestroyMesh(GraphicsDevice& device, const Mesh& mesh);
 } // namespace GEF::Renderer
@@ -58,12 +48,4 @@ inline GEF::Renderer::BufferLayout GEF::Renderer::Vertex::Layout()
     return { { ShaderDataType::Float3, "a_Position" },
              { ShaderDataType::Float3, "a_Normal" },
              { ShaderDataType::Float2, "a_UV" } };
-}
-
-inline GEF::Renderer::BufferLayout GEF::Renderer::InstanceData::Layout()
-{
-    return { { ShaderDataType::Mat4, "a_Model" },
-             { ShaderDataType::Mat3, "a_NormalMatrix" },
-             { ShaderDataType::Float3, "a_Albedo" },
-             { ShaderDataType::Float2, "a_Params" } };
 }

@@ -11,6 +11,8 @@
 
 #include <Engine/Renderer/Mesh.hpp>
 
+#include "Material.hpp"
+
 namespace GEF::Scene
 {
     struct Transform
@@ -34,14 +36,6 @@ namespace GEF::Scene
         return glm::mat3_cast(rotation)
             * glm::mat3(glm::scale(glm::mat4(1), 1.0f / scale));
     }
-
-    struct Material
-    {
-        glm::vec3 albedo{ 0.8f };
-        // sRGB, as picked by eye: the renderer converts to linear
-        float shininess = 32.0f;
-        float specularStrength = 0.5f;
-    };
 
     struct MeshRenderer
     {
@@ -70,10 +64,5 @@ namespace GEF::Scene
         // Half-angles in degrees, from the light direction to the cone edge
         float innerConeAngle{ 30.0f };
         float outerConeAngle{ 45.0f };
-    };
-
-    struct Environment
-    {
-        glm::vec3 ambient{ 0.1f };
     };
 } // namespace GEF::Scene

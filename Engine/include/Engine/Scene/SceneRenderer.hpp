@@ -19,13 +19,20 @@ namespace GEF::Scene
 {
     class SceneRenderer
     {
+    public:
+        struct Environment
+        {
+            glm::vec3 ambient{ 0.1f };
+        };
+
     private:
         struct Batch
         {
             Renderer::BufferHandle instanceBuffer;
             Renderer::VertexArrayHandle vertexArray;
             uint32_t capacity = 0; // instances the buffer can hold
-            std::vector<Renderer::InstanceData> instances; // filled each frame
+            std::vector<Renderer::Layout::InstanceData>
+                instances; // filled each frame
             Renderer::Mesh mesh;
         };
 

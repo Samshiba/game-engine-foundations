@@ -106,6 +106,7 @@ set(ENGINE_HEADERS
         # Scene
         "include/Engine/Scene/Components.hpp"
         "include/Engine/Scene/SceneRenderer.hpp"
+        "include/Engine/Scene/Material.hpp"
 
         # UI
         "include/Engine/UI/ImGuiBackend.hpp"

@@ -151,7 +151,7 @@ void GEF::Scene::SceneRenderer::Render(
                 it->second = CreateBatch(mesh, InitialBatchCapacity);
             }
 
-            it->second.instances.push_back(Renderer::InstanceData{
+            it->second.instances.push_back(Renderer::Layout::InstanceData{
                 .model = transform.GetMatrix(),
                 .normalMatrix = transform.GetNormalMatrix(),
                 .albedo =
@@ -174,7 +174,7 @@ void GEF::Scene::SceneRenderer::Render(
         }
 
         device_.UpdateBuffer(batch.instanceBuffer, 0, batch.instances.data(),
-                             count * sizeof(Renderer::InstanceData));
+                             count * sizeof(Renderer::Layout::InstanceData));
 
         cmd.BindVertexArray(batch.vertexArray);
         if (instancing_)
@@ -225,7 +225,7 @@ GEF::Scene::SceneRenderer::CreateBatch(const Renderer::Mesh& mesh,
     batch.instanceBuffer = device_.CreateBuffer(
         { .type = Renderer::BufferType::Vertex,
           .usage = Renderer::BufferUsage::Dynamic,
-          .size = static_cast<uint32_t>(sizeof(Renderer::InstanceData))
+          .size = static_cast<uint32_t>(sizeof(Renderer::Layout::InstanceData))
               * capacity });
     batch.vertexArray = device_.CreateVertexArray({
         .vertexBuffers = {
@@ -234,7 +234,7 @@ GEF::Scene::SceneRenderer::CreateBatch(const Renderer::Mesh& mesh,
               .layout = Renderer::Vertex::Layout() },
             { .buffer = batch.instanceBuffer,
               // binding 1: per instance
-              .layout = Renderer::InstanceData::Layout(),
+              .layout = Renderer::Layout::InstanceData::Layout(),
               .instanceDivisor = 1 },
         },
         .indexBuffer = mesh.indexBuffer,
@@ -251,7 +251,7 @@ void GEF::Scene::SceneRenderer::GrowBatch(Batch& batch, uint32_t capacity)
     batch.instanceBuffer = device_.CreateBuffer(
         { .type = Renderer::BufferType::Vertex,
           .usage = Renderer::BufferUsage::Dynamic,
-          .size = static_cast<uint32_t>(sizeof(Renderer::InstanceData))
+          .size = static_cast<uint32_t>(sizeof(Renderer::Layout::InstanceData))
               * capacity });
     batch.vertexArray = device_.CreateVertexArray({
         .vertexBuffers = {
@@ -260,7 +260,7 @@ void GEF::Scene::SceneRenderer::GrowBatch(Batch& batch, uint32_t capacity)
               .layout = Renderer::Vertex::Layout() },
             { .buffer = batch.instanceBuffer,
               // binding 1: per instance
-              .layout = Renderer::InstanceData::Layout(),
+              .layout = Renderer::Layout::InstanceData::Layout(),
               .instanceDivisor = 1 },
         },
         .indexBuffer = batch.mesh.indexBuffer,

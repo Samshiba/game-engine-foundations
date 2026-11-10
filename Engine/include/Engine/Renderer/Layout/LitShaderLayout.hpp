@@ -9,6 +9,22 @@
 
 #include <glm/glm.hpp>
 
+#include <Engine/Renderer/Buffer.hpp>
+
+// ---------- Instance Attributes ----------
+namespace GEF::Renderer::Layout
+{
+    struct InstanceData
+    {
+        glm::mat4 model; // attributes 3-6  (one vec4 per column)
+        glm::mat3 normalMatrix; // attributes 7-9  (one vec3 per column)
+        glm::vec3 albedo; // attribute 10
+        glm::vec2 params; // attribute 11
+
+        static BufferLayout Layout();
+    };
+} // namespace GEF::Renderer::Layout
+
 // ---------- Uniform ----------
 namespace GEF::Renderer::Layout
 {
@@ -96,3 +112,11 @@ namespace GEF::Renderer::Layout
         // constexpr uint32_t Height = 7;
     } // namespace TextureBinding
 } // namespace GEF::Renderer::Layout
+
+inline GEF::Renderer::BufferLayout GEF::Renderer::Layout::InstanceData::Layout()
+{
+    return { { ShaderDataType::Mat4, "a_Model" },
+             { ShaderDataType::Mat3, "a_NormalMatrix" },
+             { ShaderDataType::Float3, "a_Albedo" },
+             { ShaderDataType::Float2, "a_Params" } };
+}
