@@ -20,8 +20,9 @@ part goes into the pieces that shape the renderer.
 ## Overview
 
 GEF is a static library (`GEF::Engine`) that a game links against. The game keeps its world in a
-libecs registry: entities with a `Transform`, a `MeshRenderer` (which mesh, which material) and
-one `DirectionalLight`. The engine runs the loop, and on each frame:
+libecs registry: entities with a `Transform` and a `MeshRenderer` (which mesh, which material),
+and lights (`DirectionalLight`, `PointLight`, `SpotLight`) placed by their own `Transform`. The
+engine runs the loop, and on each frame:
 
 1. the game updates its entities (input, movement, gameplay);
 2. the scene renderer reads the entities and records draw commands into a command list;
@@ -37,7 +38,7 @@ flowchart TB
 
     subgraph SCENE["Scene"]
         SR["SceneRenderer"]
-        COMP["Components<br/>Transform, MeshRenderer, DirectionalLight"]
+        COMP["Components<br/>Transform, MeshRenderer, lights"]
     end
 
     subgraph RENDERER["Renderer, independent of the graphics API"]
@@ -104,7 +105,9 @@ written against GEF does not depend on OpenGL.
   buffers and back.
 - `Camera` is a perspective camera defined by a position, yaw and pitch. It computes the view and
   projection matrices.
-- `LightingData` holds the C++ copies of the shader uniform blocks.
+- `Layout/LitShaderLayout.hpp` is the contract between the C++ side and the lit shader: the
+  binding of each uniform and storage block, and the C++ copies of their layouts
+  ([details](#lighting)).
 - `FrameCapture` saves screenshots and frame sequences ([details](#frame-capture)).
 
 **Scene** (`Engine/Scene/`): the ECS components and the `SceneRenderer`, which turns them into
@@ -304,16 +307,26 @@ The components are plain structs:
 |--------------------|-------------------------------------------------------------------------------------------|
 | `Transform`        | position, rotation (quaternion), scale                                                    |
 | `MeshRenderer`     | a `Mesh` (handles and index count) and a `Material` (color, shininess, specular strength) |
-| `DirectionalLight` | direction, color, intensity, ambient color                                                |
+| `DirectionalLight` | color, intensity                                                                          |
+| `PointLight`       | color, intensity, range                                                                   |
+| `SpotLight`        | color, intensity, range, inner and outer cone half-angles (degrees)                       |
 
-`SceneRenderer::Render(registry, camera, cmd)` does the following each frame:
+A light takes its position and orientation from the `Transform` of its entity, and shines along
+its local -Z. The scale is ignored. A light without a `Transform` is not drawn.
+
+`Environment` is not a component: there is one per scene, so the game passes it to `Render` like
+the camera. It holds the ambient color.
+
+`SceneRenderer::Render(registry, camera, environment, cmd)` does the following each frame:
 
 1. It writes two uniform buffers that are the same for every object: the frame data (camera
-   matrices and position, binding 0) and the light (binding 1).
-2. It goes through every entity that has a `Transform` and a `MeshRenderer`, and adds an
+   matrices and position, binding 0) and the environment (ambient color, binding 1).
+2. It collects the lights into one list per type and uploads each list to its shader storage buffer
+   ([details](#lighting)).
+3. It goes through every entity that has a `Transform` and a `MeshRenderer`, and adds an
    `InstanceData` to the batch of its mesh: model matrix, normal matrix, color and specular
    values. Batches are found by the mesh's vertex array handle.
-3. For each batch, it uploads the instances to the batch's instance buffer (doubling its size
+4. For each batch, it uploads the instances to the batch's instance buffer (doubling its size
    when it is too small) and records the draw.
 
 Instancing means drawing the same mesh several times with one call, each copy reading its own
@@ -328,15 +341,71 @@ shader, which is why the demo's toggle and the benchmark measure the cost of dra
 
 ## Lighting
 
-The lit shader (`lit.vert`, `lit.frag`, embedded in the library from `Engine/embed/shaders`) uses the Blinn-Phong model
-with one directional light:
-an ambient term, a diffuse term proportional to the angle between the surface and the light, and
-a specular highlight whose size depends on the shininess. Colors are picked in sRGB, converted to
-linear on the CPU, lit in linear space, then gamma corrected by the shader before being written.
+The lit shader (`lit.vert.glsl`, `lit.frag.glsl`, embedded in the library from
+`Engine/embed/shaders`) uses the Blinn-Phong model. Each fragment starts from the ambient term,
+then adds the diffuse and specular terms of every light: first the directional lights, then the
+point lights, then the spot lights. Colors are picked in sRGB, converted to linear on the CPU and
+lit in linear space. The CPU multiplies each light's color by its intensity, so the shader receives
+the light's radiance directly.
 
-The uniform blocks use the `std140` layout. Their C++ copies in `LightingData.hpp` only use
-`vec4` and `mat4`, which have the same layout in C++ and in GLSL, and their sizes are checked with
-`static_assert`.
+### One shader storage buffer per light type
+
+The number of lights changes with the scene, so the lights do not go in uniform buffers, whose
+arrays have a fixed size. Each type has its own shader storage buffer (SSBO, `std430` layout):
+a 16-byte header holding the count, then the array of lights.
+
+```
+byte:  0        4             16                  16 + n * size
+       [count ][ padding     ][ light 0 ][ light 1 ] ...
+```
+
+The padding is there because `std430` starts an array of `vec4` structs on a multiple of 16.
+The shader loops up to the count, not up to the array's length: a buffer keeps its capacity
+when lights are removed, so its end still holds the previous frames' lights.
+
+The SceneRenderer keeps the capacity of each buffer. When a list outgrows it, the buffer is
+recreated with twice the capacity before being written, so no frame is lost. The lists are member
+vectors cleared each frame, which keeps the steady state free of allocations.
+
+One storage buffer per type, rather than one list of all lights with a type field, keeps each
+light struct small and each loop simple. A single list would be the next step for tiled or
+clustered shading, which culls lights with one list of indices; the upload code is grouped in
+one function so that change stays local.
+
+Uniform and storage buffers have separate binding points in OpenGL: the `Frame` uniform block and
+the directional light buffer can both use binding 0.
+
+### Attenuation and cones
+
+Point and spot lights use PBR formula: inverse square of the
+distance, multiplied by a window that falls smoothly to exactly 0 at the light's range:
+
+```
+attenuation = max(0, 1 - (d / r)^4)^2 / (d^2 + 1)
+```
+
+The `+ 1` avoids the division by zero at the light and assumes units are meters. The range only
+says where to cut the light off, not how fast it falls off.
+
+A spot light lights a fragment fully inside its inner cone, not at all outside its outer cone,
+with a smooth transition between the two. The CPU sends the cosines of the half-angles, so the
+shader compares them directly with the cosine between the cone's axis and the fragment, without
+an `acos` per fragment.
+
+### Tone mapping and gamma
+
+Light adds up and has no maximum: several lights on one surface easily go above 1. Clamping would
+turn every bright area into flat white, so the shader compresses the color with a Reinhard
+operator (`c / (c + 1)`), then applies the gamma correction. This is temporary: a later
+post-processing pass will render to an HDR target and tone map there.
+
+### Keeping C++ and GLSL in sync
+
+The C++ copies of the blocks in `Layout/LitShaderLayout.hpp` only use `vec4` and `mat4`, which
+have the same layout in C++ and in GLSL, and their sizes are checked with `static_assert`. A
+size check misses two layouts of the same size with different offsets, so the tests also ask the
+driver for the real binding, offset and array stride of every member of the compiled shader, and
+compare them with the C++ structs.
 
 ## Frame capture
 
@@ -379,6 +448,9 @@ These come from the current design and are the starting points of the
 - The scene renderer uploads every instance every frame, around 6 MB per frame at 50,000
   entities, even if nothing moved.
 - There is a single pass. Shadow maps or post-processing need render targets and several passes
-  in a known order, which is what a render graph would organize.
+  in a known order, which is what a render graph would organize. Until then, tone mapping is done
+  at the end of the lit shader.
+- Every fragment evaluates every light, even the ones out of range. Tiled or clustered shading
+  would only evaluate the lights that reach each part of the screen.
 - There is one backend. The interfaces were written with a second one in mind, but nothing has
   tested them yet.
