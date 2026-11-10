@@ -72,18 +72,18 @@ GL_TEST_CASE("A header and an array written separately land back to back")
     // after the 16-byte header, where std430 puts the array
     Platform::OpenGLGraphicsDevice device;
     constexpr uint32_t Count = 3;
-    const Renderer::BufferHandle handle = CreateStorageBuffer(
-        device, sizeof(Layout::LightListHeader)
-                    + Count * sizeof(Layout::GpuPointLight));
+    const Renderer::BufferHandle handle =
+        CreateStorageBuffer(device,
+                            sizeof(Layout::LightListHeader)
+                                + Count * sizeof(Layout::GpuPointLight));
 
-    const Layout::LightListHeader header{ .count = Count };
+    const Layout::LightListHeader header{ .count = Count, .pad = {} };
     std::array<Layout::GpuPointLight, Count> lights{};
     for (uint32_t i = 0; i < Count; ++i)
         lights[i].positionRange = glm::vec4(float(i), 0, 0, 10.0f);
 
     device.UpdateBuffer(handle, 0, &header, sizeof(header));
-    device.UpdateBuffer(handle, sizeof(header), lights.data(),
-                        sizeof(lights));
+    device.UpdateBuffer(handle, sizeof(header), lights.data(), sizeof(lights));
 
     const GLuint id = device.GetBuffer(handle)->id;
     Layout::LightListHeader gpuHeader{};
@@ -105,7 +105,8 @@ GL_TEST_CASE("A header and an array written separately land back to back")
 GL_TEST_CASE("BindShaderStorageBuffer attaches the buffer to the binding point")
 {
     Tests::DrawFixture fixture;
-    const Renderer::BufferHandle handle = CreateStorageBuffer(fixture.device, 64);
+    const Renderer::BufferHandle handle =
+        CreateStorageBuffer(fixture.device, 64);
 
     // The binding is part of the draw's packet, applied by Submit
     Renderer::CommandList cmd;
