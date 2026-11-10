@@ -11,7 +11,6 @@
 #include <vector>
 
 #include <Engine/Renderer/Handle.hpp>
-#include <Engine/Renderer/LightingData.hpp>
 
 namespace GEF::Renderer
 {
@@ -45,11 +44,16 @@ namespace GEF::Renderer
     class CommandList
     {
     public:
+        static constexpr uint32_t MaxUniformBindings = 2;
+        static constexpr uint32_t MaxShaderStorageBindings = 3;
+
         struct DrawPacket
         {
             PipelineHandle pipeline;
             VertexArrayHandle vertexArray;
             std::array<BufferHandle, MaxUniformBindings> uniformBuffers;
+            std::array<BufferHandle, MaxShaderStorageBindings>
+                shaderStorageBuffers;
             uint32_t indexCount;
             uint32_t instanceCount;
             uint32_t baseInstance;
@@ -93,6 +97,8 @@ namespace GEF::Renderer
         void BindVertexArray(VertexArrayHandle handle);
         void BindPipeline(PipelineHandle handle);
         void BindUniformBuffer(uint32_t bindingPoint, BufferHandle handle);
+        void BindShaderStorageBuffer(uint32_t bindingPoint,
+                                     BufferHandle handle);
 
         void DrawIndexed(uint32_t indexCount);
         void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount,
@@ -113,5 +119,7 @@ namespace GEF::Renderer
         PipelineHandle pipeline_;
         VertexArrayHandle vertexArray_;
         std::array<BufferHandle, MaxUniformBindings> uniformBuffers_;
+        std::array<BufferHandle, MaxShaderStorageBindings>
+            shaderStorageBuffers_;
     };
 } // namespace GEF::Renderer

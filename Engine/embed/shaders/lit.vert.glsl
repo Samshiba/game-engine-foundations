@@ -14,13 +14,6 @@ layout (std140, binding = 0) uniform Frame
     vec4 u_CameraPosition;
 };
 
-layout (std140, binding = 1) uniform Light
-{
-    vec4 u_Direction;
-    vec4 u_Color;
-    vec4 u_Ambient;
-};
-
 out vec3 v_Normal;
 out vec3 v_WorldPos;
 flat out vec3 v_Albedo;

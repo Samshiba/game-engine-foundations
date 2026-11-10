@@ -45,8 +45,12 @@ namespace GEF::Platform
         {
             Renderer::PipelineHandle pipeline;
             Renderer::VertexArrayHandle vertexArray;
-            std::array<Renderer::BufferHandle, Renderer::MaxUniformBindings>
+            std::array<Renderer::BufferHandle,
+                       Renderer::CommandList::MaxUniformBindings>
                 uniformBuffers;
+            std::array<Renderer::BufferHandle,
+                       Renderer::CommandList::MaxShaderStorageBindings>
+                shaderStorageBuffers;
         };
 
         struct GpuTimer
@@ -111,6 +115,8 @@ namespace GEF::Platform
         void BindPipeline(Renderer::PipelineHandle handle);
         void BindUniformBuffer(uint32_t bindingPoint,
                                Renderer::BufferHandle handle);
+        void BindShaderStorageBuffer(uint32_t bindingPoint,
+                                     Renderer::BufferHandle handle);
 
         void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount,
                                   uint32_t baseInstance);

@@ -363,7 +363,7 @@ namespace GEF::Platform
         lastSubmitStats_ = {};
         BoundState bound{};
 
-        // GPU and CPU fram time
+        // ----- GPU and CPU fram time -----
         GpuTimer& timer = gpuTimers_[gpuTimerIndex_];
         gpuTimerIndex_ = (gpuTimerIndex_ + 1) % gpuTimers_.size();
         if (timer.pending)
@@ -386,7 +386,7 @@ namespace GEF::Platform
 
         const auto cpuStart = std::chrono::steady_clock::now();
 
-        // Frame command
+        // ----- Frame command -----
         const auto visitor = Utils::Overloaded{
             [this](const Renderer::CommandList::SetClearColorCommand& command) {
                 SetClearColor(command.r, command.g, command.b, command.a);
@@ -403,13 +403,14 @@ namespace GEF::Platform
             std::visit(visitor, command);
         }
 
-        // Packets
+        // ----- Packets -----
         const auto& drawPackets = cmd.GetDrawPackets();
         for (const uint64_t key : cmd.GetSortKeys())
         {
             const auto sequence = Renderer::SortKey::Sequence(key);
             auto const& packet = drawPackets[sequence];
 
+            // Pipeline
             if (packet.pipeline != bound.pipeline)
             {
                 BindPipeline(packet.pipeline);
@@ -417,6 +418,7 @@ namespace GEF::Platform
                 ++lastSubmitStats_.pipelineChanges;
             }
 
+            // Vertex
             if (packet.vertexArray != bound.vertexArray)
             {
                 BindVertexArray(packet.vertexArray);
@@ -424,7 +426,9 @@ namespace GEF::Platform
                 ++lastSubmitStats_.vertexArrayChanges;
             }
 
-            for (uint32_t i = 0; i < Renderer::MaxUniformBindings; ++i)
+            // Uniform
+            for (uint32_t i = 0; i < Renderer::CommandList::MaxUniformBindings;
+                 ++i)
             {
                 const auto buffer = packet.uniformBuffers[i];
                 if (buffer.IsValid() && buffer != bound.uniformBuffers[i])
@@ -432,6 +436,19 @@ namespace GEF::Platform
                     BindUniformBuffer(i, buffer);
                     bound.uniformBuffers[i] = buffer;
                     ++lastSubmitStats_.uniformBufferChanges;
+                }
+            }
+
+            // Shader Storage
+            for (uint32_t i = 0;
+                 i < Renderer::CommandList::MaxShaderStorageBindings; ++i)
+            {
+                const auto buffer = packet.shaderStorageBuffers[i];
+                if (buffer.IsValid() && buffer != bound.shaderStorageBuffers[i])
+                {
+                    BindShaderStorageBuffer(i, buffer);
+                    bound.shaderStorageBuffers[i] = buffer;
+                    ++lastSubmitStats_.shaderStorageBufferChanges;
                 }
             }
 
@@ -523,6 +540,17 @@ namespace GEF::Platform
         GEF_CORE_ASSERT(buffer->type == Renderer::BufferType::Uniform,
                         "Buffer is not a uniform buffer");
         glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, buffer->id);
+    }
+
+    void
+    OpenGLGraphicsDevice::BindShaderStorageBuffer(uint32_t bindingPoint,
+                                                  Renderer::BufferHandle handle)
+    {
+        const GLBuffer* buffer = GetBuffer(handle);
+        GEF_CORE_ASSERT(buffer, "Invalid buffer handle");
+        GEF_CORE_ASSERT(buffer->type == Renderer::BufferType::ShaderStorage,
+                        "Buffer is not a shader storage buffer");
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingPoint, buffer->id);
     }
 
     void OpenGLGraphicsDevice::DrawIndexedInstanced(uint32_t indexCount,

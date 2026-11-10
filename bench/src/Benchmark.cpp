@@ -30,6 +30,7 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <libecs/core/registry/Registry.hpp>
 
 #include <Engine/Assets/ObjLoader.hpp>
@@ -245,10 +246,18 @@ public:
 
         renderer_.emplace(ctx.device);
 
+        // Lights point along their local -Z: quatLookAt turns -Z toward the
+        // same direction as before the Transform-based lights, so the scenes
+        // stay comparable with earlier results
         const auto sun = registry_.CreateEntity();
-        registry_.EmplaceComponent<Scene::DirectionalLight>(
+        registry_.EmplaceComponent<Scene::Transform>(
             sun,
-            Scene::DirectionalLight{ .direction = { -1.0f, -1.0f, -0.5f } });
+            Scene::Transform{
+                .rotation = glm::quatLookAt(
+                    glm::normalize(glm::vec3(-1.0f, -1.0f, -0.5f)),
+                    glm::vec3(0.0f, 1.0f, 0.0f)) });
+        registry_.EmplaceComponent<Scene::DirectionalLight>(
+            sun, Scene::DirectionalLight{});
 
         camera_.aspectRatio = float(WindowWidth) / float(WindowHeight);
         StartScenario(ctx, 0);
@@ -293,7 +302,7 @@ public:
     void OnRender(EngineContext&, CommandList& cmd)
     {
         if (renderer_)
-            renderer_->Render(registry_, camera_, cmd);
+            renderer_->Render(registry_, camera_, environment_, cmd);
     }
 
     void OnShutdown(EngineContext& ctx)
@@ -407,6 +416,7 @@ private:
     std::span<const Scenario> scenarios_;
     libecs::core::registry::Registry registry_;
     Camera camera_;
+    Scene::Environment environment_{};
     std::optional<Scene::SceneRenderer> renderer_;
     std::vector<std::pair<std::string, Mesh>> meshes_;
     std::vector<libecs::core::Entity> entities_;

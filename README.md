@@ -3,7 +3,7 @@
 [![CI](https://github.com/Samshiba/game-engine-foundations/actions/workflows/ci.yml/badge.svg)](https://github.com/Samshiba/game-engine-foundations/actions/workflows/ci.yml)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)
 ![OpenGL 4.5](https://img.shields.io/badge/OpenGL-4.5-green.svg)
-[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-lightgrey.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
 A small 3D rendering engine in C++20, on OpenGL 4.5.
 
@@ -28,9 +28,10 @@ batching, and to measure each choice instead of guessing.
 - **No base class to inherit**: your `main` owns the engine and the game. A game is any type
   with `OnUpdate` and `OnRender` (checked by a C++20 concept), and it only receives the services
   it is allowed to use.
-- **ECS-driven rendering**: `Transform`, `MeshRenderer` and `DirectionalLight` components. All
-  entities sharing a mesh are drawn in one instanced call.
-- **Rendering features**: Blinn-Phong lighting with a directional light, OBJ loading, free-fly
+- **ECS-driven rendering**: `Transform`, `MeshRenderer` and light components. All entities
+  sharing a mesh are drawn in one instanced call.
+- **Rendering features**: Blinn-Phong lighting with any number of directional, point and spot
+  lights (one storage buffer per type), OBJ loading, free-fly
   camera, ImGui overlay, screenshots and frame sequences for GIFs.
 - **Measured and tested**: a reproducible benchmark, frame time percentiles, 127 tests (57 of
   them on a real OpenGL context), CI on MSVC, GCC and Clang with warnings as errors.
@@ -266,7 +267,8 @@ Short-term work, before the next features:
   uploading what changed.
 - Multi-draw indirect, then culling on the GPU.
 - Recording commands from several threads, one command list per thread merged before sorting.
-- More lighting: several lights, point lights, shadow maps, textures and normal maps.
+- More lighting: shadow maps, textures and normal maps (several lights, point and spot lights are
+  done).
 - glTF loading, shader hot reload, asynchronous framebuffer readback.
 - Multi-window support, and a second backend (Vulkan) to test the graphics device abstraction.
 

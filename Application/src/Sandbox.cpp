@@ -66,10 +66,15 @@ struct Sandbox
 
     GEF::Utils::FrameTimer frameTimer;
 
-    libecs::core::Entity light;
+    libecs::core::Entity directionalLight;
+    libecs::core::Entity pointLight;
+    float elevation = 45.0f;
+    float azimuth = 30.0f;
 
     int entityCount = 10000;
     std::vector<libecs::core::Entity> spawned;
+
+    GEF::Scene::Environment environment = { .ambient = { 0.1f, 0.1f, 0.1f } };
 
     void SpawnAt(int index)
     {
@@ -137,11 +142,21 @@ struct Sandbox
 
         renderer.emplace(ctx.device);
 
-        light = registry.CreateEntity();
+        directionalLight = registry.CreateEntity();
         registry.EmplaceComponent<GEF::Scene::DirectionalLight>(
-            light,
-            GEF::Scene::DirectionalLight{
-                .direction = { -1.0f, -1.0f, -0.5f } });
+            directionalLight, GEF::Scene::DirectionalLight{});
+        registry.EmplaceComponent<GEF::Scene::Transform>(
+            directionalLight, GEF::Scene::Transform{});
+
+        pointLight = registry.CreateEntity();
+        registry.EmplaceComponent<GEF::Scene::PointLight>(
+            pointLight,
+            GEF::Scene::PointLight{ .color = { 1.0f, 0.0f, 0.0f },
+                                    .intensity = 200.0f,
+                                    .range = 200.0f });
+        registry.EmplaceComponent<GEF::Scene::Transform>(
+            pointLight,
+            GEF::Scene::Transform{ .position = { 30.0f, 10.0f, 50.0f } });
 
         UpdateEntities();
     }
@@ -169,7 +184,7 @@ struct Sandbox
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
         if (renderer)
-            renderer->Render(registry, camera, cmd);
+            renderer->Render(registry, camera, environment, cmd);
     }
 
     void OnShutdown(GEF::EngineContext& ctx)
@@ -216,15 +231,38 @@ struct Sandbox
         ImGui::Text("Pipeline changes: %u", stats.pipelineChanges);
         ImGui::Text("Vertex Arrays changes: %u", stats.vertexArrayChanges);
         ImGui::Text("Uniform buffer changes: %u", stats.uniformBufferChanges);
+        ImGui::Text("Shader Storage buffer changes: %u",
+                    stats.shaderStorageBufferChanges);
 
         // Light
-        glm::vec3 direction =
-            registry.GetComponent<GEF::Scene::DirectionalLight>(light)
-                .direction;
-        ImGui::SliderFloat3("Light Direction", glm::value_ptr(direction), -1.0f,
+        ImGui::SliderFloat("Sun Elevation", &elevation, -10.0f, 90.0f);
+        ImGui::SliderFloat("Sun Azimuth", &azimuth, 0.0f, 360.0f);
+        registry.GetComponent<GEF::Scene::Transform>(directionalLight)
+            .rotation =
+            glm::angleAxis(glm::radians(azimuth), glm::vec3(0, 1, 0))
+            * glm::angleAxis(glm::radians(-elevation), glm::vec3(1, 0, 0));
+
+        float intensity =
+            registry
+                .GetComponent<GEF::Scene::DirectionalLight>(directionalLight)
+                .intensity;
+        ImGui::SliderFloat("Light Intensity", &intensity, 0.0f, 20.0f);
+        registry.GetComponent<GEF::Scene::DirectionalLight>(directionalLight)
+            .intensity = intensity;
+        float pointIntensity =
+            registry.GetComponent<GEF::Scene::PointLight>(pointLight).intensity;
+        ImGui::SliderFloat("Point Light Intensity", &pointIntensity, 0.0f,
+                           2000.0f);
+        registry.GetComponent<GEF::Scene::PointLight>(pointLight).intensity =
+            pointIntensity;
+
+        glm::vec3 pointLightColor =
+            registry.GetComponent<GEF::Scene::PointLight>(pointLight).color;
+        ImGui::SliderFloat3("Point Light Color", &pointLightColor.x, 0.0f,
                             1.0f);
-        registry.GetComponent<GEF::Scene::DirectionalLight>(light).direction =
-            direction;
+        registry.GetComponent<GEF::Scene::PointLight>(pointLight).color =
+            pointLightColor;
+
         ImGui::End();
     }
 };

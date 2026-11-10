@@ -15,9 +15,10 @@
 
 #include <doctest.h>
 
-#include <Engine/Renderer/LightingData.hpp>
+#include <Engine/Renderer/Layout/LitShaderLayout.hpp>
 
 using namespace GEF::Renderer;
+using namespace GEF::Renderer::Layout;
 
 namespace
 {
@@ -72,7 +73,11 @@ TEST_CASE("A draw copies the whole bound state into its packet")
     cmd.BindPipeline(Pipeline(1));
     cmd.BindVertexArray(VertexArray(2));
     cmd.BindUniformBuffer(UniformBinding::Frame, Buffer(3));
-    cmd.BindUniformBuffer(UniformBinding::Light, Buffer(4));
+    cmd.BindUniformBuffer(UniformBinding::Environment, Buffer(4));
+    cmd.BindShaderStorageBuffer(ShaderStorageBinding::DirectionalLight,
+                                Buffer(5));
+    cmd.BindShaderStorageBuffer(ShaderStorageBinding::PointLight, Buffer(6));
+    cmd.BindShaderStorageBuffer(ShaderStorageBinding::SpotLight, Buffer(7));
     cmd.DrawIndexedInstanced(36, 10, 5);
 
     REQUIRE(cmd.GetDrawPackets().size() == 1);
@@ -80,7 +85,13 @@ TEST_CASE("A draw copies the whole bound state into its packet")
     CHECK(packet.pipeline == Pipeline(1));
     CHECK(packet.vertexArray == VertexArray(2));
     CHECK(packet.uniformBuffers[UniformBinding::Frame] == Buffer(3));
-    CHECK(packet.uniformBuffers[UniformBinding::Light] == Buffer(4));
+    CHECK(packet.uniformBuffers[UniformBinding::Environment] == Buffer(4));
+    CHECK(packet.shaderStorageBuffers[ShaderStorageBinding::DirectionalLight]
+          == Buffer(5));
+    CHECK(packet.shaderStorageBuffers[ShaderStorageBinding::PointLight]
+          == Buffer(6));
+    CHECK(packet.shaderStorageBuffers[ShaderStorageBinding::SpotLight]
+          == Buffer(7));
     CHECK(packet.indexCount == 36);
     CHECK(packet.instanceCount == 10);
     CHECK(packet.baseInstance == 5);
@@ -93,6 +104,7 @@ TEST_CASE("A bind after a draw does not change that draw's packet")
     RecordDraw(cmd, 1, 2);
     cmd.BindVertexArray(VertexArray(7));
     cmd.BindUniformBuffer(UniformBinding::Frame, Buffer(9));
+    cmd.BindShaderStorageBuffer(ShaderStorageBinding::PointLight, Buffer(10));
     cmd.DrawIndexed(3);
 
     REQUIRE(cmd.GetDrawPackets().size() == 2);
@@ -100,10 +112,16 @@ TEST_CASE("A bind after a draw does not change that draw's packet")
     CHECK_FALSE(cmd.GetDrawPackets()[0]
                     .uniformBuffers[UniformBinding::Frame]
                     .IsValid());
+    CHECK_FALSE(cmd.GetDrawPackets()[0]
+                    .shaderStorageBuffers[ShaderStorageBinding::PointLight]
+                    .IsValid());
     // ...while the next draw sees the new state
     CHECK(cmd.GetDrawPackets()[1].vertexArray == VertexArray(7));
     CHECK(cmd.GetDrawPackets()[1].uniformBuffers[UniformBinding::Frame]
           == Buffer(9));
+    CHECK(cmd.GetDrawPackets()[1]
+              .shaderStorageBuffers[ShaderStorageBinding::PointLight]
+          == Buffer(10));
 }
 
 TEST_CASE("DrawIndexed is an instanced draw of one instance from slot 0")
@@ -253,4 +271,34 @@ TEST_CASE("Reset forgets the bound uniform buffers")
     CHECK_FALSE(cmd.GetDrawPackets()[0]
                     .uniformBuffers[UniformBinding::Frame]
                     .IsValid());
+}
+
+TEST_CASE("Reset forgets the bound shader storage buffers")
+{
+    // Same reason as the uniform buffers: a light SSBO regrown (destroyed and
+    // recreated) last frame must not reach this frame's packets
+    CommandList cmd;
+    cmd.BindShaderStorageBuffer(ShaderStorageBinding::PointLight, Buffer(3));
+    cmd.Reset();
+
+    RecordDraw(cmd, 1, 1);
+
+    REQUIRE(cmd.GetDrawPackets().size() == 1);
+    CHECK_FALSE(cmd.GetDrawPackets()[0]
+                    .shaderStorageBuffers[ShaderStorageBinding::PointLight]
+                    .IsValid());
+}
+
+TEST_CASE("Uniform and shader storage bindings are separate slots")
+{
+    // GL_UNIFORM_BUFFER 0 and GL_SHADER_STORAGE_BUFFER 0 are two different
+    // binding points: binding the same index in both overwrites neither
+    CommandList cmd;
+    cmd.BindUniformBuffer(0, Buffer(1));
+    cmd.BindShaderStorageBuffer(0, Buffer(2));
+    RecordDraw(cmd, 1, 1);
+
+    REQUIRE(cmd.GetDrawPackets().size() == 1);
+    CHECK(cmd.GetDrawPackets()[0].uniformBuffers[0] == Buffer(1));
+    CHECK(cmd.GetDrawPackets()[0].shaderStorageBuffers[0] == Buffer(2));
 }

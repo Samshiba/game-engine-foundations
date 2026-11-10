@@ -5,8 +5,8 @@
 // instanced draw per mesh. The CommandList only records: each draw becomes a
 // packet holding the state bound at that moment, so the tests read the
 // packets to check *what* the renderer asks for. Submit is only called where
-// the executed draw count matters. Meshes, uniform and instance buffers are
-// real GPU objects.
+// the executed draw count matters. Meshes, uniform, light storage and instance
+// buffers are real GPU objects.
 //
 
 #include <Engine/Scene/SceneRenderer.hpp>
@@ -25,7 +25,7 @@
 #include <Engine/Core/Embedded.hpp>
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
 #include <Engine/Renderer/CommandList.hpp>
-#include <Engine/Renderer/LightingData.hpp>
+#include <Engine/Renderer/Layout/LitShaderLayout.hpp>
 #include <Engine/Renderer/Mesh.hpp>
 #include <Engine/Scene/Components.hpp>
 
@@ -34,6 +34,7 @@
 using namespace GEF;
 using namespace GEF::Renderer;
 using namespace GEF::Scene;
+using namespace GEF::Renderer::Layout;
 using Registry = libecs::core::registry::Registry;
 using DrawPacket = CommandList::DrawPacket;
 
@@ -68,6 +69,7 @@ namespace
         std::vector<Mesh> meshes;
         Registry registry;
         Camera camera;
+        Environment environment;
         CommandList cmd;
 
         SceneFixture()
@@ -95,7 +97,7 @@ namespace
         void Render()
         {
             cmd.Reset();
-            renderer->Render(registry, camera, cmd);
+            renderer->Render(registry, camera, environment, cmd);
         }
 
         std::span<const DrawPacket> Draws() const
@@ -128,6 +130,43 @@ namespace
             glGetNamedBufferSubData(device.GetBuffer(buffer)->id, 0, sizeof(T),
                                     &value);
             return value;
+        }
+
+        template <typename Light>
+        libecs::core::Entity AddLight(const Transform& transform,
+                                      const Light& light)
+        {
+            const auto entity = registry.CreateEntity();
+            registry.EmplaceComponent<Transform>(entity, transform);
+            registry.EmplaceComponent<Light>(entity, light);
+            return entity;
+        }
+
+        // A light list as the shader reads it: the header's count, then that
+        // many lights right after the 16-byte header
+        template <typename GpuLight>
+        std::vector<GpuLight> ReadLights(uint32_t binding) const
+        {
+            REQUIRE(!Draws().empty());
+            const BufferHandle handle = Draws()[0].shaderStorageBuffers[binding];
+            const Platform::GLBuffer* buffer = device.GetBuffer(handle);
+            REQUIRE(buffer != nullptr);
+            REQUIRE(buffer->type == BufferType::ShaderStorage);
+
+            LightListHeader header{};
+            glGetNamedBufferSubData(buffer->id, 0, sizeof(header), &header);
+
+            // The buffer must hold every light the count announces
+            REQUIRE(sizeof(header) + header.count * sizeof(GpuLight)
+                    <= buffer->size);
+
+            std::vector<GpuLight> lights(header.count);
+            if (header.count > 0)
+                glGetNamedBufferSubData(
+                    buffer->id, sizeof(header),
+                    static_cast<GLsizeiptr>(lights.size() * sizeof(GpuLight)),
+                    lights.data());
+            return lights;
         }
 
         // The instances a draw reads: the buffer behind attribute 3 (a_Model),
@@ -227,7 +266,7 @@ GL_TEST_CASE("Entities missing a Transform or a MeshRenderer are not drawn")
     CHECK(scene.Draws()[0].instanceCount == 1);
 }
 
-GL_TEST_CASE("One pipeline, Frame and Light uniform buffers on their bindings")
+GL_TEST_CASE("One pipeline, the per-frame buffers on their bindings")
 {
     SceneFixture scene;
     scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
@@ -239,24 +278,29 @@ GL_TEST_CASE("One pipeline, Frame and Light uniform buffers on their bindings")
     CHECK(scene.device.GetPipeline(draw.pipeline) != nullptr);
     // Per-object data moved to the instance buffer: only per-frame UBOs left
     for (const uint32_t binding :
-         { UniformBinding::Frame, UniformBinding::Light })
+         { UniformBinding::Frame, UniformBinding::Environment })
     {
         CAPTURE(binding);
         CHECK(scene.device.GetBuffer(draw.uniformBuffers[binding]) != nullptr);
     }
+    // One light list per type, bound even when it is empty
+    for (const uint32_t binding :
+         { ShaderStorageBinding::DirectionalLight,
+           ShaderStorageBinding::PointLight, ShaderStorageBinding::SpotLight })
+    {
+        CAPTURE(binding);
+        const Platform::GLBuffer* buffer =
+            scene.device.GetBuffer(draw.shaderStorageBuffers[binding]);
+        REQUIRE(buffer != nullptr);
+        CHECK(buffer->type == BufferType::ShaderStorage);
+    }
 }
 
-GL_TEST_CASE("The per-frame uniform buffers hold the camera and the light")
+GL_TEST_CASE("The per-frame uniform buffers hold the camera and the ambient")
 {
     SceneFixture scene;
     scene.camera.position = { 1, 2, 3 };
-
-    const auto sun = scene.registry.CreateEntity();
-    scene.registry.EmplaceComponent<DirectionalLight>(
-        sun,
-        DirectionalLight{ .direction = { 0, -2, 0 },
-                          .color = { 1.0f, 0.5f, 0.25f },
-                          .intensity = 2.0f });
+    scene.environment.ambient = { 0.2f, 0.3f, 0.4f };
     scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
 
     scene.Render();
@@ -265,9 +309,203 @@ GL_TEST_CASE("The per-frame uniform buffers hold the camera and the light")
     CHECK(frame.viewProjection == scene.camera.GetViewProjection());
     CHECK(Near(glm::vec3(frame.cameraPosition), { 1, 2, 3 }));
 
-    const auto light = scene.ReadUniforms<LightUniforms>(UniformBinding::Light);
-    CHECK(Near(glm::vec3(light.direction), { 0, -1, 0 }));
-    CHECK(Near(glm::vec3(light.color), { 2.0f, 1.0f, 0.5f }));
+    const auto environment =
+        scene.ReadUniforms<EnvironmentUniforms>(UniformBinding::Environment);
+    CHECK(Near(glm::vec3(environment.ambient), { 0.2f, 0.3f, 0.4f }));
+}
+
+GL_TEST_CASE("A scene without lights uploads empty light lists")
+{
+    SceneFixture scene;
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
+
+    scene.Render();
+
+    CHECK(scene
+              .ReadLights<GpuDirectionalLight>(
+                  ShaderStorageBinding::DirectionalLight)
+              .empty());
+    CHECK(scene.ReadLights<GpuPointLight>(ShaderStorageBinding::PointLight)
+              .empty());
+    CHECK(scene.ReadLights<GpuSpotLight>(ShaderStorageBinding::SpotLight)
+              .empty());
+}
+
+GL_TEST_CASE("A directional light points along its Transform's -Z")
+{
+    SceneFixture scene;
+    // -Z turned -90 degrees around X: straight down
+    scene.AddLight(Transform{ .rotation = glm::angleAxis(glm::radians(-90.0f),
+                                                         glm::vec3(1, 0, 0)) },
+                   DirectionalLight{ .color = { 1.0f, 0.5f, 0.25f },
+                                     .intensity = 2.0f });
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
+
+    scene.Render();
+
+    const auto lights = scene.ReadLights<GpuDirectionalLight>(
+        ShaderStorageBinding::DirectionalLight);
+    REQUIRE(lights.size() == 1);
+    CHECK(Near(glm::vec3(lights[0].direction), { 0, -1, 0 }));
+    // Intensity is folded into the color on the CPU
+    CHECK(Near(glm::vec3(lights[0].color), { 2.0f, 1.0f, 0.5f }));
+}
+
+GL_TEST_CASE("A point light takes its position from its Transform")
+{
+    SceneFixture scene;
+    // Rotation and scale mean nothing to a point light: only the position
+    scene.AddLight(Transform{ .position = { 4, 5, 6 },
+                              .rotation = glm::angleAxis(glm::radians(45.0f),
+                                                         glm::vec3(0, 1, 0)),
+                              .scale = { 3, 3, 3 } },
+                   PointLight{ .color = { 0.5f, 1.0f, 0.0f },
+                               .intensity = 4.0f,
+                               .range = 12.0f });
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
+
+    scene.Render();
+
+    const auto lights =
+        scene.ReadLights<GpuPointLight>(ShaderStorageBinding::PointLight);
+    REQUIRE(lights.size() == 1);
+    CHECK(Near(glm::vec3(lights[0].positionRange), { 4, 5, 6 }));
+    CHECK(lights[0].positionRange.w == doctest::Approx(12.0f));
+    CHECK(Near(glm::vec3(lights[0].color), { 2.0f, 4.0f, 0.0f }));
+}
+
+GL_TEST_CASE("A spot light has a position, a direction and its cone cosines")
+{
+    SceneFixture scene;
+    // Identity rotation: the cone points along -Z
+    scene.AddLight(Transform{ .position = { 1, 2, 3 } },
+                   SpotLight{ .color = { 1, 1, 1 },
+                              .intensity = 3.0f,
+                              .range = 20.0f,
+                              .innerConeAngle = 30.0f,
+                              .outerConeAngle = 45.0f });
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
+
+    scene.Render();
+
+    const auto lights =
+        scene.ReadLights<GpuSpotLight>(ShaderStorageBinding::SpotLight);
+    REQUIRE(lights.size() == 1);
+    const GpuSpotLight& spot = lights[0];
+    CHECK(Near(glm::vec3(spot.positionRange), { 1, 2, 3 }));
+    CHECK(spot.positionRange.w == doctest::Approx(20.0f));
+    CHECK(Near(glm::vec3(spot.direction), { 0, 0, -1 }));
+    CHECK(Near(glm::vec3(spot.color), { 3, 3, 3 }));
+    // Cosines, so the shader compares dot(-L, axis) without an acos
+    CHECK(spot.coneCos.x == doctest::Approx(glm::cos(glm::radians(30.0f))));
+    CHECK(spot.coneCos.y == doctest::Approx(glm::cos(glm::radians(45.0f))));
+    CHECK(spot.coneCos.x > spot.coneCos.y); // inner cone = larger cosine
+}
+
+GL_TEST_CASE("Lights without a Transform are not uploaded")
+{
+    SceneFixture scene;
+    const auto orphan = scene.registry.CreateEntity();
+    scene.registry.EmplaceComponent<PointLight>(orphan, PointLight{});
+    scene.AddLight(Transform{ .position = { 7, 0, 0 } }, PointLight{});
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
+
+    scene.Render();
+
+    const auto lights =
+        scene.ReadLights<GpuPointLight>(ShaderStorageBinding::PointLight);
+    REQUIRE(lights.size() == 1);
+    CHECK(lights[0].positionRange.x == doctest::Approx(7.0f));
+}
+
+GL_TEST_CASE("Each light type goes to its own list")
+{
+    SceneFixture scene;
+    for (int i = 0; i < 2; ++i)
+        scene.AddLight(Transform{}, DirectionalLight{});
+    for (int i = 0; i < 3; ++i)
+        scene.AddLight(Transform{}, PointLight{});
+    scene.AddLight(Transform{}, SpotLight{});
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
+
+    scene.Render();
+
+    CHECK(scene
+              .ReadLights<GpuDirectionalLight>(
+                  ShaderStorageBinding::DirectionalLight)
+              .size()
+          == 2);
+    CHECK(scene.ReadLights<GpuPointLight>(ShaderStorageBinding::PointLight)
+              .size()
+          == 3);
+    CHECK(scene.ReadLights<GpuSpotLight>(ShaderStorageBinding::SpotLight)
+              .size()
+          == 1);
+}
+
+GL_TEST_CASE("A light list grows past its capacity without losing a frame")
+{
+    SceneFixture scene;
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
+
+    // First frame: a few lights, the list gets its initial capacity
+    for (int i = 0; i < 3; ++i)
+        scene.AddLight(Transform{ .position = { float(i), 0, 0 } },
+                       PointLight{});
+    scene.Render();
+    REQUIRE(scene.ReadLights<GpuPointLight>(ShaderStorageBinding::PointLight)
+                .size()
+            == 3);
+
+    // Far more than any reasonable initial capacity
+    constexpr int Total = 3 + 200;
+    for (int i = 3; i < Total; ++i)
+        scene.AddLight(Transform{ .position = { float(i), 0, 0 } },
+                       PointLight{});
+    scene.Render();
+
+    // The frame where the buffer grows must hold every light, in the new
+    // buffer the draw is bound to
+    const auto lights =
+        scene.ReadLights<GpuPointLight>(ShaderStorageBinding::PointLight);
+    REQUIRE(lights.size() == Total);
+    std::vector<bool> seen(Total, false);
+    for (const GpuPointLight& light : lights)
+    {
+        const auto index = static_cast<int>(light.positionRange.x);
+        REQUIRE(index >= 0);
+        REQUIRE(index < Total);
+        seen[index] = true;
+    }
+    for (int i = 0; i < Total; ++i)
+    {
+        CAPTURE(i);
+        CHECK(seen[i]);
+    }
+}
+
+GL_TEST_CASE("The light count follows the scene from one frame to the next")
+{
+    // The buffer keeps its capacity when lights go away: only the count tells
+    // the shader how many are real, the rest is last frame's data
+    SceneFixture scene;
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
+    std::vector<libecs::core::Entity> lights;
+    for (int i = 0; i < 5; ++i)
+        lights.push_back(scene.AddLight(Transform{}, PointLight{}));
+
+    scene.Render();
+    REQUIRE(scene.ReadLights<GpuPointLight>(ShaderStorageBinding::PointLight)
+                .size()
+            == 5);
+
+    for (int i = 0; i < 3; ++i)
+        scene.registry.DestroyEntity(lights[i]);
+    scene.Render();
+
+    CHECK(scene.ReadLights<GpuPointLight>(ShaderStorageBinding::PointLight)
+              .size()
+          == 2);
 }
 
 GL_TEST_CASE("The instance buffer holds each entity's transform and material")
