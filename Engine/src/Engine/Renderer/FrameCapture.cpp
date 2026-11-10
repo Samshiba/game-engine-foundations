@@ -8,9 +8,9 @@
 #include <chrono>
 #include <format>
 
+#include <Engine/Assets/ImageLoader.hpp>
 #include <Engine/Core/FileSystem.hpp>
 #include <Engine/Core/Log.hpp>
-#include <Engine/Utils/Image.hpp>
 
 namespace GEF::Renderer
 {
@@ -63,7 +63,8 @@ namespace GEF::Renderer
             const auto path = isSequence_
                 ? output_ / std::format("frame_{:04}.png", i)
                 : output_;
-            Utils::WritePng(path, width, height, std::move(capturedFrames_[i]));
+            Assets::WritePng(path, width, height,
+                             std::move(capturedFrames_[i]));
         }
         capturedFrames_.clear();
     }

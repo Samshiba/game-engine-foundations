@@ -9,6 +9,8 @@
 
 #include <Engine/Renderer/Handle.hpp>
 
+#include "Engine/Renderer/Texture.hpp"
+
 namespace GEF::Scene
 {
     struct Material
@@ -17,5 +19,8 @@ namespace GEF::Scene
         // sRGB, as picked by eye: the renderer converts to linear
         float shininess = 32.0f;
         float specularStrength = 0.5f;
+
+        Renderer::Texture albedoMap{};
+        Renderer::Texture normalMap{};
     };
 } // namespace GEF::Scene
