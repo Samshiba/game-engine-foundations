@@ -18,6 +18,8 @@ concurrency:
 
 jobs:
   build-and-test:
+    if: github.event.pull_request.draft == false
+
     name: ${{ matrix.toolchain.name }} / ${{ matrix.config }}
     runs-on: ${{ matrix.toolchain.os }}
 
@@ -132,6 +134,8 @@ jobs:
   # as the README shows. Checks that GEF works as a subproject (only the
   # library is built, no -Werror imposed, GEF::Engine links).
   consumer:
+    if: github.event.pull_request.draft == false
+
     name: FetchContent consumer (GCC 14)
     runs-on: ubuntu-24.04
 
