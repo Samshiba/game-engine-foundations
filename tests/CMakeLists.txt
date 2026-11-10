@@ -20,6 +20,7 @@ add_executable(GEF_Tests
         "Platform/OpenGL/OpenGLPipeline.test.cpp"
         "Platform/OpenGL/OpenGLReadFramebuffer.test.cpp"
         "Platform/OpenGL/OpenGLShader.test.cpp"
+        "Platform/OpenGL/OpenGLShaderStorageBuffer.test.cpp"
         "Platform/OpenGL/OpenGLSubmit.test.cpp"
         "Platform/OpenGL/OpenGLUniformBuffer.test.cpp"
 )

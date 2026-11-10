@@ -12,19 +12,27 @@
 
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
 #include <Engine/Renderer/CommandList.hpp>
-#include <Engine/Renderer/LightingData.hpp>
+#include <Engine/Renderer/Layout/LitShaderLayout.hpp>
 
 #include "GLDrawHelpers.hpp"
 #include "GLTestContext.hpp"
 
 using namespace GEF;
-namespace UniformBinding = Renderer::UniformBinding;
+namespace UniformBinding = Renderer::Layout::UniformBinding;
+namespace ShaderStorageBinding = Renderer::Layout::ShaderStorageBinding;
 
 namespace
 {
     Renderer::BufferHandle CreateUniformBuffer(Renderer::GraphicsDevice& device)
     {
         return device.CreateBuffer({ .type = Renderer::BufferType::Uniform,
+                                     .usage = Renderer::BufferUsage::Dynamic,
+                                     .size = 64 });
+    }
+
+    Renderer::BufferHandle CreateStorageBuffer(Renderer::GraphicsDevice& device)
+    {
+        return device.CreateBuffer({ .type = Renderer::BufferType::ShaderStorage,
                                      .usage = Renderer::BufferUsage::Dynamic,
                                      .size = 64 });
     }
@@ -41,13 +49,17 @@ GL_TEST_CASE("Draws sharing all their state bind it once")
 {
     Tests::DrawFixture fixture;
     const auto frame = CreateUniformBuffer(fixture.device);
-    const auto light = CreateUniformBuffer(fixture.device);
+    const auto environment = CreateUniformBuffer(fixture.device);
+    const auto points = CreateStorageBuffer(fixture.device);
+    const auto spots = CreateStorageBuffer(fixture.device);
 
     // What the SceneRenderer does with instancing off: one draw per entity,
     // same pipeline, same mesh, same per-frame buffers
     Renderer::CommandList cmd;
     cmd.BindUniformBuffer(UniformBinding::Frame, frame);
-    cmd.BindUniformBuffer(UniformBinding::Light, light);
+    cmd.BindUniformBuffer(UniformBinding::Environment, environment);
+    cmd.BindShaderStorageBuffer(ShaderStorageBinding::PointLight, points);
+    cmd.BindShaderStorageBuffer(ShaderStorageBinding::SpotLight, spots);
     for (int i = 0; i < 100; ++i)
         fixture.RecordDraw(cmd);
     fixture.device.Submit(cmd);
@@ -57,8 +69,11 @@ GL_TEST_CASE("Draws sharing all their state bind it once")
     CHECK(stats.pipelineChanges == 1);
     CHECK(stats.vertexArrayChanges == 1);
     CHECK(stats.uniformBufferChanges == 2); // one per binding, not per draw
+    CHECK(stats.shaderStorageBufferChanges == 2);
 
-    fixture.device.DestroyBuffer(light);
+    fixture.device.DestroyBuffer(spots);
+    fixture.device.DestroyBuffer(points);
+    fixture.device.DestroyBuffer(environment);
     fixture.device.DestroyBuffer(frame);
 }
 
@@ -110,12 +125,48 @@ GL_TEST_CASE("Unused uniform buffer slots are not bound")
 
     Renderer::CommandList cmd;
     cmd.BindUniformBuffer(UniformBinding::Frame, frame);
-    fixture.RecordDraw(cmd); // nothing on the Light binding
+    fixture.RecordDraw(cmd); // nothing on the Environment binding
     fixture.device.Submit(cmd);
 
     CHECK(fixture.device.GetLastSubmitStats().uniformBufferChanges == 1);
 
     fixture.device.DestroyBuffer(frame);
+}
+
+GL_TEST_CASE("Unused shader storage slots are not bound")
+{
+    Tests::DrawFixture fixture;
+    const auto points = CreateStorageBuffer(fixture.device);
+
+    Renderer::CommandList cmd;
+    cmd.BindShaderStorageBuffer(ShaderStorageBinding::PointLight, points);
+    fixture.RecordDraw(cmd); // nothing on the directional and spot bindings
+    fixture.device.Submit(cmd);
+
+    CHECK(fixture.device.GetLastSubmitStats().shaderStorageBufferChanges == 1);
+
+    fixture.device.DestroyBuffer(points);
+}
+
+GL_TEST_CASE("A shader storage buffer changing between draws is rebound")
+{
+    // What happens when two draws see different light lists: each change
+    // costs one bind, the unchanged slots none
+    Tests::DrawFixture fixture;
+    const auto first = CreateStorageBuffer(fixture.device);
+    const auto second = CreateStorageBuffer(fixture.device);
+
+    Renderer::CommandList cmd;
+    cmd.BindShaderStorageBuffer(ShaderStorageBinding::PointLight, first);
+    fixture.RecordDraw(cmd);
+    cmd.BindShaderStorageBuffer(ShaderStorageBinding::PointLight, second);
+    fixture.RecordDraw(cmd);
+    fixture.device.Submit(cmd);
+
+    CHECK(fixture.device.GetLastSubmitStats().shaderStorageBufferChanges == 2);
+
+    fixture.device.DestroyBuffer(second);
+    fixture.device.DestroyBuffer(first);
 }
 
 GL_TEST_CASE("Stats describe the last Submit only")
@@ -135,6 +186,7 @@ GL_TEST_CASE("Stats describe the last Submit only")
     CHECK(stats.pipelineChanges == 0);
     CHECK(stats.vertexArrayChanges == 0);
     CHECK(stats.uniformBufferChanges == 0);
+    CHECK(stats.shaderStorageBufferChanges == 0);
 }
 
 GL_TEST_CASE("Frame commands set the viewport and the clear color")

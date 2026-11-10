@@ -17,7 +17,7 @@
 
 #include <Engine/Platform/OpenGL/OpenGLGraphicsDevice.hpp>
 #include <Engine/Renderer/CommandList.hpp>
-#include <Engine/Renderer/LightingData.hpp>
+#include <Engine/Renderer/Layout/LitShaderLayout.hpp>
 
 #include "GLDrawHelpers.hpp"
 #include "GLTestContext.hpp"
@@ -129,13 +129,13 @@ GL_TEST_CASE("BindUniformBuffer attaches the buffer to the binding point")
 
     // The binding is part of the draw's packet, applied by Submit
     Renderer::CommandList cmd;
-    cmd.BindUniformBuffer(Renderer::UniformBinding::Light, handle);
+    cmd.BindUniformBuffer(Renderer::Layout::UniformBinding::Environment, handle);
     fixture.RecordDraw(cmd);
     fixture.device.Submit(cmd);
 
     // binding = 1 in GLSL reads whatever is attached to slot 1
     GLint bound = 0;
-    glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, Renderer::UniformBinding::Light,
+    glGetIntegeri_v(GL_UNIFORM_BUFFER_BINDING, Renderer::Layout::UniformBinding::Environment,
                     &bound);
     CHECK(static_cast<GLuint>(bound) == fixture.device.GetBuffer(handle)->id);
 
