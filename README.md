@@ -3,7 +3,7 @@
 [![CI](https://github.com/Samshiba/game-engine-foundations/actions/workflows/ci.yml/badge.svg)](https://github.com/Samshiba/game-engine-foundations/actions/workflows/ci.yml)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)
 ![OpenGL 4.5](https://img.shields.io/badge/OpenGL-4.5-green.svg)
-[![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-lightgrey.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
 A small 3D rendering engine in C++20, on OpenGL 4.5.
 
