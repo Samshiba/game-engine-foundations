@@ -48,6 +48,8 @@ GEF::Scene::SceneRenderer::~SceneRenderer()
     device_.DestroyBuffer(directionalLightSSBO_.handle);
     device_.DestroyBuffer(pointLightSSBO_.handle);
     device_.DestroyBuffer(spotLightSSBO_.handle);
+    device_.DestroyTexture(defaultAlbedo_);
+    device_.DestroyTexture(defaultNormal_);
 
     for (const auto& [key, batch] : batches_)
     {
@@ -144,7 +146,16 @@ void GEF::Scene::SceneRenderer::Render(
             const MeshRenderer& meshRenderer) {
             auto mesh = meshRenderer.mesh;
 
-            auto [it, inserted] = batches_.try_emplace(mesh.vertexArray);
+            BatchKey key{};
+            key.albedoMap = meshRenderer.material.albedoMap.IsValid()
+                ? meshRenderer.material.albedoMap
+                : defaultAlbedo_;
+            key.normalMap = meshRenderer.material.normalMap.IsValid()
+                ? meshRenderer.material.normalMap
+                : defaultNormal_;
+            key.mesh = mesh.vertexArray;
+
+            auto [it, inserted] = batches_.try_emplace(key);
 
             if (inserted)
             {
@@ -161,12 +172,12 @@ void GEF::Scene::SceneRenderer::Render(
         });
 
     // Draw
-    for (auto& batch : batches_ | std::views::values)
+    for (auto& [key, batch] : batches_)
     {
         if (batch.instances.empty())
             continue;
 
-        const auto count = static_cast<uint32_t>(batch.instances.size());
+        const auto count = batch.instances.size();
 
         if (batch.instances.size() > batch.capacity)
         {
@@ -177,6 +188,11 @@ void GEF::Scene::SceneRenderer::Render(
                              count * sizeof(Renderer::Layout::InstanceData));
 
         cmd.BindVertexArray(batch.vertexArray);
+        cmd.BindTexture(Renderer::Layout::TextureBinding::Albedo,
+                        key.albedoMap);
+        cmd.BindTexture(Renderer::Layout::TextureBinding::Normal,
+                        key.normalMap);
+
         if (instancing_)
         {
             cmd.DrawIndexedInstanced(batch.mesh.indexCount, count, 0);
@@ -213,6 +229,22 @@ void GEF::Scene::SceneRenderer::CreateResources(
         InitialLightCapacity);
     spotLightSSBO_ =
         CreateLightBuffer<Renderer::Layout::GpuSpotLight>(InitialLightCapacity);
+
+    const uint8_t white[4] = { 255, 255, 255, 255 };
+    const uint8_t flat[4] = { 128, 128, 255, 255 };
+
+    defaultAlbedo_ =
+        device_.CreateTexture({ .width = 1,
+                                .height = 1,
+                                .generateMipmaps = false,
+                                .format = Renderer::TextureFormat::SRGBA8,
+                                .data = white });
+    defaultNormal_ =
+        device_.CreateTexture({ .width = 1,
+                                .height = 1,
+                                .generateMipmaps = false,
+                                .format = Renderer::TextureFormat::RGBA8,
+                                .data = flat });
 }
 
 GEF::Scene::SceneRenderer::Batch

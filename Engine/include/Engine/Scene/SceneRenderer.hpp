@@ -36,6 +36,19 @@ namespace GEF::Scene
             Renderer::Mesh mesh;
         };
 
+        struct BatchKey
+        {
+            Renderer::VertexArrayHandle mesh;
+            Renderer::TextureHandle albedoMap;
+            Renderer::TextureHandle normalMap;
+            bool operator==(const BatchKey&) const = default;
+        };
+
+        struct BatchKeyHasher
+        {
+            std::size_t operator()(const BatchKey& key) const noexcept;
+        };
+
         struct LightBuffer
         {
             Renderer::BufferHandle handle;
@@ -44,8 +57,6 @@ namespace GEF::Scene
 
         static constexpr uint32_t InitialBatchCapacity = 256;
         static constexpr uint32_t InitialLightCapacity = 16;
-
-        using MeshKey = Renderer::VertexArrayHandle;
 
     public:
         SceneRenderer(Renderer::GraphicsDevice& device,
@@ -79,7 +90,7 @@ namespace GEF::Scene
                           uint32_t bindingPoint, Renderer::CommandList& cmd);
 
     private:
-        std::unordered_map<MeshKey, Batch> batches_{};
+        std::unordered_map<BatchKey, Batch, BatchKeyHasher> batches_{};
 
         Renderer::GraphicsDevice& device_;
         Renderer::PipelineHandle pipeline_;
@@ -96,5 +107,16 @@ namespace GEF::Scene
         bool instancing_ = true;
 
         Renderer::ShaderHandle litShader_{};
+
+        Renderer::TextureHandle defaultAlbedo_;
+        Renderer::TextureHandle defaultNormal_;
     };
 } // namespace GEF::Scene
+
+inline std::size_t GEF::Scene::SceneRenderer::BatchKeyHasher::operator()(
+    const BatchKey& key) const noexcept
+{
+    return std::hash<Renderer::VertexArrayHandle>{}(key.mesh)
+        ^ std::hash<Renderer::TextureHandle>{}(key.albedoMap)
+        ^ std::hash<Renderer::TextureHandle>{}(key.normalMap);
+}
