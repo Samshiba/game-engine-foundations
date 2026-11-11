@@ -79,7 +79,8 @@ struct Sandbox
         .ambient = { 0.1f, 0.1f, 0.1f }
     };
 
-    Texture texture;
+    Texture albedoMap;
+    Texture normalMap;
 
     void SpawnAt(int index)
     {
@@ -99,7 +100,8 @@ struct Sandbox
             GEF::Scene::Material{ .albedo = { 1.0f, 1.0f, 1.0f },
                                   .shininess = 32.0f,
                                   .specularStrength = 1.0f,
-                                  .albedoMap = texture };
+                                  .albedoMap = albedoMap,
+                                  .normalMap = normalMap };
         registry.EmplaceComponent<GEF::Scene::MeshRenderer>(
             bunny,
             GEF::Scene::MeshRenderer{ .mesh = mesh, .material = material });
@@ -139,7 +141,7 @@ struct Sandbox
                 camera.aspectRatio =
                     float(resize.GetWidth()) / float(resize.GetHeight());
             });
-        const auto path = GEF::FileSystem::AssetPath("models/cube.obj");
+        auto path = GEF::FileSystem::AssetPath("models/cube.obj");
         if (const auto data = GEF::Assets::LoadObj(path))
             mesh = UploadMesh(ctx.device, *data);
         else
@@ -163,12 +165,18 @@ struct Sandbox
             pointLight,
             GEF::Scene::Transform{ .position = { 30.0f, 10.0f, 50.0f } });
 
-        auto text =
-            GEF::FileSystem::AssetPath("textures/MetalPlatesTexture.jpg");
-        if (const auto image = GEF::Assets::LoadImage(text))
-            texture = UploadTexture(ctx.device, *image, TextureFormat::SRGBA8);
+        path = GEF::FileSystem::AssetPath("textures/MetalPlatesTexture.jpg");
+        if (const auto image = GEF::Assets::LoadImage(path))
+            albedoMap =
+                UploadTexture(ctx.device, *image, TextureFormat::SRGBA8);
         else
-            GEF_ERROR("Failed to load texture: {}", text.string());
+            GEF_ERROR("Failed to load texture: {}", path.string());
+
+        path = GEF::FileSystem::AssetPath("textures/MetalPlatesNormal.jpg");
+        if (const auto image = GEF::Assets::LoadImage(path))
+            normalMap = UploadTexture(ctx.device, *image, TextureFormat::RGBA8);
+        else
+            GEF_ERROR("Failed to load texture: {}", path.string());
 
         UpdateEntities();
     }
@@ -210,7 +218,8 @@ struct Sandbox
         if (mesh.indexCount != 0)
             DestroyMesh(ctx.device, mesh);
 
-        DestroyTexture(ctx.device, texture);
+        DestroyTexture(ctx.device, albedoMap);
+        DestroyTexture(ctx.device, normalMap);
     }
 
     void OnImGui(GEF::EngineContext& ctx)

@@ -15,10 +15,11 @@
 
 namespace GEF::Renderer
 {
-    struct Vertex // 32 bytes, interleaved
+    struct Vertex // 48 bytes, interleaved
     {
         glm::vec3 position;
         glm::vec3 normal;
+        glm::vec4 tangent; // w = +-1 for handedness (mirror)
         glm::vec2 uv;
 
         friend bool operator==(const Vertex&, const Vertex&) = default;
@@ -47,5 +48,6 @@ inline GEF::Renderer::BufferLayout GEF::Renderer::Vertex::Layout()
 {
     return { { ShaderDataType::Float3, "a_Position" },
              { ShaderDataType::Float3, "a_Normal" },
+             { ShaderDataType::Float4, "a_Tangent" },
              { ShaderDataType::Float2, "a_UV" } };
 }

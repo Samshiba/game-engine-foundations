@@ -1,8 +1,8 @@
 #version 450 core
 
-in vec3 v_Normal;
 in vec3 v_WorldPos;
 in vec2 v_UV;
+in mat3 v_TBN;
 flat in vec3 v_Albedo;
 flat in vec2 v_Params;
 
@@ -118,11 +118,13 @@ void EvalSpotLight(in SpotLight light, in vec3 N, in vec3 V, in vec3 albedo, ino
 // ---------- Main ----------
 void main()
 {
-    vec3 N = normalize(v_Normal); // Normal vector
     vec3 V = normalize(u_CameraPosition.xyz - v_WorldPos); // View vector (eye)
 
     vec3 albedo = v_Albedo * texture(u_Albedo, v_UV).rgb;
     vec3 color = u_Ambient.rgb * albedo;
+
+    vec3 n = texture(u_Normal, v_UV).xyz * 2.0 - 1.0;
+    vec3 N = normalize(v_TBN * n);
 
     for (uint i = 0; i < dirCount; i++) {
         EvalDirectionalLight(dirLights[i], N, V, albedo, color);

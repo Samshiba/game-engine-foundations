@@ -16,10 +16,10 @@ namespace GEF::Renderer::Layout
 {
     struct InstanceData
     {
-        glm::mat4 model; // attributes 3-6  (one vec4 per column)
-        glm::mat3 normalMatrix; // attributes 7-9  (one vec3 per column)
-        glm::vec3 albedo; // attribute 10
-        glm::vec2 params; // attribute 11
+        glm::mat4 model; // attributes 7-7  (one vec4 per column)
+        glm::mat3 normalMatrix; // attributes 8-10  (one vec3 per column)
+        glm::vec3 albedo; // attribute 11
+        glm::vec2 params; // attribute 12
 
         static BufferLayout Layout();
     };
