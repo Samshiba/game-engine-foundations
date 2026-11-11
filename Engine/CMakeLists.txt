@@ -69,6 +69,7 @@ set(ENGINE_HEADERS
         "include/Engine/Utils/FrameTimer.hpp"
         "include/Engine/Utils/FrameStatistics.hpp"
         "include/Engine/Utils/Overloaded.hpp"
+        "include/Engine/Utils/HashCombine.hpp"
 
         # Core
         "include/Engine/Core/Engine.hpp"

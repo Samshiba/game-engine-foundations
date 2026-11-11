@@ -12,6 +12,7 @@
 #include <Engine/Renderer/GraphicsDevice.hpp>
 #include <Engine/Renderer/Layout/LitShaderLayout.hpp>
 #include <Engine/Renderer/Mesh.hpp>
+#include <Engine/Utils/HashCombine.hpp>
 
 #include "Components.hpp"
 
@@ -116,7 +117,5 @@ namespace GEF::Scene
 inline std::size_t GEF::Scene::SceneRenderer::BatchKeyHasher::operator()(
     const BatchKey& key) const noexcept
 {
-    return std::hash<Renderer::VertexArrayHandle>{}(key.mesh)
-        ^ std::hash<Renderer::TextureHandle>{}(key.albedoMap)
-        ^ std::hash<Renderer::TextureHandle>{}(key.normalMap);
+    return Utils::HashAll(key.mesh, key.albedoMap, key.normalMap);
 }

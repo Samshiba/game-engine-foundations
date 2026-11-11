@@ -181,11 +181,14 @@ void GEF::Scene::SceneRenderer::Render(
 
         if (batch.instances.size() > batch.capacity)
         {
-            GrowBatch(batch, std::max(count, batch.capacity * 2));
+            GrowBatch(
+                batch,
+                std::max(static_cast<uint32_t>(count), batch.capacity * 2));
         }
 
         device_.UpdateBuffer(batch.instanceBuffer, 0, batch.instances.data(),
-                             count * sizeof(Renderer::Layout::InstanceData));
+                             static_cast<uint32_t>(count)
+                                 * sizeof(Renderer::Layout::InstanceData));
 
         cmd.BindVertexArray(batch.vertexArray);
         cmd.BindTexture(Renderer::Layout::TextureBinding::Albedo,
@@ -195,7 +198,8 @@ void GEF::Scene::SceneRenderer::Render(
 
         if (instancing_)
         {
-            cmd.DrawIndexedInstanced(batch.mesh.indexCount, count, 0);
+            cmd.DrawIndexedInstanced(batch.mesh.indexCount,
+                                     static_cast<uint32_t>(count), 0);
         }
         else
         {

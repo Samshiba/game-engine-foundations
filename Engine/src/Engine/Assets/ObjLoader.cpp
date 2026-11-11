@@ -11,6 +11,7 @@
 
 #include <Engine/Core/FileSystem.hpp>
 #include <Engine/Core/Log.hpp>
+#include <Engine/Utils/HashCombine.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -21,14 +22,7 @@ struct std::hash<GEF::Renderer::Vertex>
 {
     std::size_t operator()(const GEF::Renderer::Vertex& v) const noexcept
     {
-        std::size_t seed = 0x19BD75E6;
-        seed ^= (seed << 6) + (seed >> 2) + 0x0C4A02F0
-            + std::hash<glm::vec3>{}(v.position);
-        seed ^= (seed << 6) + (seed >> 2) + 0x6AAFFEDC
-            + std::hash<glm::vec3>{}(v.normal);
-        seed ^= (seed << 6) + (seed >> 2) + 0x68196E62
-            + std::hash<glm::vec2>{}(v.uv);
-        return seed;
+        return GEF::Utils::HashAll(v.position, v.normal, v.uv, v.tangent);
     }
 };
 
