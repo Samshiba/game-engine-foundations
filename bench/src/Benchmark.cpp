@@ -416,7 +416,7 @@ private:
     std::span<const Scenario> scenarios_;
     libecs::core::registry::Registry registry_;
     Camera camera_;
-    Scene::Environment environment_{};
+    Scene::SceneRenderer::Environment environment_{};
     std::optional<Scene::SceneRenderer> renderer_;
     std::vector<std::pair<std::string, Mesh>> meshes_;
     std::vector<libecs::core::Entity> entities_;

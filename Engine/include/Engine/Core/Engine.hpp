@@ -96,6 +96,7 @@ namespace GEF
             game.OnInit(ctx);
 
         auto previous = Clock::now();
+
         while (is_running_)
         {
             const auto now = Clock::now();

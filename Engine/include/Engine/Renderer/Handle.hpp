@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <functional>
 
+#include <Engine/Utils/HashCombine.hpp>
+
 namespace GEF::Renderer
 {
     template <typename Tag>
@@ -44,10 +46,6 @@ struct std::hash<GEF::Renderer::Handle<Tag>>
     std::size_t
     operator()(const GEF::Renderer::Handle<Tag>& handle) const noexcept
     {
-        // index in the high 32 bits, generation in the low 32: unique per
-        // handle
-        const uint64_t key =
-            (static_cast<uint64_t>(handle.index) << 32) | handle.generation;
-        return std::hash<uint64_t>{}(key);
+        return GEF::Utils::HashAll(handle.index, handle.generation);
     }
 };

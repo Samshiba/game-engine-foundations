@@ -24,6 +24,7 @@
 #include <Engine/Scene/SceneRenderer.hpp>
 #include <Engine/Utils/FrameTimer.hpp>
 
+#include "Engine/Assets/ImageLoader.hpp"
 #include "FreeFlyController.hpp"
 
 using namespace GEF::Renderer;
@@ -74,7 +75,12 @@ struct Sandbox
     int entityCount = 10000;
     std::vector<libecs::core::Entity> spawned;
 
-    GEF::Scene::Environment environment = { .ambient = { 0.1f, 0.1f, 0.1f } };
+    GEF::Scene::SceneRenderer::Environment environment = {
+        .ambient = { 0.1f, 0.1f, 0.1f }
+    };
+
+    Texture albedoMap;
+    Texture normalMap;
 
     void SpawnAt(int index)
     {
@@ -90,11 +96,12 @@ struct Sandbox
                 .position = { (x - 5) * 5.0f, 0.0f, (z - 5) * 5.0f },
                 .scale = glm::vec3(10.0f) });
 
-        const auto material = GEF::Scene::Material{
-            .albedo = { x / 200.0f, z / 250.0f, 0.5f },
-            .shininess = 32.0f,
-            .specularStrength = 1.0f,
-        };
+        const auto material =
+            GEF::Scene::Material{ .albedo = { 1.0f, 1.0f, 1.0f },
+                                  .shininess = 32.0f,
+                                  .specularStrength = 1.0f,
+                                  .albedoMap = albedoMap,
+                                  .normalMap = normalMap };
         registry.EmplaceComponent<GEF::Scene::MeshRenderer>(
             bunny,
             GEF::Scene::MeshRenderer{ .mesh = mesh, .material = material });
@@ -134,7 +141,7 @@ struct Sandbox
                 camera.aspectRatio =
                     float(resize.GetWidth()) / float(resize.GetHeight());
             });
-        const auto path = GEF::FileSystem::AssetPath("models/cube.obj");
+        auto path = GEF::FileSystem::AssetPath("models/cube.obj");
         if (const auto data = GEF::Assets::LoadObj(path))
             mesh = UploadMesh(ctx.device, *data);
         else
@@ -157,6 +164,19 @@ struct Sandbox
         registry.EmplaceComponent<GEF::Scene::Transform>(
             pointLight,
             GEF::Scene::Transform{ .position = { 30.0f, 10.0f, 50.0f } });
+
+        path = GEF::FileSystem::AssetPath("textures/MetalPlatesTexture.jpg");
+        if (const auto image = GEF::Assets::LoadImage(path))
+            albedoMap =
+                UploadTexture(ctx.device, *image, TextureFormat::SRGBA8);
+        else
+            GEF_ERROR("Failed to load texture: {}", path.string());
+
+        path = GEF::FileSystem::AssetPath("textures/MetalPlatesNormal.jpg");
+        if (const auto image = GEF::Assets::LoadImage(path))
+            normalMap = UploadTexture(ctx.device, *image, TextureFormat::RGBA8);
+        else
+            GEF_ERROR("Failed to load texture: {}", path.string());
 
         UpdateEntities();
     }
@@ -197,6 +217,9 @@ struct Sandbox
 
         if (mesh.indexCount != 0)
             DestroyMesh(ctx.device, mesh);
+
+        DestroyTexture(ctx.device, albedoMap);
+        DestroyTexture(ctx.device, normalMap);
     }
 
     void OnImGui(GEF::EngineContext& ctx)
@@ -220,6 +243,14 @@ struct Sandbox
         if (ImGui::Checkbox("VSync", &vsync))
             ctx.window.SetVSync(vsync);
 
+        // Debug View
+        int view = static_cast<int>(renderer->GetDebugView());
+        if (ImGui::Combo("Debug View", &view,
+                         "None\0Albedo\0Normal\0UV\0Tangent\0Normal "
+                         "Map\0Lighting Only\0"))
+            renderer->SetDebugView(
+                static_cast<GEF::Scene::SceneRenderer::DebugView>(view));
+
         // Instancing
         ImGui::Text("Entities: %zu", spawned.size());
         ImGui::SliderInt("Entities", &entityCount, 0, 50000);
@@ -233,6 +264,7 @@ struct Sandbox
         ImGui::Text("Uniform buffer changes: %u", stats.uniformBufferChanges);
         ImGui::Text("Shader Storage buffer changes: %u",
                     stats.shaderStorageBufferChanges);
+        ImGui::Text("Texture changes: %u", stats.textureChanges);
 
         // Light
         ImGui::SliderFloat("Sun Elevation", &elevation, -10.0f, 90.0f);

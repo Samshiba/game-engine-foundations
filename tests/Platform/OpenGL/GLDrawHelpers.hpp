@@ -30,9 +30,9 @@ namespace GEF::Tests
     inline Renderer::Mesh UploadTriangle(Renderer::GraphicsDevice& device)
     {
         Renderer::MeshData data;
-        data.vertices = { { { 0, 0, 0 }, { 0, 0, 1 }, { 0, 0 } },
-                          { { 1, 0, 0 }, { 0, 0, 1 }, { 1, 0 } },
-                          { { 0, 1, 0 }, { 0, 0, 1 }, { 0, 1 } } };
+        data.vertices = { { { 0, 0, 0 }, { 0, 0, 1 }, {}, { 0, 0 } },
+                          { { 1, 0, 0 }, { 0, 0, 1 }, {}, { 1, 0 } },
+                          { { 0, 1, 0 }, { 0, 0, 1 }, {}, { 0, 1 } } };
         data.indices = { 0, 1, 2 };
         return Renderer::UploadMesh(device, data);
     }

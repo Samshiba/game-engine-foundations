@@ -31,9 +31,10 @@ batching, and to measure each choice instead of guessing.
 - **ECS-driven rendering**: `Transform`, `MeshRenderer` and light components. All entities
   sharing a mesh are drawn in one instanced call.
 - **Rendering features**: Blinn-Phong lighting with any number of directional, point and spot
-  lights (one storage buffer per type), OBJ loading, free-fly
-  camera, ImGui overlay, screenshots and frame sequences for GIFs.
-- **Measured and tested**: a reproducible benchmark, frame time percentiles, 127 tests (57 of
+  lights (one storage buffer per type), albedo and normal maps, OBJ loading with tangents,
+  debug views (albedo, normals, UVs, tangents, lighting only), free-fly camera, ImGui overlay,
+  screenshots and frame sequences for GIFs.
+- **Measured and tested**: a reproducible benchmark, frame time percentiles, 157 tests (81 of
   them on a real OpenGL context), CI on MSVC, GCC and Clang with warnings as errors.
 
 ## Performance
@@ -203,7 +204,7 @@ flowchart LR
     GAME --> SR["SceneRenderer<br/>one batch per mesh"]
     SR -- reads --> ECS
     SR -- records --> CMD["CommandList<br/>packets + sort keys"]
-    ENGINE["Engine"] -- "Submit" --> DEV["GraphicsDevice"]
+    ENGINE["Engine"] -- " Submit " --> DEV["GraphicsDevice"]
     CMD --> DEV
     DEV -.-> GL["OpenGL 4.5 backend"]
 ```
@@ -267,8 +268,8 @@ Short-term work, before the next features:
   uploading what changed.
 - Multi-draw indirect, then culling on the GPU.
 - Recording commands from several threads, one command list per thread merged before sorting.
-- More lighting: shadow maps, textures and normal maps (several lights, point and spot lights are
-  done).
+- More lighting: shadow maps, then physically based materials (metallic, roughness) with the HDR
+  pass. Several lights, textures and normal maps are done.
 - glTF loading, shader hot reload, asynchronous framebuffer readback.
 - Multi-window support, and a second backend (Vulkan) to test the graphics device abstraction.
 
@@ -280,9 +281,9 @@ Short-term work, before the next features:
   [glm](https://github.com/g-truc/glm), [spdlog](https://github.com/gabime/spdlog),
   [Dear ImGui](https://github.com/ocornut/imgui),
   [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader),
-  [stb_image_write](https://github.com/nothings/stb),
+  [stb_image](https://github.com/nothings/stb),
   [doctest](https://github.com/doctest/doctest).
 
 ## License
 
-GEF is released under the [GPL-3.0](LICENSE) license.
+GEF is released under the [MIT](LICENSE) license.

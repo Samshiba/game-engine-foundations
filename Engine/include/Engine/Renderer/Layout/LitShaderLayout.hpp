@@ -9,6 +9,22 @@
 
 #include <glm/glm.hpp>
 
+#include <Engine/Renderer/Buffer.hpp>
+
+// ---------- Instance Attributes ----------
+namespace GEF::Renderer::Layout
+{
+    struct InstanceData
+    {
+        glm::mat4 model; // attributes 7-7  (one vec4 per column)
+        glm::mat3 normalMatrix; // attributes 8-10  (one vec3 per column)
+        glm::vec3 albedo; // attribute 11
+        glm::vec2 params; // attribute 12
+
+        static BufferLayout Layout();
+    };
+} // namespace GEF::Renderer::Layout
+
 // ---------- Uniform ----------
 namespace GEF::Renderer::Layout
 {
@@ -25,8 +41,9 @@ namespace GEF::Renderer::Layout
     {
         glm::mat4 viewProjection;
         glm::vec4 cameraPosition; // xyz, w unused
+        glm::uvec4 flags; // x = debug view mode, yzw unused
     };
-    static_assert(sizeof(FrameUniforms) == 80);
+    static_assert(sizeof(FrameUniforms) == 96);
 
     struct EnvironmentUniforms // binding 1: once per frame
     {
@@ -80,3 +97,26 @@ namespace GEF::Renderer::Layout
     };
     static_assert(sizeof(GpuSpotLight) == 64);
 } // namespace GEF::Renderer::Layout
+
+// ---------- Texture ----------
+namespace GEF::Renderer::Layout
+{
+    namespace TextureBinding
+    {
+        constexpr uint32_t Albedo = 0;
+        constexpr uint32_t Normal = 1;
+        // constexpr uint32_t Roughness = 2;
+        // constexpr uint32_t Metallic = 3;
+        // constexpr uint32_t Emissive = 4;
+        // constexpr uint32_t AO = 5;
+        // constexpr uint32_t Height = 6;
+    } // namespace TextureBinding
+} // namespace GEF::Renderer::Layout
+
+inline GEF::Renderer::BufferLayout GEF::Renderer::Layout::InstanceData::Layout()
+{
+    return { { ShaderDataType::Mat4, "a_Model" },
+             { ShaderDataType::Mat3, "a_NormalMatrix" },
+             { ShaderDataType::Float3, "a_Albedo" },
+             { ShaderDataType::Float2, "a_Params" } };
+}

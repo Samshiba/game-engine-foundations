@@ -12,6 +12,7 @@
 #include <Engine/Renderer/GraphicsDevice.hpp>
 #include <Engine/Renderer/Layout/LitShaderLayout.hpp>
 #include <Engine/Renderer/Mesh.hpp>
+#include <Engine/Utils/HashCombine.hpp>
 
 #include "Components.hpp"
 
@@ -19,14 +20,45 @@ namespace GEF::Scene
 {
     class SceneRenderer
     {
+    public:
+        struct Environment
+        {
+            glm::vec3 ambient{ 0.1f };
+        };
+
+        enum class DebugView : uint32_t
+        {
+            None,
+            Albedo,
+            Normal,
+            UV,
+            Tangent,
+            NormalMap,
+            LightingOnly,
+        };
+
     private:
         struct Batch
         {
             Renderer::BufferHandle instanceBuffer;
             Renderer::VertexArrayHandle vertexArray;
             uint32_t capacity = 0; // instances the buffer can hold
-            std::vector<Renderer::InstanceData> instances; // filled each frame
+            std::vector<Renderer::Layout::InstanceData>
+                instances; // filled each frame
             Renderer::Mesh mesh;
+        };
+
+        struct BatchKey
+        {
+            Renderer::VertexArrayHandle mesh;
+            Renderer::TextureHandle albedoMap;
+            Renderer::TextureHandle normalMap;
+            bool operator==(const BatchKey&) const = default;
+        };
+
+        struct BatchKeyHasher
+        {
+            std::size_t operator()(const BatchKey& key) const noexcept;
         };
 
         struct LightBuffer
@@ -37,8 +69,6 @@ namespace GEF::Scene
 
         static constexpr uint32_t InitialBatchCapacity = 256;
         static constexpr uint32_t InitialLightCapacity = 16;
-
-        using MeshKey = Renderer::VertexArrayHandle;
 
     public:
         SceneRenderer(Renderer::GraphicsDevice& device,
@@ -56,6 +86,9 @@ namespace GEF::Scene
         void SetInstancingEnabled(bool enabled);
         [[nodiscard]] bool IsInstancingEnabled() const;
 
+        void SetDebugView(DebugView debugView);
+        [[nodiscard]] DebugView GetDebugView() const;
+
     private:
         void CreateResources(Renderer::ShaderHandle litShader);
 
@@ -72,7 +105,7 @@ namespace GEF::Scene
                           uint32_t bindingPoint, Renderer::CommandList& cmd);
 
     private:
-        std::unordered_map<MeshKey, Batch> batches_{};
+        std::unordered_map<BatchKey, Batch, BatchKeyHasher> batches_{};
 
         Renderer::GraphicsDevice& device_;
         Renderer::PipelineHandle pipeline_;
@@ -87,7 +120,17 @@ namespace GEF::Scene
         std::vector<Renderer::Layout::GpuSpotLight> spotLights_;
 
         bool instancing_ = true;
+        DebugView debugView_ = DebugView::None;
 
         Renderer::ShaderHandle litShader_{};
+
+        Renderer::TextureHandle defaultAlbedo_;
+        Renderer::TextureHandle defaultNormal_;
     };
 } // namespace GEF::Scene
+
+inline std::size_t GEF::Scene::SceneRenderer::BatchKeyHasher::operator()(
+    const BatchKey& key) const noexcept
+{
+    return Utils::HashAll(key.mesh, key.albedoMap, key.normalMap);
+}

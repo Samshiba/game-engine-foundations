@@ -48,6 +48,8 @@ GEF::Scene::SceneRenderer::~SceneRenderer()
     device_.DestroyBuffer(directionalLightSSBO_.handle);
     device_.DestroyBuffer(pointLightSSBO_.handle);
     device_.DestroyBuffer(spotLightSSBO_.handle);
+    device_.DestroyTexture(defaultAlbedo_);
+    device_.DestroyTexture(defaultNormal_);
 
     for (const auto& [key, batch] : batches_)
     {
@@ -128,6 +130,7 @@ void GEF::Scene::SceneRenderer::Render(
     const Renderer::Layout::FrameUniforms frameU{
         .viewProjection = camera.GetViewProjection(),
         .cameraPosition = glm::vec4(camera.position, 1.0f),
+        .flags = glm::uvec4(debugView_, 0u, 0u, 0u)
     };
     device_.UpdateBuffer(frameUBO_, 0, &frameU, sizeof(frameU));
 
@@ -144,14 +147,23 @@ void GEF::Scene::SceneRenderer::Render(
             const MeshRenderer& meshRenderer) {
             auto mesh = meshRenderer.mesh;
 
-            auto [it, inserted] = batches_.try_emplace(mesh.vertexArray);
+            BatchKey key{};
+            key.albedoMap = meshRenderer.material.albedoMap.IsValid()
+                ? meshRenderer.material.albedoMap
+                : defaultAlbedo_;
+            key.normalMap = meshRenderer.material.normalMap.IsValid()
+                ? meshRenderer.material.normalMap
+                : defaultNormal_;
+            key.mesh = mesh.vertexArray;
+
+            auto [it, inserted] = batches_.try_emplace(key);
 
             if (inserted)
             {
                 it->second = CreateBatch(mesh, InitialBatchCapacity);
             }
 
-            it->second.instances.push_back(Renderer::InstanceData{
+            it->second.instances.push_back(Renderer::Layout::InstanceData{
                 .model = transform.GetMatrix(),
                 .normalMatrix = transform.GetNormalMatrix(),
                 .albedo =
@@ -161,25 +173,34 @@ void GEF::Scene::SceneRenderer::Render(
         });
 
     // Draw
-    for (auto& batch : batches_ | std::views::values)
+    for (auto& [key, batch] : batches_)
     {
         if (batch.instances.empty())
             continue;
 
-        const auto count = static_cast<uint32_t>(batch.instances.size());
+        const auto count = batch.instances.size();
 
         if (batch.instances.size() > batch.capacity)
         {
-            GrowBatch(batch, std::max(count, batch.capacity * 2));
+            GrowBatch(
+                batch,
+                std::max(static_cast<uint32_t>(count), batch.capacity * 2));
         }
 
         device_.UpdateBuffer(batch.instanceBuffer, 0, batch.instances.data(),
-                             count * sizeof(Renderer::InstanceData));
+                             static_cast<uint32_t>(count)
+                                 * sizeof(Renderer::Layout::InstanceData));
 
         cmd.BindVertexArray(batch.vertexArray);
+        cmd.BindTexture(Renderer::Layout::TextureBinding::Albedo,
+                        key.albedoMap);
+        cmd.BindTexture(Renderer::Layout::TextureBinding::Normal,
+                        key.normalMap);
+
         if (instancing_)
         {
-            cmd.DrawIndexedInstanced(batch.mesh.indexCount, count, 0);
+            cmd.DrawIndexedInstanced(batch.mesh.indexCount,
+                                     static_cast<uint32_t>(count), 0);
         }
         else
         {
@@ -213,6 +234,22 @@ void GEF::Scene::SceneRenderer::CreateResources(
         InitialLightCapacity);
     spotLightSSBO_ =
         CreateLightBuffer<Renderer::Layout::GpuSpotLight>(InitialLightCapacity);
+
+    const uint8_t white[4] = { 255, 255, 255, 255 };
+    const uint8_t flat[4] = { 128, 128, 255, 255 };
+
+    defaultAlbedo_ =
+        device_.CreateTexture({ .width = 1,
+                                .height = 1,
+                                .generateMipmaps = false,
+                                .format = Renderer::TextureFormat::SRGBA8,
+                                .data = white });
+    defaultNormal_ =
+        device_.CreateTexture({ .width = 1,
+                                .height = 1,
+                                .generateMipmaps = false,
+                                .format = Renderer::TextureFormat::RGBA8,
+                                .data = flat });
 }
 
 GEF::Scene::SceneRenderer::Batch
@@ -225,7 +262,7 @@ GEF::Scene::SceneRenderer::CreateBatch(const Renderer::Mesh& mesh,
     batch.instanceBuffer = device_.CreateBuffer(
         { .type = Renderer::BufferType::Vertex,
           .usage = Renderer::BufferUsage::Dynamic,
-          .size = static_cast<uint32_t>(sizeof(Renderer::InstanceData))
+          .size = static_cast<uint32_t>(sizeof(Renderer::Layout::InstanceData))
               * capacity });
     batch.vertexArray = device_.CreateVertexArray({
         .vertexBuffers = {
@@ -234,7 +271,7 @@ GEF::Scene::SceneRenderer::CreateBatch(const Renderer::Mesh& mesh,
               .layout = Renderer::Vertex::Layout() },
             { .buffer = batch.instanceBuffer,
               // binding 1: per instance
-              .layout = Renderer::InstanceData::Layout(),
+              .layout = Renderer::Layout::InstanceData::Layout(),
               .instanceDivisor = 1 },
         },
         .indexBuffer = mesh.indexBuffer,
@@ -251,7 +288,7 @@ void GEF::Scene::SceneRenderer::GrowBatch(Batch& batch, uint32_t capacity)
     batch.instanceBuffer = device_.CreateBuffer(
         { .type = Renderer::BufferType::Vertex,
           .usage = Renderer::BufferUsage::Dynamic,
-          .size = static_cast<uint32_t>(sizeof(Renderer::InstanceData))
+          .size = static_cast<uint32_t>(sizeof(Renderer::Layout::InstanceData))
               * capacity });
     batch.vertexArray = device_.CreateVertexArray({
         .vertexBuffers = {
@@ -260,7 +297,7 @@ void GEF::Scene::SceneRenderer::GrowBatch(Batch& batch, uint32_t capacity)
               .layout = Renderer::Vertex::Layout() },
             { .buffer = batch.instanceBuffer,
               // binding 1: per instance
-              .layout = Renderer::InstanceData::Layout(),
+              .layout = Renderer::Layout::InstanceData::Layout(),
               .instanceDivisor = 1 },
         },
         .indexBuffer = batch.mesh.indexBuffer,
@@ -315,4 +352,15 @@ void GEF::Scene::SceneRenderer::SetInstancingEnabled(bool enabled)
 bool GEF::Scene::SceneRenderer::IsInstancingEnabled() const
 {
     return instancing_;
+}
+
+void GEF::Scene::SceneRenderer::SetDebugView(DebugView debugView)
+{
+    debugView_ = debugView;
+}
+
+GEF::Scene::SceneRenderer::DebugView
+GEF::Scene::SceneRenderer::GetDebugView() const
+{
+    return debugView_;
 }

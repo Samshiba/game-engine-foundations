@@ -12,6 +12,7 @@ add_subdirectory("vendor/glad")
 
 set(STB_IMAGE_SOURCES
         "vendor/stb_image/stb_image_write.h"
+        "vendor/stb_image/stb_image.h"
 )
 
 set(ENGINE_SOURCES
@@ -47,19 +48,17 @@ set(ENGINE_SOURCES
         "src/Engine/Renderer/Mesh.cpp"
         "src/Engine/Renderer/CommandList.cpp"
         "src/Engine/Renderer/FrameCapture.cpp"
+        "src/Engine/Renderer/Texture.cpp"
 
         # Assets
         "src/Engine/Assets/ObjLoader.cpp"
+        "src/Engine/Assets/ImageLoader.cpp"
 
         # Scene
         "src/Engine/Scene/SceneRenderer.cpp"
 
         # UI
         "src/Engine/UI/ImGuiBackend.cpp"
-
-        # Utils
-        "src/Engine/Utils/Image.hpp"
-        "src/Engine/Utils/Image.cpp"
 )
 
 set(ENGINE_HEADERS
@@ -70,6 +69,7 @@ set(ENGINE_HEADERS
         "include/Engine/Utils/FrameTimer.hpp"
         "include/Engine/Utils/FrameStatistics.hpp"
         "include/Engine/Utils/Overloaded.hpp"
+        "include/Engine/Utils/HashCombine.hpp"
 
         # Core
         "include/Engine/Core/Engine.hpp"
@@ -97,15 +97,18 @@ set(ENGINE_HEADERS
         "include/Engine/Renderer/Camera.hpp"
         "include/Engine/Renderer/Mesh.hpp"
         "include/Engine/Renderer/FrameCapture.hpp"
+        "include/Engine/Renderer/Texture.hpp"
         # Layout
         "include/Engine/Renderer/Layout/LitShaderLayout.hpp"
 
         # Assets
         "include/Engine/Assets/ObjLoader.hpp"
+        "include/Engine/Assets/ImageLoader.hpp"
 
         # Scene
         "include/Engine/Scene/Components.hpp"
         "include/Engine/Scene/SceneRenderer.hpp"
+        "include/Engine/Scene/Material.hpp"
 
         # UI
         "include/Engine/UI/ImGuiBackend.hpp"
@@ -151,9 +154,9 @@ target_link_libraries(GEF_Engine
 
 # Compile Options (optimization flags come from the build type, see root CMakeLists)
 gef_set_warnings(GEF_Engine)
-# Image.cpp compiles the stb_image_write implementation: silence the warnings
+# ImageLoader.cpp compiles the stb_image_write implementation: silence the warnings
 # it triggers (sprintf, partial struct init) instead of dropping -Werror
-set_source_files_properties("src/Engine/Utils/Image.cpp" PROPERTIES
+set_source_files_properties("src/Engine/Assets/ImageLoader.cpp" PROPERTIES
         COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/wd4996,-Wno-missing-field-initializers>"
 )
 

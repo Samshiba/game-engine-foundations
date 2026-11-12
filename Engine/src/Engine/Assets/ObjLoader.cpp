@@ -11,6 +11,7 @@
 
 #include <Engine/Core/FileSystem.hpp>
 #include <Engine/Core/Log.hpp>
+#include <Engine/Utils/HashCombine.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -21,14 +22,7 @@ struct std::hash<GEF::Renderer::Vertex>
 {
     std::size_t operator()(const GEF::Renderer::Vertex& v) const noexcept
     {
-        std::size_t seed = 0x19BD75E6;
-        seed ^= (seed << 6) + (seed >> 2) + 0x0C4A02F0
-            + std::hash<glm::vec3>{}(v.position);
-        seed ^= (seed << 6) + (seed >> 2) + 0x6AAFFEDC
-            + std::hash<glm::vec3>{}(v.normal);
-        seed ^= (seed << 6) + (seed >> 2) + 0x68196E62
-            + std::hash<glm::vec2>{}(v.uv);
-        return seed;
+        return GEF::Utils::HashAll(v.position, v.normal, v.uv, v.tangent);
     }
 };
 
@@ -71,12 +65,14 @@ GEF::Assets::ParseObj(std::string_view objText)
         return index >= 0 && static_cast<size_t>(index) < count;
     };
 
+    // ----- Create Vertex -----
     for (const auto& shape : shapes)
     {
         for (const auto& index : shape.mesh.indices)
         {
             Renderer::Vertex vertex{};
 
+            // Position
             if (!isInRange(index.vertex_index, attrib.vertices.size() / 3))
             {
                 GEF_ENGINE_ERROR("OBJ: vertex index {} out of range",
@@ -87,6 +83,7 @@ GEF::Assets::ParseObj(std::string_view objText)
                                 attrib.vertices[3 * index.vertex_index + 1],
                                 attrib.vertices[3 * index.vertex_index + 2] };
 
+            // Normal
             if (index.normal_index != -1)
             {
                 if (!isInRange(index.normal_index, attrib.normals.size() / 3))
@@ -101,6 +98,7 @@ GEF::Assets::ParseObj(std::string_view objText)
                 hasNormals = true;
             }
 
+            // UV
             if (index.texcoord_index != -1)
             {
                 if (!isInRange(index.texcoord_index,
@@ -125,6 +123,7 @@ GEF::Assets::ParseObj(std::string_view objText)
         }
     }
 
+    // ----- Calculate Normal if not in file -----
     if (!hasNormals)
     {
         for (size_t i = 0; i + 2 < meshData.indices.size(); i += 3)
@@ -143,6 +142,64 @@ GEF::Assets::ParseObj(std::string_view objText)
 
         for (Renderer::Vertex& vertex : meshData.vertices)
             vertex.normal = glm::normalize(vertex.normal);
+    }
+
+    // ----- Calculate Tangent -----
+    std::vector<glm::vec3> bitangents;
+    bitangents.resize(meshData.indices.size());
+    for (size_t i = 0; i + 2 < meshData.indices.size(); i += 3)
+    {
+        const uint32_t ia = meshData.indices[i + 0];
+        const uint32_t ib = meshData.indices[i + 1];
+        const uint32_t ic = meshData.indices[i + 2];
+
+        Renderer::Vertex& a = meshData.vertices[ia];
+        Renderer::Vertex& b = meshData.vertices[ib];
+        Renderer::Vertex& c = meshData.vertices[ic];
+
+        const glm::vec3 edge1 = b.position - a.position;
+        const glm::vec3 edge2 = c.position - a.position;
+        const glm::vec2 deltaUV1 = b.uv - a.uv;
+        const glm::vec2 deltaUV2 = c.uv - a.uv;
+
+        const float det = deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y;
+        if (glm::abs(det) < 1e-8f)
+            continue;
+        const float f = 1.0f / det;
+
+        const glm::vec3 tangent = f * (deltaUV2.y * edge1 - deltaUV1.y * edge2);
+        const glm::vec3 bitangent =
+            f * (deltaUV1.x * edge2 - deltaUV2.x * edge1);
+
+        a.tangent += glm::vec4(tangent, 0.0f);
+        b.tangent += glm::vec4(tangent, 0.0f);
+        c.tangent += glm::vec4(tangent, 0.0f);
+
+        bitangents[ia] += bitangent;
+        bitangents[ib] += bitangent;
+        bitangents[ic] += bitangent;
+    }
+
+    for (Renderer::Vertex& vertex : meshData.vertices)
+    {
+        glm::vec3 T = xyz(vertex.tangent)
+            - glm::dot(xyz(vertex.tangent), vertex.normal) * vertex.normal;
+        if (glm::dot(T, T) < 1e-12f)
+        {
+            // no UVs: any axis perpendicular to N (no effect with the flat
+            // default map)
+            const glm::vec3 axis = glm::abs(vertex.normal.x) < 0.9f
+                ? glm::vec3(1, 0, 0)
+                : glm::vec3(0, 1, 0);
+            T = glm::cross(vertex.normal, axis);
+        }
+        T = glm::normalize(T);
+        float w = glm::dot(glm::cross(vertex.normal, T),
+                           bitangents[&vertex - meshData.vertices.data()])
+                < 0.0f
+            ? -1.0f
+            : 1.0f;
+        vertex.tangent = glm::vec4(T, w);
     }
 
     return meshData;

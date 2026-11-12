@@ -9,6 +9,11 @@ All notable changes to GEF are listed here. Versions follow [Semantic Versioning
 - `PointLight` and `SpotLight`, any number of each light type.
 - Shader storage buffers (`BufferType::ShaderStorage`, `CommandList::BindShaderStorageBuffer`).
 - Temporary Reinhard tone mapping in the lit shader.
+- Textures (`CreateTexture`, `CommandList::BindTexture`, `UploadTexture`), sRGB or linear.
+- `Assets::LoadImage`, and albedo and normal maps on `Material`.
+- `LoadObj` computes tangents; `Vertex` gains a `tangent` (48 bytes).
+- Debug views (`SceneRenderer::SetDebugView`): albedo, normal, normal map, UV, tangent and
+  lighting only, selectable in the demo's overlay. `FrameUniforms` gains a `flags` field.
 - `SubmitStats::cpuSubmitTimeMs` and `gpuFrameTimeMs`: CPU time spent issuing the commands, and
   GPU time between two timestamp queries around them. Shown in the demo's overlay and as two
   columns of the benchmark.
@@ -20,9 +25,11 @@ All notable changes to GEF are listed here. Versions follow [Semantic Versioning
   `lit.frag`. The constructor taking a `ShaderHandle` is still there for custom shaders.
 - **Breaking**: lights are oriented by their `Transform` (local -Z); `DirectionalLight::direction`
   is removed.
-- **Breaking**: the ambient color moves to `Scene::Environment`, a new argument of
+- **Breaking**: the ambient color moves to `Scene::SceneRenderer::Environment`, a new argument of
   `SceneRenderer::Render`.
 - `LightingData.hpp` is renamed `Renderer/Layout/LitShaderLayout.hpp`.
+- `Material` moves to `Scene/Material.hpp`, `InstanceData` to `LitShaderLayout.hpp`.
+- Instances are batched by mesh and textures, not by mesh alone.
 
 ## [0.1.0] - 2026-11-02
 
