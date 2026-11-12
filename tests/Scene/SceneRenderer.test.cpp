@@ -48,12 +48,17 @@ namespace
     MeshData Fan(uint32_t triangles)
     {
         MeshData data;
-        data.vertices.push_back({ { 0, 0, 0 }, { 0, 0, 1 }, {}, { 0, 0 } });
+        // Tangent along +X: a zero tangent would turn the TBN frame into NaN
+        data.vertices.push_back(
+            { { 0, 0, 0 }, { 0, 0, 1 }, { 1, 0, 0, 1 }, { 0, 0 } });
         for (uint32_t i = 0; i <= triangles; ++i)
         {
             const float angle = float(i) * 0.5f;
             data.vertices.push_back(
-                { { glm::cos(angle), glm::sin(angle), 0 }, { 0, 0, 1 }, {}, {} });
+                { { glm::cos(angle), glm::sin(angle), 0 },
+                  { 0, 0, 1 },
+                  { 1, 0, 0, 1 },
+                  {} });
         }
         for (uint32_t i = 0; i < triangles; ++i)
         {
