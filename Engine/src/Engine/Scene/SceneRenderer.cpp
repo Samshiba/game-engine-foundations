@@ -130,6 +130,7 @@ void GEF::Scene::SceneRenderer::Render(
     const Renderer::Layout::FrameUniforms frameU{
         .viewProjection = camera.GetViewProjection(),
         .cameraPosition = glm::vec4(camera.position, 1.0f),
+        .flags = glm::uvec4(debugView_, 0u, 0u, 0u)
     };
     device_.UpdateBuffer(frameUBO_, 0, &frameU, sizeof(frameU));
 
@@ -351,4 +352,15 @@ void GEF::Scene::SceneRenderer::SetInstancingEnabled(bool enabled)
 bool GEF::Scene::SceneRenderer::IsInstancingEnabled() const
 {
     return instancing_;
+}
+
+void GEF::Scene::SceneRenderer::SetDebugView(DebugView debugView)
+{
+    debugView_ = debugView;
+}
+
+GEF::Scene::SceneRenderer::DebugView
+GEF::Scene::SceneRenderer::GetDebugView() const
+{
+    return debugView_;
 }

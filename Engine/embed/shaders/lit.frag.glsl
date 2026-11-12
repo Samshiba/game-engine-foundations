@@ -11,7 +11,17 @@ layout (std140, binding = 0) uniform Frame
 {
     mat4 u_ViewProjection;
     vec4 u_CameraPosition;
+    uvec4 u_Flags;
 };
+
+// Debug View Enum
+const uint DEBUG_NONE = 0u;
+const uint DEBUG_ALBEDO = 1u;
+const uint DEBUG_NORMAL = 2u;
+const uint DEBUG_UV = 3u;
+const uint DEBUG_TANGENT = 4u;
+const uint DEBUG_NORMAL_MAP = 5u;
+const uint DEBUG_LIGHTING_ONLY = 6u;
 
 layout (std140, binding = 1) uniform Environment
 {
@@ -121,6 +131,12 @@ void main()
     vec3 V = normalize(u_CameraPosition.xyz - v_WorldPos); // View vector (eye)
 
     vec3 albedo = v_Albedo * texture(u_Albedo, v_UV).rgb;
+
+    if (u_Flags.x == DEBUG_LIGHTING_ONLY)
+    {
+        albedo = vec3(0.5);
+    }
+
     vec3 color = u_Ambient.rgb * albedo;
 
     vec3 n = texture(u_Normal, v_UV).xyz * 2.0 - 1.0;
@@ -139,5 +155,26 @@ void main()
     }
 
     color = color / (color + 1.0); // tonemap
-    o_Color = vec4(pow(color, vec3(1.0 / 2.2)), 1.0); // Gamma correction
+
+    switch (u_Flags.x) {
+        case DEBUG_ALBEDO:
+            o_Color = vec4(albedo, 1.0);
+            break;
+        case DEBUG_NORMAL:
+            o_Color = vec4(v_TBN[2] * 0.5 + 0.5, 1.0);
+            break;
+        case DEBUG_UV:
+            o_Color = vec4(v_UV, 0.0, 1.0);
+            break;
+        case DEBUG_TANGENT:
+            o_Color = vec4(v_TBN[0] * 0.5 + 0.5, 1.0);
+            break;
+        case DEBUG_NORMAL_MAP:
+            o_Color = vec4(N, 1.0);
+            break;
+        case DEBUG_NONE:
+        default:
+            o_Color = vec4(pow(color, vec3(1.0 / 2.2)), 1.0); // Gamma correction
+            break;
+    }
 }

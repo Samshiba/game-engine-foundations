@@ -41,8 +41,9 @@ namespace GEF::Renderer::Layout
     {
         glm::mat4 viewProjection;
         glm::vec4 cameraPosition; // xyz, w unused
+        glm::uvec4 flags; // x = debug view mode, yzw unused
     };
-    static_assert(sizeof(FrameUniforms) == 80);
+    static_assert(sizeof(FrameUniforms) == 96);
 
     struct EnvironmentUniforms // binding 1: once per frame
     {
@@ -104,12 +105,11 @@ namespace GEF::Renderer::Layout
     {
         constexpr uint32_t Albedo = 0;
         constexpr uint32_t Normal = 1;
-        // constexpr uint32_t Specular = 2;
-        // constexpr uint32_t Roughness = 3;
-        // constexpr uint32_t Metallic = 4;
-        // constexpr uint32_t Emissive = 5;
-        // constexpr uint32_t AO = 6;
-        // constexpr uint32_t Height = 7;
+        // constexpr uint32_t Roughness = 2;
+        // constexpr uint32_t Metallic = 3;
+        // constexpr uint32_t Emissive = 4;
+        // constexpr uint32_t AO = 5;
+        // constexpr uint32_t Height = 6;
     } // namespace TextureBinding
 } // namespace GEF::Renderer::Layout
 

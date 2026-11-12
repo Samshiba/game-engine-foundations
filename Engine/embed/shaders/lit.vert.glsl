@@ -16,6 +16,7 @@ layout (std140, binding = 0) uniform Frame
 {
     mat4 u_ViewProjection;
     vec4 u_CameraPosition;
+    uvec4 u_Flags;
 };
 
 out vec3 v_WorldPos;

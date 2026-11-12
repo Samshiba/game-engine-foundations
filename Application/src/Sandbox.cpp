@@ -243,6 +243,12 @@ struct Sandbox
         if (ImGui::Checkbox("VSync", &vsync))
             ctx.window.SetVSync(vsync);
 
+        // Debug View
+        int view = static_cast<int>(renderer->GetDebugView());
+        if (ImGui::Combo("Debug View", &view, "..."))
+            renderer->SetDebugView(
+                static_cast<GEF::Scene::SceneRenderer::DebugView>(view));
+
         // Instancing
         ImGui::Text("Entities: %zu", spawned.size());
         ImGui::SliderInt("Entities", &entityCount, 0, 50000);

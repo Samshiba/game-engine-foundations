@@ -26,6 +26,17 @@ namespace GEF::Scene
             glm::vec3 ambient{ 0.1f };
         };
 
+        enum class DebugView : uint32_t
+        {
+            None,
+            Albedo,
+            Normal,
+            UV,
+            Tangent,
+            NormalMap,
+            LightingOnly,
+        };
+
     private:
         struct Batch
         {
@@ -75,6 +86,9 @@ namespace GEF::Scene
         void SetInstancingEnabled(bool enabled);
         [[nodiscard]] bool IsInstancingEnabled() const;
 
+        void SetDebugView(DebugView debugView);
+        [[nodiscard]] DebugView GetDebugView() const;
+
     private:
         void CreateResources(Renderer::ShaderHandle litShader);
 
@@ -106,6 +120,7 @@ namespace GEF::Scene
         std::vector<Renderer::Layout::GpuSpotLight> spotLights_;
 
         bool instancing_ = true;
+        DebugView debugView_ = DebugView::None;
 
         Renderer::ShaderHandle litShader_{};
 
