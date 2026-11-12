@@ -245,7 +245,9 @@ struct Sandbox
 
         // Debug View
         int view = static_cast<int>(renderer->GetDebugView());
-        if (ImGui::Combo("Debug View", &view, "..."))
+        if (ImGui::Combo("Debug View", &view,
+                         "None\0Albedo\0Normal\0UV\0Tangent\0Normal "
+                         "Map\0Lighting Only\0"))
             renderer->SetDebugView(
                 static_cast<GEF::Scene::SceneRenderer::DebugView>(view));
 

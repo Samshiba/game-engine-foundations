@@ -158,19 +158,19 @@ void main()
 
     switch (u_Flags.x) {
         case DEBUG_ALBEDO:
-            o_Color = vec4(albedo, 1.0);
+            o_Color = vec4(pow(albedo, vec3(1.0 / 2.2)), 1.0);
             break;
         case DEBUG_NORMAL:
-            o_Color = vec4(v_TBN[2] * 0.5 + 0.5, 1.0);
+            o_Color = vec4(normalize(v_TBN[2]) * 0.5 + 0.5, 1.0);
             break;
         case DEBUG_UV:
             o_Color = vec4(v_UV, 0.0, 1.0);
             break;
         case DEBUG_TANGENT:
-            o_Color = vec4(v_TBN[0] * 0.5 + 0.5, 1.0);
+            o_Color = vec4(normalize(v_TBN[0]) * 0.5 + 0.5, 1.0);
             break;
         case DEBUG_NORMAL_MAP:
-            o_Color = vec4(N, 1.0);
+            o_Color = vec4(N * 0.5 + 0.5, 1.0);
             break;
         case DEBUG_NONE:
         default:
