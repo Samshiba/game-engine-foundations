@@ -156,6 +156,7 @@ GL_TEST_CASE("Each uniform sits at the offset of its C++ member")
 
     GEF_CHECK_OFFSET("u_ViewProjection", FrameUniforms, viewProjection);
     GEF_CHECK_OFFSET("u_CameraPosition", FrameUniforms, cameraPosition);
+    GEF_CHECK_OFFSET("u_Flags", FrameUniforms, flags);
 
     GEF_CHECK_OFFSET("u_Ambient", EnvironmentUniforms, ambient);
 

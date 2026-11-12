@@ -11,6 +11,9 @@
 
 #include <Engine/Scene/SceneRenderer.hpp>
 
+#include <array>
+#include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -674,4 +677,96 @@ GL_TEST_CASE("A renderer given a shader does not destroy it")
     // The shader belongs to whoever created it
     CHECK(device.GetShader(shader) != nullptr);
     device.DestroyShader(shader);
+}
+
+// ---------- Debug views ----------
+// The fan sits at the origin, facing the default camera (z = 3, looking down
+// -Z), and covers the center of GLTestContext's 64x64 window. The pixel read
+// back there shows what the debug view outputs.
+
+namespace
+{
+    std::array<int, 3> CenterPixel(SceneFixture& scene)
+    {
+        constexpr uint32_t Size = 64; // GLTestContext's hidden window
+        CommandList frame;
+        frame.SetViewport(0, 0, Size, Size);
+        frame.SetClearColor(0, 0, 0, 1);
+        frame.Clear();
+        scene.device.Submit(frame);
+        scene.device.Submit(scene.cmd);
+
+        const auto pixels = scene.device.ReadFramebuffer(Size, Size);
+        const std::size_t offset = (std::size_t(Size / 2) * Size + Size / 2) * 4;
+        return { pixels[offset], pixels[offset + 1], pixels[offset + 2] };
+    }
+
+    bool NearPixel(const std::array<int, 3>& a, const std::array<int, 3>& b)
+    {
+        for (int i = 0; i < 3; ++i)
+            if (std::abs(a[i] - b[i]) > 2)
+                return false;
+        return true;
+    }
+} // namespace
+
+GL_TEST_CASE("The debug view reaches the shader through the Frame uniforms")
+{
+    SceneFixture scene;
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(1) });
+    CHECK(scene.renderer->GetDebugView() == SceneRenderer::DebugView::None);
+
+    scene.renderer->SetDebugView(SceneRenderer::DebugView::Tangent);
+    scene.Render();
+
+    const auto frame = scene.ReadUniforms<FrameUniforms>(UniformBinding::Frame);
+    CHECK(frame.flags.x
+          == static_cast<uint32_t>(SceneRenderer::DebugView::Tangent));
+}
+
+GL_TEST_CASE("The albedo debug view shows the material's color, unlit")
+{
+    SceneFixture scene;
+    // No light at all: the normal render would only show the ambient
+    scene.environment.ambient = glm::vec3(0.0f);
+    scene.AddRenderable(
+        {}, { .mesh = scene.AddMesh(12),
+              .material = { .albedo = { 0.2f, 0.5f, 1.0f } } });
+
+    scene.renderer->SetDebugView(SceneRenderer::DebugView::Albedo);
+    scene.Render();
+
+    // The color as authored (sRGB), like the albedo map shown in an image
+    // viewer: the shader works in linear and encodes it back
+    const auto pixel = CenterPixel(scene);
+    INFO(pixel[0], " ", pixel[1], " ", pixel[2]);
+    CHECK(NearPixel(pixel, { 51, 128, 255 }));
+}
+
+GL_TEST_CASE("The normal debug view maps the normal from [-1, 1] to [0, 1]")
+{
+    SceneFixture scene;
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(12) });
+
+    scene.renderer->SetDebugView(SceneRenderer::DebugView::Normal);
+    scene.Render();
+
+    // Normal (0, 0, 1) -> (0.5, 0.5, 1), written as is
+    const auto pixel = CenterPixel(scene);
+    INFO(pixel[0], " ", pixel[1], " ", pixel[2]);
+    CHECK(NearPixel(pixel, { 128, 128, 255 }));
+}
+
+GL_TEST_CASE("The normal map debug view shows the flat default map as +Z")
+{
+    SceneFixture scene;
+    scene.AddRenderable({}, { .mesh = scene.AddMesh(12) });
+
+    scene.renderer->SetDebugView(SceneRenderer::DebugView::NormalMap);
+    scene.Render();
+
+    // The flat map leaves the normal at (0, 0, 1): same color as above
+    const auto pixel = CenterPixel(scene);
+    INFO(pixel[0], " ", pixel[1], " ", pixel[2]);
+    CHECK(NearPixel(pixel, { 128, 128, 255 }));
 }
