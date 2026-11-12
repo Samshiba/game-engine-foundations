@@ -231,7 +231,7 @@ GL_TEST_CASE(
     "Per-vertex and per-instance attributes sit where the layouts put them")
 {
     // CreateVertexArray numbers attributes in order: Vertex::Layout() on
-    // binding 0 (0, 1, 2), then InstanceData::Layout() on binding 1 (3...).
+    // binding 0 (0, 1, 2, 3), then InstanceData::Layout() on binding 1 (4...).
     // A matrix takes one location per column. The shader's "location = N"
     // must match, or an instance would read another field's data.
     LitShaderFixture lit;
@@ -241,8 +241,10 @@ GL_TEST_CASE(
 
     CHECK(location("a_Position") == 0);
     CHECK(location("a_Normal") == 1);
-    CHECK(location("a_Model") == 3); // mat4: 3, 4, 5, 6
-    CHECK(location("a_NormalMatrix") == 7); // mat3: 7, 8, 9
-    CHECK(location("a_Albedo") == 10);
-    CHECK(location("a_Params") == 11);
+    CHECK(location("a_Tangent") == 2);
+    CHECK(location("a_UV") == 3);
+    CHECK(location("a_Model") == 4); // mat4: 4, 5, 6, 7
+    CHECK(location("a_NormalMatrix") == 8); // mat3: 8, 9, 10
+    CHECK(location("a_Albedo") == 11);
+    CHECK(location("a_Params") == 12);
 }

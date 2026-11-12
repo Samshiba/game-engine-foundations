@@ -45,12 +45,12 @@ namespace
     MeshData Fan(uint32_t triangles)
     {
         MeshData data;
-        data.vertices.push_back({ { 0, 0, 0 }, { 0, 0, 1 }, { 0, 0 } });
+        data.vertices.push_back({ { 0, 0, 0 }, { 0, 0, 1 }, {}, { 0, 0 } });
         for (uint32_t i = 0; i <= triangles; ++i)
         {
             const float angle = float(i) * 0.5f;
             data.vertices.push_back(
-                { { glm::cos(angle), glm::sin(angle), 0 }, { 0, 0, 1 }, {} });
+                { { glm::cos(angle), glm::sin(angle), 0 }, { 0, 0, 1 }, {}, {} });
         }
         for (uint32_t i = 0; i < triangles; ++i)
         {
@@ -69,7 +69,7 @@ namespace
         std::vector<Mesh> meshes;
         Registry registry;
         Camera camera;
-        Environment environment;
+        SceneRenderer::Environment environment;
         CommandList cmd;
 
         SceneFixture()
@@ -169,7 +169,7 @@ namespace
             return lights;
         }
 
-        // The instances a draw reads: the buffer behind attribute 3 (a_Model),
+        // The instances a draw reads: the buffer behind attribute 4 (a_Model),
         // the first per-instance attribute, on binding 1 of the draw's VAO
         std::vector<InstanceData> ReadInstances(const DrawPacket& draw) const
         {
@@ -179,7 +179,7 @@ namespace
             // No DSA query for an attribute's buffer: bind the VAO and ask
             GLint buffer = 0;
             glBindVertexArray(vao->id);
-            glGetVertexAttribiv(3, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,
+            glGetVertexAttribiv(4, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING,
                                 &buffer);
             glBindVertexArray(0);
             REQUIRE(buffer != 0);

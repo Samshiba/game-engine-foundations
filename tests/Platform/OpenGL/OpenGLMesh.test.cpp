@@ -23,10 +23,10 @@ namespace
     {
         MeshData data;
         data.vertices = {
-            { { 0, 0, 0 }, { 0, 0, 1 }, { 0, 0 } },
-            { { 1, 0, 0 }, { 0, 0, 1 }, { 1, 0 } },
-            { { 1, 1, 0 }, { 0, 0, 1 }, { 1, 1 } },
-            { { 0, 1, 0 }, { 0, 0, 1 }, { 0, 1 } },
+            { { 0, 0, 0 }, { 0, 0, 1 }, {}, { 0, 0 } },
+            { { 1, 0, 0 }, { 0, 0, 1 }, {}, { 1, 0 } },
+            { { 1, 1, 0 }, { 0, 0, 1 }, {}, { 1, 1 } },
+            { { 0, 1, 0 }, { 0, 0, 1 }, {}, { 0, 1 } },
         };
         data.indices = { 0, 1, 2, 0, 2, 3 };
         return data;
@@ -75,13 +75,16 @@ GL_TEST_CASE("UploadMesh describes position, normal and uv to the vertex array")
         return value;
     };
 
-    // Same locations as lit.vert: 0 = position, 1 = normal, 2 = uv
+    // Same locations as lit.vert: 0 = position, 1 = normal, 2 = tangent,
+    // 3 = uv
     CHECK(attrib(0, GL_VERTEX_ATTRIB_ARRAY_SIZE) == 3);
     CHECK(attrib(1, GL_VERTEX_ATTRIB_ARRAY_SIZE) == 3);
-    CHECK(attrib(2, GL_VERTEX_ATTRIB_ARRAY_SIZE) == 2);
+    CHECK(attrib(2, GL_VERTEX_ATTRIB_ARRAY_SIZE) == 4);
+    CHECK(attrib(3, GL_VERTEX_ATTRIB_ARRAY_SIZE) == 2);
     CHECK(attrib(0, GL_VERTEX_ATTRIB_RELATIVE_OFFSET) == 0);
     CHECK(attrib(1, GL_VERTEX_ATTRIB_RELATIVE_OFFSET) == 12);
     CHECK(attrib(2, GL_VERTEX_ATTRIB_RELATIVE_OFFSET) == 24);
+    CHECK(attrib(3, GL_VERTEX_ATTRIB_RELATIVE_OFFSET) == 40);
 
     Renderer::DestroyMesh(device, mesh);
 }

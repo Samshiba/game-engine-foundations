@@ -9,9 +9,11 @@
 
 #include <doctest.h>
 
+#include <Engine/Renderer/Layout/LitShaderLayout.hpp>
 #include <Engine/Renderer/Mesh.hpp>
 
 using namespace GEF::Renderer;
+using GEF::Renderer::Layout::InstanceData;
 
 TEST_CASE("Vertex::Layout() describes the whole Vertex struct")
 {
@@ -38,6 +40,6 @@ TEST_CASE("Mesh and instance attributes fit in the 16 attribute slots")
     };
 
     const int total = slots(Vertex::Layout()) + slots(InstanceData::Layout());
-    CHECK(total == 12); // 3 per vertex + 4 (model) + 3 (normal) + 2
+    CHECK(total == 13); // 4 per vertex + 4 (model) + 3 (normal) + 2
     CHECK(total <= 16); // GL_MAX_VERTEX_ATTRIBS is at least 16
 }

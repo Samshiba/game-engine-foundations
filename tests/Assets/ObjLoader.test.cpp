@@ -266,10 +266,181 @@ TEST_CASE("LoadObj returns nullopt for a missing file")
     CHECK_FALSE(LoadObj(missing).has_value());
 }
 
-TEST_CASE("Vertex matches the 32-byte layout UploadMesh describes")
+TEST_CASE("Vertex matches the 48-byte layout UploadMesh describes")
 {
-    // position (12) + normal (12) + uv (8), no padding
-    CHECK(sizeof(Vertex) == 32);
+    // position (12) + normal (12) + tangent (16) + uv (8), no padding
+    CHECK(sizeof(Vertex) == 48);
     CHECK(offsetof(Vertex, normal) == 12);
-    CHECK(offsetof(Vertex, uv) == 24);
+    CHECK(offsetof(Vertex, tangent) == 24);
+    CHECK(offsetof(Vertex, uv) == 40);
+}
+
+// ---------- Tangents ----------
+// The tangent is the direction U grows along the surface, w the sign that
+// rebuilds the bitangent in the shader: B = cross(N, T) * w. Checked on quads
+// in the XY plane (normal +Z) whose UVs are placed on purpose.
+
+namespace
+{
+    bool IsFinite(const glm::vec4& v)
+    {
+        return glm::all(glm::equal(v, v)) // NaN != NaN
+            && glm::all(glm::lessThan(glm::abs(v), glm::vec4(1e30f)));
+    }
+
+    // Every tangent: finite, unit, perpendicular to its normal, w = +-1
+    void CheckTangentFrame(const MeshData& mesh)
+    {
+        for (const Vertex& vertex : mesh.vertices)
+        {
+            const glm::vec3 tangent(vertex.tangent);
+            CAPTURE(vertex.position.x);
+            CAPTURE(vertex.position.y);
+            CAPTURE(vertex.position.z);
+            REQUIRE(IsFinite(vertex.tangent));
+            CHECK(glm::length(tangent) == doctest::Approx(1.0f));
+            CHECK(glm::dot(tangent, vertex.normal)
+                  == doctest::Approx(0.0f).epsilon(Epsilon));
+            CHECK(glm::abs(vertex.tangent.w) == 1.0f);
+        }
+    }
+
+    // Quad in the XY plane seen from +Z; the 4 vt follow the 4 corners
+    // (0,0) (1,0) (1,1) (0,1) in position
+    std::string QuadWithUVs(std::string_view uvs)
+    {
+        return std::string(R"(
+v 0 0 0
+v 1 0 0
+v 1 1 0
+v 0 1 0
+)") + std::string(uvs)
+            + "f 1/1 2/2 3/3 4/4\n";
+    }
+} // namespace
+
+TEST_CASE("ParseObj computes the tangent along the U direction")
+{
+    SUBCASE("U along +X, V along +Y: tangent +X, right-handed")
+    {
+        const auto mesh = ParseObj(QuadWithUVs("vt 0 0\nvt 1 0\nvt 1 1\nvt 0 1\n"));
+
+        REQUIRE(mesh.has_value());
+        CheckTangentFrame(*mesh);
+        for (const Vertex& vertex : mesh->vertices)
+        {
+            CHECK(Near(glm::vec3(vertex.tangent), { 1, 0, 0 }));
+            CHECK(vertex.tangent.w == 1.0f);
+        }
+    }
+
+    SUBCASE("U along +Y, V along -X (UVs rotated 90 degrees): tangent +Y")
+    {
+        // Corner (x, y) gets uv (y, 1 - x)
+        const auto mesh = ParseObj(QuadWithUVs("vt 0 1\nvt 0 0\nvt 1 0\nvt 1 1\n"));
+
+        REQUIRE(mesh.has_value());
+        CheckTangentFrame(*mesh);
+        for (const Vertex& vertex : mesh->vertices)
+        {
+            CHECK(Near(glm::vec3(vertex.tangent), { 0, 1, 0 }));
+            // cross(+Z, +Y) = -X = the V direction: not mirrored
+            CHECK(vertex.tangent.w == 1.0f);
+        }
+    }
+}
+
+TEST_CASE("ParseObj flags mirrored UVs with w = -1")
+{
+    // U flipped (along -X), V still along +Y: cross(N, T) = cross(+Z, -X)
+    // = -Y, opposite to V. Without w = -1 the shader's bitangent would point
+    // the wrong way and the bumps of a mirrored half would be inverted
+    const auto mesh = ParseObj(QuadWithUVs("vt 1 0\nvt 0 0\nvt 0 1\nvt 1 1\n"));
+
+    REQUIRE(mesh.has_value());
+    CheckTangentFrame(*mesh);
+    for (const Vertex& vertex : mesh->vertices)
+    {
+        CHECK(Near(glm::vec3(vertex.tangent), { -1, 0, 0 }));
+        CHECK(vertex.tangent.w == -1.0f);
+    }
+}
+
+TEST_CASE("ParseObj gives a valid tangent frame without UVs (no NaN)")
+{
+    // No vt: every UV is (0,0), the UV determinant is 0, there is no U
+    // direction. The tangent still has to be a usable unit vector: a NaN
+    // would turn the whole mesh black through the normal map
+    SUBCASE("a triangle")
+    {
+        const auto mesh = ParseObj(Triangle);
+        REQUIRE(mesh.has_value());
+        CheckTangentFrame(*mesh);
+    }
+
+    SUBCASE("a cube (normals along X too, where the fallback axis changes)")
+    {
+        const auto mesh = ParseObj(CubeWithFaceNormals);
+        REQUIRE(mesh.has_value());
+        CheckTangentFrame(*mesh);
+    }
+}
+
+TEST_CASE("Tangents of a textured cube follow each face's U direction")
+{
+    // The Sandbox cube: each face maps the whole texture, its first corner
+    // bottom-left seen from outside
+    const auto mesh = ParseObj(R"(
+v -0.5 -0.5  0.5
+v  0.5 -0.5  0.5
+v  0.5  0.5  0.5
+v -0.5  0.5  0.5
+v -0.5 -0.5 -0.5
+v  0.5 -0.5 -0.5
+v  0.5  0.5 -0.5
+v -0.5  0.5 -0.5
+vt 0 0
+vt 1 0
+vt 1 1
+vt 0 1
+vn  0  0  1
+vn  0  0 -1
+vn  1  0  0
+vn -1  0  0
+vn  0  1  0
+vn  0 -1  0
+f 1/1/1 2/2/1 3/3/1 4/4/1
+f 6/1/2 5/2/2 8/3/2 7/4/2
+f 2/1/3 6/2/3 7/3/3 3/4/3
+f 5/1/4 1/2/4 4/3/4 8/4/4
+f 4/1/5 3/2/5 7/3/5 8/4/5
+f 5/1/6 6/2/6 2/3/6 1/4/6
+)");
+
+    REQUIRE(mesh.has_value());
+    CHECK(mesh->vertices.size() == 24);
+    CheckTangentFrame(*mesh);
+
+    for (const Vertex& vertex : mesh->vertices)
+    {
+        CAPTURE(vertex.normal.x);
+        CAPTURE(vertex.normal.y);
+        CAPTURE(vertex.normal.z);
+        CHECK(vertex.tangent.w == 1.0f); // no face is mirrored
+
+        // U goes from the face's 1st corner to its 2nd
+        const glm::vec3 tangent(vertex.tangent);
+        if (Near(vertex.normal, { 0, 0, 1 }))
+            CHECK(Near(tangent, { 1, 0, 0 }));
+        if (Near(vertex.normal, { 0, 0, -1 }))
+            CHECK(Near(tangent, { -1, 0, 0 }));
+        if (Near(vertex.normal, { 1, 0, 0 }))
+            CHECK(Near(tangent, { 0, 0, -1 }));
+        if (Near(vertex.normal, { -1, 0, 0 }))
+            CHECK(Near(tangent, { 0, 0, 1 }));
+        if (Near(vertex.normal, { 0, 1, 0 }))
+            CHECK(Near(tangent, { 1, 0, 0 }));
+        if (Near(vertex.normal, { 0, -1, 0 }))
+            CHECK(Near(tangent, { 1, 0, 0 }));
+    }
 }
