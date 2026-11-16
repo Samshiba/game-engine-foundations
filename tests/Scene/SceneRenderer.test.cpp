@@ -694,11 +694,8 @@ namespace
     std::array<int, 3> CenterPixel(SceneFixture& scene)
     {
         constexpr uint32_t Size = 64; // GLTestContext's hidden window
-        CommandList frame;
-        frame.SetViewport(0, 0, Size, Size);
-        frame.SetClearColor(0, 0, 0, 1);
-        frame.Clear();
-        scene.device.Submit(frame);
+        // The implicit pass of scene.cmd covers the back buffer
+        scene.device.SetBackBufferSize(Size, Size);
         scene.device.Submit(scene.cmd);
 
         const auto pixels = scene.device.ReadFramebuffer(Size, Size);

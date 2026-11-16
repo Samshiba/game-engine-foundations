@@ -43,8 +43,22 @@ namespace GEF::Platform
         GLuint id;
         uint32_t width;
         uint32_t height;
-        GLenum format;
-        GLint level;
+        GLenum internalFormat;
+        GLint levels;
+    };
+
+    struct GLRenderTarget
+    {
+        Renderer::RenderTargetDesc desc;
+
+        GLuint id;
+        uint32_t width;
+        uint32_t height;
+
+        std::array<Renderer::TextureHandle, Renderer::MaxColorAttachments>
+            attachments{};
+
+        Renderer::TextureHandle depthStencil;
     };
 
     class OpenGLGraphicsDevice : public Renderer::GraphicsDevice
@@ -103,6 +117,11 @@ namespace GEF::Platform
         CreateTexture(const Renderer::TextureDesc& desc) override;
         void DestroyTexture(Renderer::TextureHandle handle) override;
 
+        // Render Target
+        [[nodiscard]] Renderer::RenderTargetHandle
+        CreateRenderTarget(const Renderer::RenderTargetDesc& desc) override;
+        void DestroyRenderTarget(Renderer::RenderTargetHandle handle) override;
+
         // Backend-side lookup (command list execution, tests), nullptr if stale
         [[nodiscard]] const GLBuffer*
         GetBuffer(Renderer::BufferHandle handle) const;
@@ -112,6 +131,10 @@ namespace GEF::Platform
         GetShader(Renderer::ShaderHandle handle) const;
         [[nodiscard]] const GLPipeline*
         GetPipeline(Renderer::PipelineHandle handle) const;
+        [[nodiscard]] const GLTexture*
+        GetTexture(Renderer::TextureHandle handle) const;
+        [[nodiscard]] const GLRenderTarget*
+        GetRenderTarget(Renderer::RenderTargetHandle handle) const;
 
         // Infos
         [[nodiscard]] const Renderer::AdapterInfo&
@@ -122,6 +145,7 @@ namespace GEF::Platform
         ReadFramebuffer(uint32_t width, uint32_t height) const override;
 
         void Submit(Renderer::CommandList& cmd) override;
+        void SetBackBufferSize(uint32_t width, uint32_t height) override;
 
     private:
         void SetClearColor(float r, float g, float b, float a);
@@ -139,7 +163,14 @@ namespace GEF::Platform
         void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount,
                                   uint32_t baseInstance);
 
+        void DestroyRenderTargetResources(GLRenderTarget& target);
+        bool AllocateTextureStorage(GLTexture& texture, bool clampToEdge);
+        glm::uvec2 ComputeSize(const Renderer::RenderTargetDesc& desc) const;
+
     private:
+        uint32_t backBufferWidth_ = 0;
+        uint32_t backBufferHeight_ = 0;
+
         // Infos
         Renderer::AdapterInfo adapterInfo_;
         Renderer::SubmitStats lastSubmitStats_;
@@ -154,5 +185,7 @@ namespace GEF::Platform
         Renderer::ResourcePool<GLShader, Renderer::ShaderTag> shaders_;
         Renderer::ResourcePool<GLPipeline, Renderer::PipelineTag> pipelines_;
         Renderer::ResourcePool<GLTexture, Renderer::TextureTag> textures_;
+        Renderer::ResourcePool<GLRenderTarget, Renderer::RenderTargetTag>
+            renderTargets_;
     };
 } // namespace GEF::Platform

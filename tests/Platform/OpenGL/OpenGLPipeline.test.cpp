@@ -178,34 +178,32 @@ GL_TEST_CASE("Switching pipelines leaves no state from the previous one")
 }
 
 GL_TEST_CASE(
-    "Clear resets the depth buffer even after a pipeline without depth write")
+    "A pass clears the depth buffer even after a pipeline without depth write")
 {
     // glClear(GL_DEPTH_BUFFER_BIT) obeys glDepthMask: if the last pipeline of
-    // a frame disabled depth writes, a naive Clear would leave the old depth
+    // a frame disabled depth writes, a naive clear would leave the old depth
     // values, and the whole next frame would be depth-tested against them.
-    // Checked on a real depth buffer, not just the GL flag.
+    // Checked on a real depth buffer (a depth-only render target, as a shadow
+    // map would be), not just the GL flag.
     PipelineFixture fixture;
+    const auto target = fixture.device.CreateRenderTarget(
+        { .sizeMode = Renderer::SizeMode::Fixed,
+          .width = 4,
+          .height = 4,
+          .depthStencil = Renderer::TextureFormat::Depth32F });
+    REQUIRE(target.IsValid());
+    const GLuint framebuffer = fixture.device.GetRenderTarget(target)->id;
 
-    GLuint framebuffer = 0;
-    GLuint depthBuffer = 0;
-    glCreateFramebuffers(1, &framebuffer);
-    glCreateRenderbuffers(1, &depthBuffer);
-    glNamedRenderbufferStorage(depthBuffer, GL_DEPTH_COMPONENT24, 4, 4);
-    glNamedFramebufferRenderbuffer(framebuffer, GL_DEPTH_ATTACHMENT,
-                                   GL_RENDERBUFFER, depthBuffer);
-    glNamedFramebufferDrawBuffer(framebuffer, GL_NONE);
-    glNamedFramebufferReadBuffer(framebuffer, GL_NONE);
-    REQUIRE(glCheckNamedFramebufferStatus(framebuffer, GL_FRAMEBUFFER)
-            == GL_FRAMEBUFFER_COMPLETE);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-
-    const auto readDepth = [] {
+    const auto readDepth = [framebuffer] {
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         float depth = -1.0f;
         glReadPixels(0, 0, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return depth;
     };
 
     // Fill the depth buffer with "old frame" values
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     glDepthMask(GL_TRUE);
     glClearDepth(0.25);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -215,17 +213,16 @@ GL_TEST_CASE(
     const auto noDepthWrite = fixture.Create(true, false, CullMode::None);
     fixture.Bind(noDepthWrite);
 
-    // Next frame's clear must still reset the depth buffer
+    // Next frame's pass must still reset the depth buffer
     glClearDepth(1.0);
     Renderer::CommandList cmd;
-    cmd.Clear();
+    cmd.BeginPass({ .target = target, .clearColor = false });
+    cmd.EndPass();
     fixture.device.Submit(cmd);
 
     CHECK(readDepth() == doctest::Approx(1.0f));
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDeleteRenderbuffers(1, &depthBuffer);
-    glDeleteFramebuffers(1, &framebuffer);
+    fixture.device.DestroyRenderTarget(target);
     fixture.device.DestroyPipeline(noDepthWrite);
 }
 

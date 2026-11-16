@@ -32,9 +32,10 @@ batching, and to measure each choice instead of guessing.
   sharing a mesh are drawn in one instanced call.
 - **Rendering features**: Blinn-Phong lighting with any number of directional, point and spot
   lights (one storage buffer per type), albedo and normal maps, OBJ loading with tangents,
-  debug views (albedo, normals, UVs, tangents, lighting only), free-fly camera, ImGui overlay,
+  debug views (albedo, normals, UVs, tangents, lighting only), render targets and passes,
+  free-fly camera, ImGui overlay,
   screenshots and frame sequences for GIFs.
-- **Measured and tested**: a reproducible benchmark, frame time percentiles, 157 tests (81 of
+- **Measured and tested**: a reproducible benchmark, frame time percentiles, 177 tests (96 of
   them on a real OpenGL context), CI on MSVC, GCC and Clang with warnings as errors.
 
 ## Performance
@@ -261,8 +262,8 @@ Short-term work, before the next features:
 
 ## Roadmap
 
-- A render graph: passes, render targets and their dependencies, as the base for shadow maps and
-  post-processing.
+- A render graph: ordering the passes from their dependencies and reusing target memory, as the
+  base for shadow maps and post-processing. Render targets and passes are done.
 - Frustum culling, then level of detail for scenes limited by geometry.
 - Cheaper uploads: a ring buffer for per-frame data, persistent mapped buffers, and only
   uploading what changed.

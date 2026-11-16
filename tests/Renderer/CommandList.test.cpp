@@ -10,7 +10,6 @@
 #include <Engine/Renderer/CommandList.hpp>
 
 #include <cstdint>
-#include <variant>
 #include <vector>
 
 #include <doctest.h>
@@ -213,29 +212,100 @@ TEST_CASE("The sequence comes back out of the key unchanged")
     }
 }
 
-TEST_CASE("Frame commands keep their values and their order")
+TEST_CASE("The pass comes back out of the key unchanged")
+{
+    // Pass sits in the top 4 bits: reading the low bits would return a piece
+    // of the sequence instead
+    for (const uint32_t pass : { 0u, 1u, 7u, 15u })
+    {
+        CAPTURE(pass);
+        CHECK(SortKey::Pass(SortKey::Make(pass, 4095, 4095, 0xFFFF, 0xFFFFF))
+              == pass);
+    }
+}
+
+TEST_CASE("A new list starts in the implicit back buffer pass")
+{
+    // A game that never calls BeginPass still draws to the screen
+    CommandList cmd;
+
+    const auto& passes = cmd.GetPasses();
+    REQUIRE(passes.size() == 1);
+    CHECK_FALSE(passes[0].desc.target.IsValid());
+    CHECK(passes[0].desc.clearColor);
+    CHECK(passes[0].desc.clearDepth);
+    CHECK(passes[0].desc.clearValue.r == doctest::Approx(0.1f));
+    CHECK_FALSE(passes[0].blitSource.IsValid());
+}
+
+TEST_CASE("BeginPass records the pass description as given")
 {
     CommandList cmd;
-    cmd.SetViewport(0, 0, 1280, 720);
-    cmd.SetClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-    cmd.Clear();
+    const RenderTargetHandle target{ .index = 3, .generation = 1 };
 
-    const auto& commands = cmd.GetFrameCommands();
-    REQUIRE(commands.size() == 3);
+    cmd.BeginPass({ .target = target,
+                    .clearColor = false,
+                    .clearDepth = true,
+                    .clearValue = { 0.25f, 0.5f, 0.75f, 1.0f } });
+    cmd.EndPass();
 
-    const auto* viewport =
-        std::get_if<CommandList::SetViewportCommand>(&commands[0]);
-    REQUIRE(viewport != nullptr);
-    CHECK(viewport->width == 1280);
-    CHECK(viewport->height == 720);
+    const auto& passes = cmd.GetPasses();
+    REQUIRE(passes.size() == 2);
+    CHECK(passes[1].desc.target == target);
+    CHECK_FALSE(passes[1].desc.clearColor);
+    CHECK(passes[1].desc.clearDepth);
+    CHECK(passes[1].desc.clearValue.b == doctest::Approx(0.75f));
+}
 
-    const auto* color =
-        std::get_if<CommandList::SetClearColorCommand>(&commands[1]);
-    REQUIRE(color != nullptr);
-    CHECK(color->r == 0.1f);
-    CHECK(color->b == 0.3f);
+TEST_CASE("Each draw carries the index of the pass it was recorded in")
+{
+    CommandList cmd;
+    RecordDraw(cmd, 1, 1); // implicit pass 0
+    cmd.BeginPass({ .target = { .index = 0, .generation = 0 } });
+    RecordDraw(cmd, 1, 1);
+    RecordDraw(cmd, 1, 1);
+    cmd.EndPass();
+    cmd.BeginPass({});
+    RecordDraw(cmd, 1, 1);
+    cmd.EndPass();
 
-    CHECK(std::holds_alternative<CommandList::ClearCommand>(commands[2]));
+    const auto& keys = cmd.GetSortKeys();
+    REQUIRE(keys.size() == 4);
+    CHECK(SortKey::Pass(keys[0]) == 0);
+    CHECK(SortKey::Pass(keys[1]) == 1);
+    CHECK(SortKey::Pass(keys[2]) == 1);
+    CHECK(SortKey::Pass(keys[3]) == 2);
+}
+
+TEST_CASE("Sorting never moves a draw into another pass")
+{
+    // The pass outweighs the pipeline: a cheap pipeline index recorded in a
+    // later pass must not be replayed before an earlier pass
+    CommandList cmd;
+    RecordDraw(cmd, 9, 9);
+    cmd.BeginPass({});
+    RecordDraw(cmd, 0, 0);
+    cmd.EndPass();
+
+    const auto sorted = SortedPackets(cmd);
+    REQUIRE(sorted.size() == 2);
+    CHECK(sorted[0].pipeline == Pipeline(9));
+    CHECK(sorted[1].pipeline == Pipeline(0));
+}
+
+TEST_CASE("Blit sets the source of the current pass")
+{
+    CommandList cmd;
+    const RenderTargetHandle scene{ .index = 2, .generation = 0 };
+
+    cmd.BeginPass({ .clearColor = false, .clearDepth = false });
+    cmd.Blit(scene);
+    cmd.EndPass();
+
+    const auto& passes = cmd.GetPasses();
+    REQUIRE(passes.size() == 2);
+    CHECK_FALSE(passes[0].blitSource.IsValid());
+    CHECK(passes[1].blitSource == scene);
 }
 
 TEST_CASE("Reset empties the list but keeps its memory")
@@ -243,7 +313,8 @@ TEST_CASE("Reset empties the list but keeps its memory")
     CommandList cmd;
     for (int i = 0; i < 100; ++i)
         RecordDraw(cmd, 1, 1);
-    cmd.Clear();
+    cmd.BeginPass({});
+    cmd.EndPass();
     const auto packetCapacity = cmd.GetDrawPackets().capacity();
     const auto keyCapacity = cmd.GetSortKeys().capacity();
 
@@ -251,7 +322,9 @@ TEST_CASE("Reset empties the list but keeps its memory")
 
     CHECK(cmd.GetDrawPackets().empty());
     CHECK(cmd.GetSortKeys().empty());
-    CHECK(cmd.GetFrameCommands().empty());
+    // Only the implicit pass is left
+    REQUIRE(cmd.GetPasses().size() == 1);
+    CHECK_FALSE(cmd.GetPasses()[0].desc.target.IsValid());
     // No allocation next frame: the steady state is allocation-free
     CHECK(cmd.GetDrawPackets().capacity() == packetCapacity);
     CHECK(cmd.GetSortKeys().capacity() == keyCapacity);

@@ -11,9 +11,16 @@
 
 namespace GEF::Renderer
 {
+    CommandList::CommandList()
+    {
+        Reset();
+    }
+
     void CommandList::Reset()
     {
-        frameCommands_.clear();
+        passes_.clear();
+        inPass_ = false;
+        isImplicitPass_ = false;
         drawPackets_.clear();
         sortKeys_.clear();
         pipeline_ = PipelineHandle();
@@ -21,22 +28,38 @@ namespace GEF::Renderer
         uniformBuffers_.fill(BufferHandle{});
         shaderStorageBuffers_.fill(BufferHandle{});
         textures_.fill(TextureHandle{});
+
+        passes_.push_back(
+            { .desc = { .clearValue = { 0.1f, 0.1f, 0.1f, 1 } } });
+        inPass_ = true;
+        isImplicitPass_ = true;
     }
 
-    void CommandList::Clear()
+    void CommandList::SortPackets()
     {
-        frameCommands_.emplace_back(ClearCommand{});
+        std::ranges::sort(sortKeys_);
     }
 
-    void CommandList::SetClearColor(float r, float g, float b, float a)
+    void CommandList::Blit(RenderTargetHandle handle)
     {
-        frameCommands_.emplace_back(SetClearColorCommand{ r, g, b, a });
+        GEF_CORE_ASSERT(inPass_, "Blit outside a pass");
+        passes_.back().blitSource = handle;
     }
 
-    void CommandList::SetViewport(uint32_t x, uint32_t y, uint32_t width,
-                                  uint32_t height)
+    void CommandList::BeginPass(const PassDesc& desc)
     {
-        frameCommands_.emplace_back(SetViewportCommand{ x, y, width, height });
+        GEF_CORE_ASSERT(!inPass_ || isImplicitPass_, "BeginPass inside a pass");
+        GEF_CORE_ASSERT(passes_.size() <= SortKey::PASS_MASK,
+                        "Too many passes");
+        passes_.push_back({ .desc = desc });
+        inPass_ = true;
+        isImplicitPass_ = false;
+    }
+
+    void CommandList::EndPass()
+    {
+        GEF_CORE_ASSERT(inPass_ && !isImplicitPass_, "EndPass outside a pass");
+        inPass_ = false;
     }
 
     void CommandList::BindVertexArray(VertexArrayHandle handle)
@@ -88,25 +111,20 @@ namespace GEF::Renderer
                         "VertexArray index out of bounds");
         GEF_CORE_ASSERT(drawPackets_.size() <= SortKey::SEQUENCE_MASK,
                         "Too many draw packets");
+        GEF_CORE_ASSERT(inPass_, "Attempting to draw outside of a pass");
 
-        sortKeys_.emplace_back(
-            SortKey::Make(0, pipeline_.index, vertexArray_.index, 0,
-                          static_cast<uint32_t>(drawPackets_.size())));
+        sortKeys_.emplace_back(SortKey::Make(
+            static_cast<uint32_t>(passes_.size() - 1), pipeline_.index,
+            vertexArray_.index, 0, static_cast<uint32_t>(drawPackets_.size())));
 
         drawPackets_.emplace_back(pipeline_, vertexArray_, uniformBuffers_,
                                   shaderStorageBuffers_, textures_, indexCount,
                                   instanceCount, baseInstance);
     }
 
-    void CommandList::SortPackets()
+    const std::vector<CommandList::Pass>& CommandList::GetPasses() const
     {
-        std::ranges::sort(sortKeys_);
-    }
-
-    const std::vector<CommandList::FrameCommand>&
-    CommandList::GetFrameCommands() const
-    {
-        return frameCommands_;
+        return passes_;
     }
 
     const std::vector<CommandList::DrawPacket>&

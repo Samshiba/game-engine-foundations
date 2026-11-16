@@ -91,6 +91,15 @@ namespace GEF::Platform
                 OpenGLGraphicsDevice::DestroyPipeline(handle);
         }
 
+        const auto renderTargets = renderTargets_.GetAliveHandles();
+        if (!renderTargets.empty())
+        {
+            GEF_ENGINE_WARN("{} render targets leaked! Destroy them!",
+                            renderTargets.size());
+            for (const auto& handle : renderTargets)
+                OpenGLGraphicsDevice::DestroyRenderTarget(handle);
+        }
+
         const auto textures = textures_.GetAliveHandles();
         if (!textures.empty())
         {
@@ -345,28 +354,61 @@ namespace GEF::Platform
     Renderer::TextureHandle
     OpenGLGraphicsDevice::CreateTexture(const Renderer::TextureDesc& desc)
     {
-        int level = std::bit_width(std::max(desc.width, desc.height));
-        GLenum format = desc.format == Renderer::TextureFormat::RGBA8
-            ? GL_RGBA8
-            : GL_SRGB8_ALPHA8;
+        if (desc.width == 0 || desc.height == 0)
+            return Renderer::TextureHandle{};
 
-        GLuint id = 0;
-        glCreateTextures(GL_TEXTURE_2D, 1, &id);
-        glTextureStorage2D(id, level, format, desc.width,
-                           desc.height); // immutable
-        glTextureSubImage2D(id, 0, 0, 0, desc.width, desc.height, GL_RGBA,
-                            GL_UNSIGNED_BYTE, desc.data);
+        GLenum internalFormat = 0;
+        GLenum uploadFormat = 0;
+        GLenum uploadType = 0;
 
-        if (desc.generateMipmaps)
+        switch (desc.format)
         {
-            glGenerateTextureMipmap(id);
+        case Renderer::TextureFormat::RGBA8:
+            internalFormat = GL_RGBA8;
+            uploadFormat = GL_RGBA;
+            uploadType = GL_UNSIGNED_BYTE;
+            break;
+        case Renderer::TextureFormat::SRGBA8:
+            internalFormat = GL_SRGB8_ALPHA8;
+            uploadFormat = GL_RGBA;
+            uploadType = GL_UNSIGNED_BYTE;
+            break;
+        case Renderer::TextureFormat::Depth32F:
+            internalFormat = GL_DEPTH_COMPONENT32F;
+            uploadFormat = GL_DEPTH_COMPONENT;
+            uploadType = GL_FLOAT;
+            break;
+        case Renderer::TextureFormat::None:
+        default:
+            return Renderer::TextureHandle{};
         }
 
-        glTextureParameteri(id, GL_TEXTURE_MIN_FILTER,
-                            GL_LINEAR_MIPMAP_LINEAR); // + MAG, WRAP_S/T
+        bool useMipmaps = desc.generateMipmaps
+            && !(desc.format == Renderer::TextureFormat::Depth32F);
+        int levels =
+            useMipmaps ? std::bit_width(std::max(desc.width, desc.height)) : 1;
 
-        return textures_.Insert(
-            GLTexture{ id, desc.width, desc.height, format, level });
+        GLTexture texture{ .id = 0,
+                           .width = desc.width,
+                           .height = desc.height,
+                           .internalFormat = internalFormat,
+                           .levels = levels };
+        if (!AllocateTextureStorage(texture, false))
+        {
+            return Renderer::TextureHandle{};
+        }
+
+        if (desc.data)
+        {
+            glTextureSubImage2D(texture.id, 0, 0, 0, desc.width, desc.height,
+                                uploadFormat, uploadType, desc.data);
+            if (useMipmaps)
+            {
+                glGenerateTextureMipmap(texture.id);
+            }
+        }
+
+        return textures_.Insert(texture);
     }
 
     void OpenGLGraphicsDevice::DestroyTexture(Renderer::TextureHandle handle)
@@ -376,6 +418,119 @@ namespace GEF::Platform
         {
             glDeleteTextures(1, &texture->id);
             textures_.Remove(handle);
+        }
+    }
+
+    Renderer::RenderTargetHandle OpenGLGraphicsDevice::CreateRenderTarget(
+        const Renderer::RenderTargetDesc& desc)
+    {
+        // Init render target
+        GLRenderTarget target{};
+        target.desc = desc;
+        const auto size = ComputeSize(desc);
+        target.width = size.x;
+        target.height = size.y;
+
+        glCreateFramebuffers(1, &target.id);
+
+        // Create color textures
+        std::array<GLenum, Renderer::MaxColorAttachments> drawBuffers{};
+        uint32_t colorAttachmentCount = 0;
+        uint32_t lastColorAttachment = 0;
+        for (uint32_t i = 0; i < Renderer::MaxColorAttachments; ++i)
+        {
+            if (desc.attachments[i] == Renderer::TextureFormat::None)
+                continue;
+
+            Renderer::TextureDesc texDesc{};
+            texDesc.width = target.width;
+            texDesc.height = target.height;
+            texDesc.format = desc.attachments[i];
+            texDesc.generateMipmaps = false;
+
+            Renderer::TextureHandle texHandle = CreateTexture(texDesc);
+            if (!texHandle.IsValid())
+            {
+                GEF_ENGINE_ERROR("Failed to create render target texture");
+                DestroyRenderTargetResources(target);
+                return Renderer::RenderTargetHandle{};
+            }
+
+            glTextureParameteri(GetTexture(texHandle)->id, GL_TEXTURE_WRAP_S,
+                                GL_CLAMP_TO_EDGE);
+            glTextureParameteri(GetTexture(texHandle)->id, GL_TEXTURE_WRAP_T,
+                                GL_CLAMP_TO_EDGE);
+
+            target.attachments[i] = texHandle;
+
+            drawBuffers[i] = GL_COLOR_ATTACHMENT0 + i;
+            glNamedFramebufferTexture(target.id, GL_COLOR_ATTACHMENT0 + i,
+                                      GetTexture(texHandle)->id, 0);
+
+            colorAttachmentCount++;
+            lastColorAttachment = i;
+        }
+
+        if (colorAttachmentCount > 0)
+        {
+            glNamedFramebufferDrawBuffers(target.id, lastColorAttachment + 1,
+                                          drawBuffers.data());
+        }
+        else
+        {
+            glNamedFramebufferDrawBuffer(target.id, GL_NONE);
+            glNamedFramebufferReadBuffer(target.id, GL_NONE);
+        }
+
+        // Create depth texture
+        if (desc.depthStencil != Renderer::TextureFormat::None)
+        {
+            Renderer::TextureDesc depthTexDesc{};
+            depthTexDesc.width = target.width;
+            depthTexDesc.height = target.height;
+            depthTexDesc.format = desc.depthStencil;
+
+            Renderer::TextureHandle depthTexHandle =
+                CreateTexture(depthTexDesc);
+            if (!depthTexHandle.IsValid())
+            {
+                GEF_ENGINE_ERROR(
+                    "Failed to create render target depth texture");
+                DestroyRenderTargetResources(target);
+                return Renderer::RenderTargetHandle{};
+            }
+
+            glTextureParameteri(GetTexture(depthTexHandle)->id,
+                                GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTextureParameteri(GetTexture(depthTexHandle)->id,
+                                GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            target.depthStencil = depthTexHandle;
+            glNamedFramebufferTexture(target.id, GL_DEPTH_ATTACHMENT,
+                                      GetTexture(depthTexHandle)->id, 0);
+        }
+
+        // Creation check
+        GLenum status =
+            glCheckNamedFramebufferStatus(target.id, GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE)
+        {
+            GEF_ENGINE_ERROR("Render target framebuffer is incomplete");
+            DestroyRenderTargetResources(target);
+            return Renderer::RenderTargetHandle{};
+        }
+
+        return renderTargets_.Insert(target);
+    }
+
+    void OpenGLGraphicsDevice::DestroyRenderTarget(
+        Renderer::RenderTargetHandle handle)
+    {
+        auto renderTarget = renderTargets_.Get(handle);
+        if (renderTarget)
+        {
+            DestroyRenderTargetResources(*renderTarget);
+            renderTargets_.Remove(handle);
         }
     }
 
@@ -404,6 +559,19 @@ namespace GEF::Platform
         return pipelines_.IsValid(handle) ? pipelines_.Get(handle) : nullptr;
     }
 
+    const GLTexture*
+    OpenGLGraphicsDevice::GetTexture(Renderer::TextureHandle handle) const
+    {
+        return textures_.IsValid(handle) ? textures_.Get(handle) : nullptr;
+    }
+
+    const GLRenderTarget* OpenGLGraphicsDevice::GetRenderTarget(
+        Renderer::RenderTargetHandle handle) const
+    {
+        return renderTargets_.IsValid(handle) ? renderTargets_.Get(handle)
+                                              : nullptr;
+    }
+
     void OpenGLGraphicsDevice::Submit(Renderer::CommandList& cmd)
     {
         cmd.SortPackets();
@@ -428,94 +596,132 @@ namespace GEF::Platform
             }
         }
         lastSubmitStats_.gpuFrameTimeMs = gpuFrameTimeMs_;
-
         glQueryCounter(timer.start, GL_TIMESTAMP);
-
         const auto cpuStart = std::chrono::steady_clock::now();
 
-        // ----- Frame command -----
-        const auto visitor = Utils::Overloaded{
-            [this](const Renderer::CommandList::SetClearColorCommand& command) {
-                SetClearColor(command.r, command.g, command.b, command.a);
-            },
-            [this](const Renderer::CommandList::ClearCommand&) { Clear(); },
-            [this](const Renderer::CommandList::SetViewportCommand& command) {
-                SetViewport(command.x, command.y, command.width,
-                            command.height);
-            },
-        };
-
-        for (const auto& command : cmd.GetFrameCommands())
+        // ----- Passes -----
+        size_t k = 0;
+        const auto& keys = cmd.GetSortKeys();
+        for (uint32_t p = 0; p < cmd.GetPasses().size(); ++p)
         {
-            std::visit(visitor, command);
+            const auto& pass = cmd.GetPasses()[p];
+            auto target = GetRenderTarget(pass.desc.target);
+            if (!target)
+            {
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            }
+            else
+            {
+                glBindFramebuffer(GL_FRAMEBUFFER, target->id);
+            }
+
+            SetViewport(0, 0, target ? target->width : backBufferWidth_,
+                        target ? target->height : backBufferHeight_);
+
+            if (pass.desc.clearColor)
+            {
+                SetClearColor(pass.desc.clearValue.r, pass.desc.clearValue.g,
+                              pass.desc.clearValue.b, pass.desc.clearValue.a);
+                glClear(GL_COLOR_BUFFER_BIT);
+            }
+
+            if (pass.desc.clearDepth)
+            {
+                glDepthMask(GL_TRUE);
+                glClear(GL_DEPTH_BUFFER_BIT);
+                bound.pipeline = {};
+            }
+
+            if (pass.blitSource.IsValid())
+            {
+                auto const source = GetRenderTarget(pass.blitSource);
+                if (source)
+                {
+                    const GLuint dst = target ? target->id : 0;
+                    const uint32_t dw =
+                        target ? target->width : backBufferWidth_;
+                    const uint32_t dh =
+                        target ? target->height : backBufferHeight_;
+                    glBlitNamedFramebuffer(
+                        source->id, dst, 0, 0, source->width, source->height, 0,
+                        0, dw, dh, GL_COLOR_BUFFER_BIT,
+                        (source->width == dw && source->height == dh)
+                            ? GL_NEAREST
+                            : GL_LINEAR);
+                }
+            }
+
+            // ----- Packets -----
+            const auto& drawPackets = cmd.GetDrawPackets();
+            for (; k < keys.size() && Renderer::SortKey::Pass(keys[k]) == p;
+                 ++k)
+            {
+                const auto sequence = Renderer::SortKey::Sequence(keys[k]);
+                auto const& packet = drawPackets[sequence];
+
+                // Pipeline
+                if (packet.pipeline != bound.pipeline)
+                {
+                    BindPipeline(packet.pipeline);
+                    bound.pipeline = packet.pipeline;
+                    ++lastSubmitStats_.pipelineChanges;
+                }
+
+                // Vertex
+                if (packet.vertexArray != bound.vertexArray)
+                {
+                    BindVertexArray(packet.vertexArray);
+                    bound.vertexArray = packet.vertexArray;
+                    ++lastSubmitStats_.vertexArrayChanges;
+                }
+
+                // Uniform
+                for (uint32_t i = 0;
+                     i < Renderer::CommandList::MaxUniformBindings; ++i)
+                {
+                    const auto buffer = packet.uniformBuffers[i];
+                    if (buffer.IsValid() && buffer != bound.uniformBuffers[i])
+                    {
+                        BindUniformBuffer(i, buffer);
+                        bound.uniformBuffers[i] = buffer;
+                        ++lastSubmitStats_.uniformBufferChanges;
+                    }
+                }
+
+                // Shader Storage
+                for (uint32_t i = 0;
+                     i < Renderer::CommandList::MaxShaderStorageBindings; ++i)
+                {
+                    const auto buffer = packet.shaderStorageBuffers[i];
+                    if (buffer.IsValid()
+                        && buffer != bound.shaderStorageBuffers[i])
+                    {
+                        BindShaderStorageBuffer(i, buffer);
+                        bound.shaderStorageBuffers[i] = buffer;
+                        ++lastSubmitStats_.shaderStorageBufferChanges;
+                    }
+                }
+
+                // Texture
+                for (uint32_t i = 0;
+                     i < Renderer::CommandList::MaxTextureBindings; ++i)
+                {
+                    const auto texture = packet.textures[i];
+                    if (texture.IsValid() && texture != bound.textures[i])
+                    {
+                        BindTexture(i, texture);
+                        bound.textures[i] = texture;
+                        ++lastSubmitStats_.textureChanges;
+                    }
+                }
+
+                DrawIndexedInstanced(packet.indexCount, packet.instanceCount,
+                                     packet.baseInstance);
+                ++lastSubmitStats_.drawCalls;
+            }
         }
-
-        // ----- Packets -----
-        const auto& drawPackets = cmd.GetDrawPackets();
-        for (const uint64_t key : cmd.GetSortKeys())
-        {
-            const auto sequence = Renderer::SortKey::Sequence(key);
-            auto const& packet = drawPackets[sequence];
-
-            // Pipeline
-            if (packet.pipeline != bound.pipeline)
-            {
-                BindPipeline(packet.pipeline);
-                bound.pipeline = packet.pipeline;
-                ++lastSubmitStats_.pipelineChanges;
-            }
-
-            // Vertex
-            if (packet.vertexArray != bound.vertexArray)
-            {
-                BindVertexArray(packet.vertexArray);
-                bound.vertexArray = packet.vertexArray;
-                ++lastSubmitStats_.vertexArrayChanges;
-            }
-
-            // Uniform
-            for (uint32_t i = 0; i < Renderer::CommandList::MaxUniformBindings;
-                 ++i)
-            {
-                const auto buffer = packet.uniformBuffers[i];
-                if (buffer.IsValid() && buffer != bound.uniformBuffers[i])
-                {
-                    BindUniformBuffer(i, buffer);
-                    bound.uniformBuffers[i] = buffer;
-                    ++lastSubmitStats_.uniformBufferChanges;
-                }
-            }
-
-            // Shader Storage
-            for (uint32_t i = 0;
-                 i < Renderer::CommandList::MaxShaderStorageBindings; ++i)
-            {
-                const auto buffer = packet.shaderStorageBuffers[i];
-                if (buffer.IsValid() && buffer != bound.shaderStorageBuffers[i])
-                {
-                    BindShaderStorageBuffer(i, buffer);
-                    bound.shaderStorageBuffers[i] = buffer;
-                    ++lastSubmitStats_.shaderStorageBufferChanges;
-                }
-            }
-
-            // Texture
-            for (uint32_t i = 0; i < Renderer::CommandList::MaxTextureBindings;
-                 ++i)
-            {
-                const auto texture = packet.textures[i];
-                if (texture.IsValid() && texture != bound.textures[i])
-                {
-                    BindTexture(i, texture);
-                    bound.textures[i] = texture;
-                    ++lastSubmitStats_.textureChanges;
-                }
-            }
-
-            DrawIndexedInstanced(packet.indexCount, packet.instanceCount,
-                                 packet.baseInstance);
-            ++lastSubmitStats_.drawCalls;
-        }
+        glBindFramebuffer(GL_FRAMEBUFFER,
+                          0); // ImGui reset
 
         // Before the query readback: CPU can wait for the GPU, which is not
         // work
@@ -638,5 +844,147 @@ namespace GEF::Platform
         glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
                      data.data());
         return data;
+    }
+
+    void OpenGLGraphicsDevice::SetBackBufferSize(uint32_t width,
+                                                 uint32_t height)
+    {
+        if (width == 0 || height == 0)
+            return;
+
+        backBufferWidth_ = width;
+        backBufferHeight_ = height;
+
+        // Recreate render target textures
+        for (auto const& targetHandle : renderTargets_.GetAliveHandles())
+        {
+            auto target = renderTargets_.Get(targetHandle);
+
+            if (!target
+                || target->desc.sizeMode != Renderer::SizeMode::WindowRelative)
+                continue;
+
+            const auto size = ComputeSize(target->desc);
+            target->width = size.x;
+            target->height = size.y;
+
+            for (uint32_t i = 0; i < Renderer::MaxColorAttachments; ++i)
+            {
+                auto textureHandle = target->attachments[i];
+                if (textureHandle.IsValid() && textures_.IsValid(textureHandle))
+                {
+                    auto texture = textures_.Get(textureHandle);
+                    glDeleteTextures(1, &texture->id);
+
+                    texture->width = size.x;
+                    texture->height = size.y;
+
+                    if (!AllocateTextureStorage(*texture, true))
+                    {
+                        GEF_CORE_ASSERT(
+                            false, "Failed to allocate texture storage buffer");
+                        return;
+                    }
+
+                    glNamedFramebufferTexture(
+                        target->id, GL_COLOR_ATTACHMENT0 + i, texture->id, 0);
+                }
+            }
+
+            if (target->depthStencil.IsValid()
+                && textures_.IsValid(target->depthStencil))
+            {
+                auto texture = textures_.Get(target->depthStencil);
+                glDeleteTextures(1, &texture->id);
+
+                texture->width = size.x;
+                texture->height = size.y;
+
+                if (!AllocateTextureStorage(*texture, true))
+                {
+                    GEF_CORE_ASSERT(
+                        false, "Failed to allocate texture storage buffer");
+                    return;
+                }
+
+                glNamedFramebufferTexture(target->id, GL_DEPTH_ATTACHMENT,
+                                          texture->id, 0);
+            }
+
+            GLenum status =
+                glCheckNamedFramebufferStatus(target->id, GL_FRAMEBUFFER);
+            if (status != GL_FRAMEBUFFER_COMPLETE)
+            {
+                GEF_ENGINE_ERROR("Render target framebuffer is incomplete");
+                DestroyRenderTargetResources(*target);
+            }
+        }
+    }
+
+    void
+    OpenGLGraphicsDevice::DestroyRenderTargetResources(GLRenderTarget& target)
+    {
+        if (target.id != 0)
+        {
+            glDeleteFramebuffers(1, &target.id);
+            target.id = 0;
+        }
+        for (uint32_t i = 0; i < Renderer::MaxColorAttachments; ++i)
+        {
+            if (target.attachments[i].IsValid())
+            {
+                DestroyTexture(target.attachments[i]);
+                target.attachments[i] = Renderer::TextureHandle{};
+            }
+        }
+        if (target.depthStencil.IsValid())
+        {
+            DestroyTexture(target.depthStencil);
+            target.depthStencil = Renderer::TextureHandle{};
+        }
+    }
+
+    bool OpenGLGraphicsDevice::AllocateTextureStorage(GLTexture& texture,
+                                                      bool clampToEdge)
+    {
+        GLuint id = 0;
+        glCreateTextures(GL_TEXTURE_2D, 1, &id);
+        glTextureStorage2D(id, texture.levels, texture.internalFormat,
+                           texture.width, texture.height);
+
+        GLint allocatedWidth = 0;
+        glGetTextureLevelParameteriv(id, 0, GL_TEXTURE_WIDTH, &allocatedWidth);
+        if (allocatedWidth == 0)
+        {
+            glDeleteTextures(1, &id);
+            GEF_ENGINE_ERROR(
+                "Failed to allocate immutable texture storage ({}x{})",
+                texture.width, texture.height);
+            return false;
+        }
+
+        bool useMipmaps = texture.levels > 1;
+        GLint minFilter = useMipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR;
+        GLint wrapMode = clampToEdge ? GL_CLAMP_TO_EDGE : GL_REPEAT;
+
+        glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, minFilter);
+        glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(id, GL_TEXTURE_WRAP_S, wrapMode);
+        glTextureParameteri(id, GL_TEXTURE_WRAP_T, wrapMode);
+
+        texture.id = id;
+        return true;
+    }
+
+    glm::uvec2 OpenGLGraphicsDevice::ComputeSize(
+        const Renderer::RenderTargetDesc& desc) const
+    {
+        if (desc.sizeMode == Renderer::SizeMode::Fixed)
+            return { std::max(desc.width, 1u), std::max(desc.height, 1u) };
+
+        return {
+            std::max(1u, static_cast<uint32_t>(backBufferWidth_ * desc.scaleX)),
+            std::max(1u, static_cast<uint32_t>(backBufferHeight_ * desc.scaleY))
+        };
     }
 } // namespace GEF::Platform
