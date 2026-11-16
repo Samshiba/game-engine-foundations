@@ -82,6 +82,8 @@ struct Sandbox
     Texture albedoMap;
     Texture normalMap;
 
+    RenderTargetHandle sceneTarget;
+
     void SpawnAt(int index)
     {
         int x = index / 250;
@@ -147,6 +149,13 @@ struct Sandbox
         else
             GEF_ERROR("Failed to load mesh: {}", path.string());
 
+        sceneTarget = ctx.device.CreateRenderTarget(
+            { .sizeMode = SizeMode::WindowRelative,
+              .scaleX = 1.0f,
+              .scaleY = 1.0f,
+              .attachments = { TextureFormat::RGBA8 },
+              .depthStencil = TextureFormat::Depth32F });
+
         renderer.emplace(ctx.device);
 
         directionalLight = registry.CreateEntity();
@@ -203,8 +212,14 @@ struct Sandbox
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
+        cmd.BeginPass(
+            { .target = sceneTarget, .clearValue = { 0.1f, 0.1f, 0.1f, 1 } });
         if (renderer)
             renderer->Render(registry, camera, environment, cmd);
+        cmd.EndPass();
+        cmd.BeginPass({ .clearColor = false, .clearDepth = false });
+        cmd.Blit(sceneTarget);
+        cmd.EndPass();
     }
 
     void OnShutdown(GEF::EngineContext& ctx)
@@ -220,6 +235,7 @@ struct Sandbox
 
         DestroyTexture(ctx.device, albedoMap);
         DestroyTexture(ctx.device, normalMap);
+        ctx.device.DestroyRenderTarget(sceneTarget);
     }
 
     void OnImGui(GEF::EngineContext& ctx)

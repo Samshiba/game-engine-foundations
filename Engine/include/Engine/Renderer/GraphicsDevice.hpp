@@ -19,7 +19,7 @@
 namespace GEF::Renderer
 {
     // Buffer
-    enum class BufferType
+    enum class BufferType : uint8_t
     {
         Index,
         Vertex,
@@ -27,7 +27,7 @@ namespace GEF::Renderer
         ShaderStorage,
     };
 
-    enum class BufferUsage
+    enum class BufferUsage : uint8_t
     {
         Static,
         Dynamic,
@@ -64,7 +64,7 @@ namespace GEF::Renderer
     };
 
     // Pipeline
-    enum class CullMode
+    enum class CullMode : uint8_t
     {
         None,
         Back,
@@ -85,10 +85,12 @@ namespace GEF::Renderer
     };
 
     // Texture
-    enum class TextureFormat
+    enum class TextureFormat : uint8_t
     {
+        None,
         RGBA8,
-        SRGBA8
+        SRGBA8,
+        Depth32F
     };
 
     struct TextureDesc
@@ -98,6 +100,29 @@ namespace GEF::Renderer
         bool generateMipmaps = true;
         TextureFormat format = TextureFormat::RGBA8;
         const void* data = nullptr;
+    };
+
+    // Passes
+    static constexpr uint32_t MaxColorAttachments = 4;
+
+    enum class SizeMode : uint8_t
+    {
+        Fixed,
+        WindowRelative
+    };
+
+    struct RenderTargetDesc
+    {
+        SizeMode sizeMode = SizeMode::Fixed;
+        uint32_t width = 1;
+        uint32_t height = 1;
+        float scaleX = 1.0f;
+        float scaleY = 1.0f;
+
+        std::array<TextureFormat, MaxColorAttachments> attachments = {
+            TextureFormat::None
+        };
+        TextureFormat depthStencil = TextureFormat::None;
     };
 
     // Infos
@@ -127,7 +152,7 @@ namespace GEF::Renderer
     class GraphicsDevice
     {
     protected:
-        static constexpr std::size_t GpuTimerCount = 3;
+        static constexpr uint8_t GpuTimerCount = 3;
 
     public:
         virtual ~GraphicsDevice() = default;
@@ -159,6 +184,11 @@ namespace GEF::Renderer
         CreateTexture(const TextureDesc& desc) = 0;
         virtual void DestroyTexture(TextureHandle handle) = 0;
 
+        // Render Target
+        [[nodiscard]] virtual RenderTargetHandle
+        CreateRenderTarget(const RenderTargetDesc& desc) = 0;
+        virtual void DestroyRenderTarget(RenderTargetHandle handle) = 0;
+
         // Infos
         [[nodiscard]] virtual const AdapterInfo& GetAdapterInfo() const = 0;
         [[nodiscard]] virtual const SubmitStats& GetLastSubmitStats() const = 0;
@@ -168,5 +198,6 @@ namespace GEF::Renderer
         static std::unique_ptr<GraphicsDevice> Create(RendererBackend backend);
 
         virtual void Submit(CommandList& cmd) = 0;
+        virtual void SetBackBufferSize(uint32_t width, uint32_t height) = 0;
     };
 } // namespace GEF::Renderer

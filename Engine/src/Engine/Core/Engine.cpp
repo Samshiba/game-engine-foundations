@@ -19,6 +19,7 @@ namespace GEF
         auto device = Renderer::GraphicsDevice::Create(spec_.backend);
         GEF_CORE_ASSERT(device, "Failed to create graphics device");
         graphics_device_ = std::move(device);
+        graphics_device_->SetBackBufferSize(spec_.width, spec_.height);
         window_->SetEventCallback([this](Events::Event& e) { OnEvent(e); });
 
         if (!std::filesystem::is_directory(FileSystem::AssetsDirectory()))
@@ -40,9 +41,6 @@ namespace GEF
     void Engine::BeginFrame()
     {
         frame_commands_.Reset();
-        frame_commands_.SetViewport(0, 0, spec_.width, spec_.height);
-        frame_commands_.SetClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        frame_commands_.Clear();
 
         imgui_->BeginFrame();
     }
@@ -67,6 +65,7 @@ namespace GEF
             const auto& resize = static_cast<Events::WindowResizeEvent&>(e);
             spec_.width = resize.GetWidth();
             spec_.height = resize.GetHeight();
+            graphics_device_->SetBackBufferSize(spec_.width, spec_.height);
         }
 
         event_bus_.TriggerEvent(e);

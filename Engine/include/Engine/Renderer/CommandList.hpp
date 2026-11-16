@@ -7,8 +7,9 @@
 
 #include <array>
 #include <cstdint>
-#include <variant>
 #include <vector>
+
+#include <glm/glm.hpp>
 
 #include <Engine/Renderer/Handle.hpp>
 
@@ -23,6 +24,7 @@ namespace GEF::Renderer
 
         inline constexpr uint64_t FIELD_MASK_12 = 0xFFF;
         inline constexpr uint64_t SEQUENCE_MASK = 0xFFFFF;
+        inline constexpr uint64_t PASS_MASK = 0xF;
 
         constexpr uint64_t Make(uint32_t pass, uint32_t pipeline,
                                 uint32_t vertexArray, uint32_t depth,
@@ -38,6 +40,11 @@ namespace GEF::Renderer
         constexpr uint32_t Sequence(uint64_t key)
         {
             return uint32_t(key & SEQUENCE_MASK);
+        }
+
+        constexpr uint32_t Pass(uint64_t key)
+        {
+            return uint32_t((key >> PASS_SHIFT) & PASS_MASK);
         }
     } // namespace SortKey
 
@@ -61,39 +68,31 @@ namespace GEF::Renderer
             uint32_t baseInstance;
         };
 
-        struct ClearCommand
-        {};
-
-        struct SetClearColorCommand
+        struct PassDesc
         {
-            float r;
-            float g;
-            float b;
-            float a;
+            RenderTargetHandle target{}; // invalide = back buffer
+            bool clearColor = true;
+            bool clearDepth = true;
+            glm::vec4 clearValue{ 0, 0, 0, 1 };
         };
 
-        struct SetViewportCommand
+        struct Pass
         {
-            uint32_t x;
-            uint32_t y;
-            uint32_t width;
-            uint32_t height;
+            PassDesc desc;
+            RenderTargetHandle blitSource{};
         };
-
-        using FrameCommand = std::variant<SetClearColorCommand, ClearCommand,
-                                          SetViewportCommand>;
 
     public:
+        CommandList();
         ~CommandList() = default;
 
         void Reset();
         void SortPackets();
+        void Blit(RenderTargetHandle handle);
 
-        // Frame Commands
-        void Clear();
-        void SetClearColor(float r, float g, float b, float a);
-        void SetViewport(uint32_t x, uint32_t y, uint32_t width,
-                         uint32_t height);
+        // Passes
+        void BeginPass(const PassDesc& desc);
+        void EndPass();
 
         // Packets
         void BindVertexArray(VertexArrayHandle handle);
@@ -108,12 +107,14 @@ namespace GEF::Renderer
                                   uint32_t baseInstance);
 
         // Getters for backend
-        [[nodiscard]] const std::vector<FrameCommand>& GetFrameCommands() const;
+        [[nodiscard]] const std::vector<Pass>& GetPasses() const;
         [[nodiscard]] const std::vector<DrawPacket>& GetDrawPackets() const;
         [[nodiscard]] const std::vector<uint64_t>& GetSortKeys() const;
 
     private:
-        std::vector<FrameCommand> frameCommands_;
+        bool inPass_ = false;
+        bool isImplicitPass_ = false;
+        std::vector<Pass> passes_;
 
         std::vector<DrawPacket> drawPackets_;
         std::vector<uint64_t> sortKeys_;
