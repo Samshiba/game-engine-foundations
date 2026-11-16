@@ -17,6 +17,12 @@ All notable changes to GEF are listed here. Versions follow [Semantic Versioning
 - `SubmitStats::cpuSubmitTimeMs` and `gpuFrameTimeMs`: CPU time spent issuing the commands, and
   GPU time between two timestamp queries around them. Shown in the demo's overlay and as two
   columns of the benchmark.
+- Render targets (`CreateRenderTarget`, `DestroyRenderTarget`, `RenderTargetDesc`): up to four
+  color attachments and a depth attachment, at a fixed size or relative to the window, resized in
+  place with the window. `TextureFormat::Depth32F`.
+- Passes (`CommandList::BeginPass`, `EndPass`, `Blit`): each pass draws into a render target or
+  the back buffer, with its own clear. The pass is the highest field of the sort key.
+- `GraphicsDevice::SetBackBufferSize`, called by the engine at startup and on resize.
 
 ### Changed
 
@@ -30,6 +36,10 @@ All notable changes to GEF are listed here. Versions follow [Semantic Versioning
 - `LightingData.hpp` is renamed `Renderer/Layout/LitShaderLayout.hpp`.
 - `Material` moves to `Scene/Material.hpp`, `InstanceData` to `LitShaderLayout.hpp`.
 - Instances are batched by mesh and textures, not by mesh alone.
+- **Breaking**: `CommandList::SetViewport`, `SetClearColor` and `Clear` are removed. The viewport
+  and the clear come from the pass; `Reset` opens an implicit back buffer pass cleared to dark
+  gray, so games that do not use passes draw as before.
+- The demo renders the scene into a render target, then blits it to the screen.
 
 ## [0.1.0] - 2026-11-02
 

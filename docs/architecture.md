@@ -179,20 +179,22 @@ sequenceDiagram
     participant D as GraphicsDevice
     E ->> E: compute dt
     E ->> G: OnUpdate(ctx, dt)
-    E ->> C: Reset, then viewport, clear color and clear
+    E ->> C: Reset (opens the implicit back buffer pass)
     E ->> G: OnRender(ctx, cmd)
+    G ->> C: BeginPass(scene target)
     G ->> SR: Render(registry, camera, cmd)
     SR ->> D: UpdateBuffer (per-frame data, instances)
     SR ->> C: Bind..., DrawIndexedInstanced
+    G ->> C: EndPass, then a back buffer pass with Blit
     E ->> G: OnImGui(ctx)
     E ->> D: Submit(cmd)
-    Note over D: sort, then OpenGL calls
+    Note over D: sort, then pass by pass: bind, clear, blit, draws
     E ->> E: render ImGui, capture if requested
     E ->> E: swap buffers, poll window events
 ```
 
 Window events are produced while polling, at the end of the frame. The engine handles the ones
-that concern it first (close stops the loop, resize updates the viewport size), then passes every
+that concern it first (close stops the loop, resize gives the device the new back buffer size), then passes every
 event to the event bus, where the game may have subscribed. The demo subscribes to resize to keep
 the camera's aspect ratio right.
 
@@ -229,7 +231,8 @@ OpenGL id and freeing it in its destructor:
 Resources are described with plain structs: `BufferDesc` (type, usage, size, initial data),
 `VertexArrayDesc` (vertex buffers with their layout and instance divisor, index buffer),
 `TextureDesc` (size, format, mipmaps, pixels), `ShaderDesc` (sources), `PipelineDesc` (shader,
-depth test and write, face culling). The OpenGL
+depth test and write, face culling), `RenderTargetDesc` (size, color and depth formats, see
+[render targets and passes](#render-targets-and-passes)). The OpenGL
 device uses Direct State Access (`glCreateBuffers`, `glNamedBufferSubData`,
 `glVertexArrayAttribFormat`, ...), which modifies objects directly instead of binding them first.
 
@@ -251,8 +254,7 @@ cmd.DrawIndexedInstanced(indexCount, instanceCount, firstInstance);
 `Bind*` calls only update the list's current state. Each draw copies that state into a
 `DrawPacket`: pipeline, vertex array, the buffer of each uniform and storage binding, the texture
 of each texture unit, and the draw's parameters. A packet does not depend on what was recorded before it, so packets can
-be executed
-in any order.
+be executed in any order.
 
 Each packet also gets a 64-bit sort key. Sorting the keys puts the packets in the order that
 minimizes state changes:
@@ -266,21 +268,27 @@ minimizes state changes:
 - The sequence is the packet's position in the recording. Every key is different, so the sort
   gives the same result on every run, and the key also says which packet it belongs to. Only the
   keys are sorted, the packets stay where they are.
-- The pass and depth fields are not used yet (always 0). They are reserved for separating opaque
-  and transparent objects and for ordering by distance.
+- The pass is the index of the pass the draw was recorded in. It outweighs everything else, so
+  sorting never moves a draw into another pass. 4 bits: 16 passes per frame, checked by an
+  assert in `BeginPass`.
+- The depth field is not used yet (always 0). It is reserved for ordering by distance, front to
+  back for opaque objects and back to front for transparent ones.
 - The field sizes set the limits: 4096 pipelines, 4096 vertex arrays, about a million draws per
   frame. They are checked by asserts.
 
-Viewport, clear color and clear are frame-level commands. They are kept in a separate list and
-executed in order, before the draws.
+Clearing and choosing where to draw are not commands of their own: they belong to the pass the
+draws are recorded in (see [render targets and passes](#render-targets-and-passes)).
 
 The command list is reused from one frame to the next. `Reset` empties it without releasing its
 memory, so once the biggest frame has been seen, recording does not allocate anymore.
 
 ## Submitting a frame
 
-`OpenGLGraphicsDevice::Submit` sorts the keys, runs the frame commands, then goes through the
-packets in sorted order. It remembers what is currently bound (pipeline, vertex array, uniform
+`OpenGLGraphicsDevice::Submit` sorts the keys, then goes through the passes in recording order.
+For each pass, it binds the pass's framebuffer, sets the viewport to its size, clears it, blits
+into it if the pass asks for it, then goes through that pass's packets in sorted order. Since the
+pass is the highest field of the key, the packets of one pass are contiguous in the sorted keys.
+It remembers what is currently bound (pipeline, vertex array, uniform
 buffer of each binding) and only calls OpenGL for what differs from the previous packet. Binding
 a pipeline sets the shader program and its depth and culling state. Then it issues the draw with
 `glDrawElementsInstancedBaseInstance`.
@@ -302,9 +310,70 @@ cannot take the draw calls fast enough. When the GPU time is the larger, the CPU
 before the GPU. If both are small next to the frame time, the frame is limited elsewhere, for
 example by the scene renderer building and uploading the instance data.
 
+After the last pass, the back buffer is bound again, so that ImGui draws on the screen.
+
 Buffer updates are the exception to "record first": `UpdateBuffer` writes immediately. This works
 because each buffer is written once per frame, before `Submit` (see the
 [rules](#rules-the-code-relies-on)).
+
+## Render targets and passes
+
+A render target is somewhere to draw other than the screen: a framebuffer and the textures
+attached to it. The device creates it from a `RenderTargetDesc` and returns a
+`RenderTargetHandle`, like any other resource:
+
+```cpp
+sceneTarget = device.CreateRenderTarget({ .sizeMode = SizeMode::WindowRelative,
+                                          .attachments = { TextureFormat::RGBA8 },
+                                          .depthStencil = TextureFormat::Depth32F });
+```
+
+- `attachments` lists up to four color attachments. `attachments[i]` is attached to
+  `GL_COLOR_ATTACHMENTi` and receives the fragment shader's output `i`. A `None` leaves a hole
+  without shifting the others. Several outputs are what a G-buffer or an object id buffer for
+  picking need; one is enough today.
+- `depthStencil` is the depth attachment. A target can have only a depth attachment, which is
+  what a shadow map is.
+- Each attachment is an ordinary device texture, with one mip level and clamped to its edges: it
+  is redrawn whole every frame, and will be sampled by later passes.
+- The color format is `RGBA8`, not `SRGBA8`, because the lit shader applies the gamma itself.
+  Storing to an sRGB target would apply it twice.
+
+`SizeMode::Fixed` targets have their own `width` and `height`. `SizeMode::WindowRelative` targets
+are the back buffer's size times `scaleX` and `scaleY` (0.5 for a half-resolution effect). The
+engine gives the device the back buffer size at startup and on every resize
+(`SetBackBufferSize`). The device then reallocates the textures of the window-relative targets
+in place: the handles the game holds stay valid, only the OpenGL ids behind them change. A size of
+0, when the window is minimized, is ignored.
+
+A pass says where the following draws go and how that place starts:
+
+```cpp
+cmd.BeginPass({ .target = sceneTarget, .clearValue = { 0.1f, 0.1f, 0.1f, 1 } });
+renderer.Render(registry, camera, environment, cmd);
+cmd.EndPass();
+
+cmd.BeginPass({ .clearColor = false, .clearDepth = false }); // no target: the back buffer
+cmd.Blit(sceneTarget);
+cmd.EndPass();
+```
+
+- Passes follow each other, they are not nested. `BeginPass` inside a pass asserts, and every
+  draw must be inside one.
+- A `PassDesc` holds the target (none means the back buffer), whether to clear the color and the
+  depth, and the clear color. Clearing the depth sets `glDepthMask(GL_TRUE)` first: `glClear`
+  obeys the depth mask, and the last pipeline of the previous frame may have disabled depth writes.
+- `Blit(source)` copies the color of another target into the pass's target, after its clear and
+  before its draws, stretched if the sizes differ. Copying the scene to the screen is all it does
+  today. Post-processing will replace it with a pass drawing a full-screen triangle that samples
+  the scene.
+- `Reset` (and the constructor) opens an implicit pass on the back buffer, cleared to dark gray. A
+  game that never calls `BeginPass` draws straight to the screen, as before render targets
+  existed. The first `BeginPass` closes it.
+
+The game creates its render targets and records its passes: it is the only one that knows which
+effects it wants. The engine only reports the back buffer size and submits the passes in the order
+they were recorded.
 
 ## From entities to instanced draws
 
@@ -520,9 +589,11 @@ These come from the current design and are the starting points of the
   fill a list and the lists could be merged before sorting.
 - The scene renderer uploads every instance every frame, around 6 MB per frame at 50,000
   entities, even if nothing moved.
-- There is a single pass. Shadow maps or post-processing need render targets and several passes
-  in a known order, which is what a render graph would organize. Until then, tone mapping is done
-  at the end of the lit shader.
+- Passes run in the order the game records them, and nothing checks that a target is written
+  before it is read. A render graph would order them from their dependencies and reuse the
+  memory of targets that are no longer needed. There is no post-processing pass yet: tone mapping
+  is done at the end of the lit shader, and the scene is blitted to the screen.
+- Render targets have no multisampling, and no float color format for HDR.
 - Every fragment evaluates every light, even the ones out of range. Tiled or clustered shading
   would only evaluate the lights that reach each part of the screen.
 - Textures are bound per draw, so every combination of mesh and maps is its own batch, with its
