@@ -1,9 +1,10 @@
 //
 // Path: tests/Platform/OpenGL/OpenGLSubmit.test.cpp
 //
-// Submit on the OpenGL backend: frame commands first, then the packets in
-// sorted order, through a state cache that skips the binds that would not
-// change anything. The SubmitStats count what really reached GL.
+// Submit on the OpenGL backend: pass after pass, bind the target, clear it,
+// blit into it, then replay that pass's packets in sorted order, through a
+// state cache that skips the binds that would not change anything. The
+// SubmitStats count what really reached GL.
 //
 
 #include <cstdint>
@@ -189,34 +190,95 @@ GL_TEST_CASE("Stats describe the last Submit only")
     CHECK(stats.shaderStorageBufferChanges == 0);
 }
 
-GL_TEST_CASE("Frame commands set the viewport and the clear color")
+GL_TEST_CASE("Each pass sets the viewport to the size of its target")
 {
     Tests::DrawFixture fixture;
     GLint previous[4] = {};
     glGetIntegerv(GL_VIEWPORT, previous);
-
-    Renderer::CommandList cmd;
-    cmd.SetViewport(10, 20, 300, 200);
-    cmd.SetClearColor(0.25f, 0.5f, 0.75f, 1.0f);
-    fixture.device.Submit(cmd);
+    fixture.device.SetBackBufferSize(64, 64);
+    const auto target = fixture.device.CreateRenderTarget(
+        { .sizeMode = Renderer::SizeMode::Fixed,
+          .width = 32,
+          .height = 16,
+          .attachments = { Renderer::TextureFormat::RGBA8 } });
+    REQUIRE(target.IsValid());
 
     GLint viewport[4] = {};
+    Renderer::CommandList cmd;
+    // The implicit pass alone: the whole back buffer
+    fixture.device.Submit(cmd);
     glGetIntegerv(GL_VIEWPORT, viewport);
-    CHECK(viewport[0] == 10);
-    CHECK(viewport[1] == 20);
-    CHECK(viewport[2] == 300);
-    CHECK(viewport[3] == 200);
+    CHECK(viewport[2] == 64);
+    CHECK(viewport[3] == 64);
 
-    GLfloat color[4] = {};
-    glGetFloatv(GL_COLOR_CLEAR_VALUE, color);
-    CHECK(color[0] == doctest::Approx(0.25f));
-    CHECK(color[1] == doctest::Approx(0.5f));
-    CHECK(color[2] == doctest::Approx(0.75f));
+    // Then a pass on the target: the target, not the window
+    cmd.Reset();
+    cmd.BeginPass({ .target = target });
+    cmd.EndPass();
+    fixture.device.Submit(cmd);
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    CHECK(viewport[0] == 0);
+    CHECK(viewport[1] == 0);
+    CHECK(viewport[2] == 32);
+    CHECK(viewport[3] == 16);
 
+    fixture.device.DestroyRenderTarget(target);
     // The GL context is shared by every test: leave the viewport as it was
     glViewport(previous[0], previous[1], previous[2], previous[3]);
 }
 
+GL_TEST_CASE("Draws spread over several passes are all submitted")
+{
+    // Submit walks the sorted keys pass by pass: a draw whose key is read
+    // with the wrong pass is silently dropped
+    Tests::DrawFixture fixture;
+    fixture.device.SetBackBufferSize(64, 64);
+    const auto target = fixture.device.CreateRenderTarget(
+        { .sizeMode = Renderer::SizeMode::Fixed,
+          .width = 8,
+          .height = 8,
+          .attachments = { Renderer::TextureFormat::RGBA8 } });
+    REQUIRE(target.IsValid());
+
+    Renderer::CommandList cmd;
+    for (int i = 0; i < 3; ++i)
+        fixture.RecordDraw(cmd);
+    for (int pass = 0; pass < 3; ++pass)
+    {
+        cmd.BeginPass({ .target = target });
+        for (int i = 0; i < 3; ++i)
+            fixture.RecordDraw(cmd);
+        cmd.EndPass();
+    }
+    fixture.device.Submit(cmd);
+
+    CHECK(fixture.device.GetLastSubmitStats().drawCalls == 12);
+
+    fixture.device.DestroyRenderTarget(target);
+}
+
+GL_TEST_CASE("Submit leaves the back buffer bound for ImGui")
+{
+    Tests::DrawFixture fixture;
+    fixture.device.SetBackBufferSize(64, 64);
+    const auto target = fixture.device.CreateRenderTarget(
+        { .sizeMode = Renderer::SizeMode::Fixed,
+          .width = 8,
+          .height = 8,
+          .attachments = { Renderer::TextureFormat::RGBA8 } });
+    REQUIRE(target.IsValid());
+
+    Renderer::CommandList cmd;
+    cmd.BeginPass({ .target = target });
+    cmd.EndPass();
+    fixture.device.Submit(cmd);
+
+    GLint bound = -1;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &bound);
+    CHECK(bound == 0);
+
+    fixture.device.DestroyRenderTarget(target);
+}
 
 GL_TEST_CASE("Submit times the replay on the CPU and on the GPU")
 {
