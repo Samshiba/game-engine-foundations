@@ -425,7 +425,8 @@ namespace GEF::Platform
         const Renderer::RenderTargetDesc& desc)
     {
         // Init render target
-        GLRenderTarget target{ .desc = desc };
+        GLRenderTarget target{};
+        target.desc = desc;
         const auto size = ComputeSize(desc);
         target.width = size.x;
         target.height = size.y;
