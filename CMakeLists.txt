@@ -47,12 +47,15 @@ endif ()
 # Strict warnings, applied to our own targets only
 function(gef_set_warnings target)
     target_compile_options(${target} PRIVATE
-            $<$<CXX_COMPILER_ID:MSVC>:
-            /W4 /permissive- /Zc:preprocessor /utf-8
+            # MSVC and clang-cl
+            $<$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>:
+            /W4 /permissive- /utf-8
             $<$<BOOL:${GEF_WARNINGS_AS_ERRORS}>:/WX>
             >
+            $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>
             $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>>:
-            /clang:-Wshadow /clang:-Wnon-virtual-dtor /clang:-Woverloaded-virtual
+            /clang:-Wpedantic /clang:-Wshadow /clang:-Wnon-virtual-dtor
+            /clang:-Woverloaded-virtual
             >
             $<$<CXX_COMPILER_FRONTEND_VARIANT:GNU>:
             -Wall -Wextra -Wpedantic
