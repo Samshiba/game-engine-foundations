@@ -157,7 +157,7 @@ gef_set_warnings(GEF_Engine)
 # ImageLoader.cpp compiles the stb_image_write implementation: silence the warnings
 # it triggers (sprintf, partial struct init) instead of dropping -Werror
 set_source_files_properties("src/Engine/Assets/ImageLoader.cpp" PROPERTIES
-        COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/wd4996,-Wno-missing-field-initializers>"
+        COMPILE_OPTIONS "$<$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>:/wd4996>;$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-missing-field-initializers>"
 )
 
 # Compile Definitions

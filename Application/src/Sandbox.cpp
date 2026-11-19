@@ -4,128 +4,82 @@
 //
 
 #include <optional>
-#include <string>
-#include <string_view>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <libecs/core/registry/Registry.hpp>
 
-#include <Engine/Assets/ObjLoader.hpp>
 #include <Engine/Core/DedicatedGpu.hpp>
 #include <Engine/Core/Engine.hpp>
-#include <Engine/Core/FileSystem.hpp>
 #include <Engine/Core/Log.hpp>
 #include <Engine/Event/ApplicationEvent.hpp>
 #include <Engine/Renderer/Camera.hpp>
-#include <Engine/Renderer/Mesh.hpp>
-#include <Engine/Scene/Components.hpp>
 #include <Engine/Scene/SceneRenderer.hpp>
 #include <Engine/Utils/FrameTimer.hpp>
 
-#include "Engine/Assets/ImageLoader.hpp"
 #include "FreeFlyController.hpp"
+#include "ShowcaseScene.hpp"
+#include "StressTestScene.hpp"
 
 using namespace GEF::Renderer;
+using DebugView = GEF::Scene::SceneRenderer::DebugView;
 
 // Laptops: run on the dedicated GPU, not the integrated one
 GEF_REQUEST_DEDICATED_GPU();
 
 namespace
 {
-    struct Spin
+    enum class SceneId : int
     {
-        float speed = 1.0f;
+        Showcase,
+        StressTest
     };
 
-    void UpdateSpin(libecs::core::registry::Registry& registry, float dt)
-    {
-        registry.GetView<Spin, GEF::Scene::Transform>().Each(
-            [&](libecs::core::Entity, Spin& spin,
-                GEF::Scene::Transform& transform) {
-                transform.rotation =
-                    glm::rotate(transform.rotation, spin.speed * dt,
-                                glm::vec3(0.0f, 1.0f, 0.0f));
-            });
-    }
+    constexpr int DebugViewCount =
+        static_cast<int>(DebugView::LightingOnly) + 1;
 } // namespace
 
 struct Sandbox
 {
-    float time = 0.0f;
-
     libecs::core::registry::Registry registry;
 
     Camera camera;
     FreeFlyController freeFlyController;
     GEF::Events::EventBus::SubscriberID resizeSubscription{};
 
-    Mesh mesh;
-
     std::optional<GEF::Scene::SceneRenderer> renderer;
+    RenderTargetHandle sceneTarget;
 
     GEF::Utils::FrameTimer frameTimer;
 
-    libecs::core::Entity directionalLight;
-    libecs::core::Entity pointLight;
-    float elevation = 45.0f;
-    float azimuth = 30.0f;
+    ShowcaseScene showcase;
+    StressTestScene stressTest;
+    SceneId activeScene = SceneId::Showcase;
 
-    int entityCount = 10000;
-    std::vector<libecs::core::Entity> spawned;
+    bool showUi = true;
+    int capturedView = -1; // -1 when no F10 capture is running
 
-    GEF::Scene::SceneRenderer::Environment environment = {
-        .ambient = { 0.1f, 0.1f, 0.1f }
-    };
-
-    Texture albedoMap;
-    Texture normalMap;
-
-    RenderTargetHandle sceneTarget;
-
-    void SpawnAt(int index)
+    void SpawnActiveScene()
     {
-        int x = index / 250;
-        int z = index % 250;
-
-        const auto bunny = registry.CreateEntity();
-        spawned.emplace_back(bunny);
-
-        registry.EmplaceComponent<GEF::Scene::Transform>(
-            bunny,
-            GEF::Scene::Transform{
-                .position = { (x - 5) * 5.0f, 0.0f, (z - 5) * 5.0f },
-                .scale = glm::vec3(10.0f) });
-
-        const auto material =
-            GEF::Scene::Material{ .albedo = { 1.0f, 1.0f, 1.0f },
-                                  .shininess = 32.0f,
-                                  .specularStrength = 1.0f,
-                                  .albedoMap = albedoMap,
-                                  .normalMap = normalMap };
-        registry.EmplaceComponent<GEF::Scene::MeshRenderer>(
-            bunny,
-            GEF::Scene::MeshRenderer{ .mesh = mesh, .material = material });
-
-        if ((x + z) % 2 == 0)
+        const float aspectRatio = camera.aspectRatio;
+        if (activeScene == SceneId::Showcase)
         {
-            registry.EmplaceComponent<Spin>(bunny, Spin{ .speed = 1.0f });
+            showcase.Spawn(registry);
+            camera = showcase.DefaultCamera();
         }
+        else
+        {
+            stressTest.Spawn(registry);
+            camera = stressTest.DefaultCamera();
+        }
+        camera.aspectRatio = aspectRatio;
     }
 
-    void UpdateEntities()
+    void DespawnActiveScene()
     {
-        const auto target = static_cast<size_t>(entityCount);
-
-        while (spawned.size() < target)
-            SpawnAt(static_cast<int>(spawned.size()));
-
-        while (spawned.size() > target)
-        {
-            registry.DestroyEntity(spawned.back());
-            spawned.pop_back();
-        }
+        if (activeScene == SceneId::Showcase)
+            showcase.Despawn(registry);
+        else
+            stressTest.Despawn(registry);
     }
 
     void OnInit(GEF::EngineContext& ctx)
@@ -143,11 +97,6 @@ struct Sandbox
                 camera.aspectRatio =
                     float(resize.GetWidth()) / float(resize.GetHeight());
             });
-        auto path = GEF::FileSystem::AssetPath("models/cube.obj");
-        if (const auto data = GEF::Assets::LoadObj(path))
-            mesh = UploadMesh(ctx.device, *data);
-        else
-            GEF_ERROR("Failed to load mesh: {}", path.string());
 
         sceneTarget = ctx.device.CreateRenderTarget(
             { .sizeMode = SizeMode::WindowRelative,
@@ -158,64 +107,70 @@ struct Sandbox
 
         renderer.emplace(ctx.device);
 
-        directionalLight = registry.CreateEntity();
-        registry.EmplaceComponent<GEF::Scene::DirectionalLight>(
-            directionalLight, GEF::Scene::DirectionalLight{});
-        registry.EmplaceComponent<GEF::Scene::Transform>(
-            directionalLight, GEF::Scene::Transform{});
+        showcase.Load(ctx.device);
+        stressTest.Load(ctx.device);
 
-        pointLight = registry.CreateEntity();
-        registry.EmplaceComponent<GEF::Scene::PointLight>(
-            pointLight,
-            GEF::Scene::PointLight{ .color = { 1.0f, 0.0f, 0.0f },
-                                    .intensity = 200.0f,
-                                    .range = 200.0f });
-        registry.EmplaceComponent<GEF::Scene::Transform>(
-            pointLight,
-            GEF::Scene::Transform{ .position = { 30.0f, 10.0f, 50.0f } });
+        SpawnActiveScene();
+    }
 
-        path = GEF::FileSystem::AssetPath("textures/MetalPlatesTexture.jpg");
-        if (const auto image = GEF::Assets::LoadImage(path))
-            albedoMap =
-                UploadTexture(ctx.device, *image, TextureFormat::SRGBA8);
-        else
-            GEF_ERROR("Failed to load texture: {}", path.string());
+    // F10: one frame per debug view, same camera, no UI
+    void UpdateDebugCapture(GEF::EngineContext& ctx)
+    {
+        if (capturedView < 0)
+        {
+            if (!ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_F10)
+                || ctx.capture.IsCapturing())
+                return;
 
-        path = GEF::FileSystem::AssetPath("textures/MetalPlatesNormal.jpg");
-        if (const auto image = GEF::Assets::LoadImage(path))
-            normalMap = UploadTexture(ctx.device, *image, TextureFormat::RGBA8);
-        else
-            GEF_ERROR("Failed to load texture: {}", path.string());
+            showUi = false;
+            capturedView = 0;
+            ctx.capture.RequestSequence(DebugViewCount);
+        }
 
-        UpdateEntities();
+        if (capturedView == DebugViewCount)
+        {
+            renderer->SetDebugView(DebugView::None);
+            showUi = true;
+            capturedView = -1;
+            return;
+        }
+
+        renderer->SetDebugView(static_cast<DebugView>(capturedView));
+        capturedView++;
     }
 
     void OnUpdate(GEF::EngineContext& ctx, float dt)
     {
-        time += dt;
         frameTimer.Update(dt);
 
-        UpdateEntities();
+        UpdateDebugCapture(ctx);
 
-        UpdateSpin(registry, dt);
+        if (capturedView < 0)
+        {
+            if (activeScene == SceneId::Showcase)
+                showcase.OnUpdate(registry, dt);
+            else
+                stressTest.OnUpdate(registry, dt);
+        }
+
         freeFlyController.Update(camera, ctx.input, ctx.window, dt);
 
+        if (ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_F1))
+            showUi = !showUi;
         if (ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_F12))
-        {
             ctx.capture.RequestScreenshot();
-        }
         if (ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_F11))
-        {
             ctx.capture.RequestSequence(200);
-        }
     }
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
-        cmd.BeginPass(
-            { .target = sceneTarget, .clearValue = { 0.1f, 0.1f, 0.1f, 1 } });
-        if (renderer)
-            renderer->Render(registry, camera, environment, cmd);
+        cmd.BeginPass({ .target = sceneTarget,
+                        .clearValue = { 0.01f, 0.01f, 0.012f, 1 } });
+        const auto& environment = activeScene == SceneId::Showcase
+            ? showcase.GetEnvironment()
+            : stressTest.GetEnvironment();
+        renderer->Render(registry, camera, environment, cmd);
         cmd.EndPass();
         cmd.BeginPass({ .clearColor = false, .clearDepth = false });
         cmd.Blit(sceneTarget);
@@ -228,19 +183,35 @@ struct Sandbox
             GEF::Events::WindowResizeEvent::GetStaticEventType(),
             resizeSubscription);
 
+        DespawnActiveScene();
         renderer.reset();
 
-        if (mesh.indexCount != 0)
-            DestroyMesh(ctx.device, mesh);
-
-        DestroyTexture(ctx.device, albedoMap);
-        DestroyTexture(ctx.device, normalMap);
+        showcase.Unload(ctx.device);
+        stressTest.Unload(ctx.device);
         ctx.device.DestroyRenderTarget(sceneTarget);
     }
 
     void OnImGui(GEF::EngineContext& ctx)
     {
+        if (!showUi)
+            return;
+
         ImGui::Begin("Stats");
+
+        int scene = static_cast<int>(activeScene);
+        if (ImGui::Combo("Scene", &scene, "Showcase\0Stress test\0"))
+        {
+            DespawnActiveScene();
+            activeScene = static_cast<SceneId>(scene);
+            SpawnActiveScene();
+        }
+        ImGui::TextDisabled("F1: hide UI  F10: capture debug views");
+        ImGui::TextDisabled(
+            "F11: capture sequence (gif), F12: capture screenshot ");
+        ImGui::TextDisabled("Hold right click: enable free fLy");
+
+        ImGui::SeparatorText("Frame");
+        // Frame Infos
         ImGui::Text("GPU: %s", ctx.device.GetAdapterInfo().renderer.c_str());
         ImGui::Text("FPS: %.2f", frameTimer.GetFPS());
         ImGui::Text("Avg Frame Time: %.2f ms",
@@ -264,12 +235,9 @@ struct Sandbox
         if (ImGui::Combo("Debug View", &view,
                          "None\0Albedo\0Normal\0UV\0Tangent\0Normal "
                          "Map\0Lighting Only\0"))
-            renderer->SetDebugView(
-                static_cast<GEF::Scene::SceneRenderer::DebugView>(view));
+            renderer->SetDebugView(static_cast<DebugView>(view));
 
-        // Instancing
-        ImGui::Text("Entities: %zu", spawned.size());
-        ImGui::SliderInt("Entities", &entityCount, 0, 50000);
+        ImGui::SeparatorText("Draws");
         bool instancing = renderer->IsInstancingEnabled();
         if (ImGui::Checkbox("Instancing", &instancing))
             renderer->SetInstancingEnabled(instancing);
@@ -282,34 +250,11 @@ struct Sandbox
                     stats.shaderStorageBufferChanges);
         ImGui::Text("Texture changes: %u", stats.textureChanges);
 
-        // Light
-        ImGui::SliderFloat("Sun Elevation", &elevation, -10.0f, 90.0f);
-        ImGui::SliderFloat("Sun Azimuth", &azimuth, 0.0f, 360.0f);
-        registry.GetComponent<GEF::Scene::Transform>(directionalLight)
-            .rotation =
-            glm::angleAxis(glm::radians(azimuth), glm::vec3(0, 1, 0))
-            * glm::angleAxis(glm::radians(-elevation), glm::vec3(1, 0, 0));
-
-        float intensity =
-            registry
-                .GetComponent<GEF::Scene::DirectionalLight>(directionalLight)
-                .intensity;
-        ImGui::SliderFloat("Light Intensity", &intensity, 0.0f, 20.0f);
-        registry.GetComponent<GEF::Scene::DirectionalLight>(directionalLight)
-            .intensity = intensity;
-        float pointIntensity =
-            registry.GetComponent<GEF::Scene::PointLight>(pointLight).intensity;
-        ImGui::SliderFloat("Point Light Intensity", &pointIntensity, 0.0f,
-                           2000.0f);
-        registry.GetComponent<GEF::Scene::PointLight>(pointLight).intensity =
-            pointIntensity;
-
-        glm::vec3 pointLightColor =
-            registry.GetComponent<GEF::Scene::PointLight>(pointLight).color;
-        ImGui::SliderFloat3("Point Light Color", &pointLightColor.x, 0.0f,
-                            1.0f);
-        registry.GetComponent<GEF::Scene::PointLight>(pointLight).color =
-            pointLightColor;
+        ImGui::SeparatorText("Scene");
+        if (activeScene == SceneId::Showcase)
+            showcase.OnImGui(registry);
+        else
+            stressTest.OnImGui(registry);
 
         ImGui::End();
     }
@@ -319,10 +264,8 @@ int main()
 {
     GEF::Engine engine(
         { .title = "Sandbox",
-          .windowPositionConfig = {
-              .type = GEF::Window::WindowInitialPosition::ABSOLUTE,
-              .absoluteX = 500,
-              .absoluteY = 500 } });
+          .windowPositionConfig = { .type = GEF::Window::WindowInitialPosition::
+                                        CENTER_PRIMARY_SCREEN } });
     Sandbox game;
     const int status = engine.Run(game);
 
