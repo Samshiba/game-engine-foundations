@@ -5,7 +5,6 @@
 
 #include <optional>
 
-#include <glm/glm.hpp>
 #include <imgui.h>
 #include <libecs/core/registry/Registry.hpp>
 
