@@ -3,6 +3,9 @@
 add_executable(Application
         "src/Sandbox.cpp"
         "src/FreeFlyController.cpp"
+        "src/Model.cpp"
+        "src/ShowcaseScene.cpp"
+        "src/StressTestScene.cpp"
 )
 
 target_link_libraries(Application PRIVATE GEF::Engine)
