@@ -23,9 +23,16 @@ All notable changes to GEF are listed here. Versions follow [Semantic Versioning
 - Passes (`CommandList::BeginPass`, `EndPass`, `Blit`): each pass draws into a render target or
   the back buffer, with its own clear. The pass is the highest field of the sort key.
 - `GraphicsDevice::SetBackBufferSize`, called by the engine at startup and on resize.
+- Demo: a Showcase scene (Poly Haven models and an ambientCG floor, three colored point lights)
+  next to the Stress test scene, selected in the overlay. F1 hides the overlay, F10 saves one
+  frame per debug view from the same camera.
+- `scripts/make-gif` (F11 capture to GIF) and `scripts/make-debug-grid` (F10 capture to a 2x2
+  grid of debug views), in bash (`.sh`) and PowerShell (`.ps1`).
 
 ### Changed
 
+- clang-cl gets the same strict warnings as MSVC (`/W4 /permissive- /WX`), plus `-Wpedantic` and
+  the shadowing and virtual checks used on GCC and Clang.
 - `SceneRenderer(GraphicsDevice&)` creates and owns the lit shader, now embedded in the library at
   build time (`Engine/embed/shaders`, `cmake/Embed.cmake`). Games no longer ship `lit.vert` and
   `lit.frag`. The constructor taking a `ShaderHandle` is still there for custom shaders.

@@ -15,7 +15,12 @@ demo draws up to 50,000 lit, animated objects in a single draw call.
 I am building GEF to understand how a renderer is put together, from GPU resource ownership to
 batching, and to measure each choice instead of guessing.
 
-![50,000 instanced cubes with the stats overlay](docs/media/demo.gif)
+![Showcase scene: a marble bust, a crate, a barrel and a cat on paving stones, lit by orange, blue and magenta point lights](docs/media/showcase.jpg)
+
+The same frame through four debug views (F10): the albedo maps, the normal maps in world space,
+the UVs, and the lighting alone.
+
+![Albedo, normal map, UV and lighting only debug views of the showcase scene](docs/media/debug-views.png)
 
 ## Highlights
 
@@ -43,6 +48,8 @@ batching, and to measure each choice instead of guessing.
 Measured with `GEF_Bench` on an RTX 3060 Laptop GPU, Release build, 1280×720, VSync off, 10 s per
 scenario after a 2 s warm-up. The full table and the method are in
 [docs/benchmark-results.md](docs/benchmark-results.md).
+
+![50,000 instanced cubes with the stats overlay](docs/media/demo.gif)
 
 | Scene                          | Entities | Instancing | Draw calls | Mean frame |      p99 | Submit CPU | Submit GPU |
 |--------------------------------|---------:|:----------:|-----------:|-----------:|---------:|-----------:|-----------:|
@@ -109,14 +116,24 @@ the executable, so it can be started from any directory.
 | Left Shift              | move faster                                           |
 | F12                     | save a screenshot in `bin/screenshots/`               |
 | F11                     | save 200 frames at a fixed 30 fps step, to make a GIF |
+| F10                     | save one frame per debug view, from the same camera   |
+| F1                      | hide or show the UI                                   |
 
-The ImGui window sets the number of entities (up to 50,000), toggles instancing and VSync, moves
-the light, and shows the frame times and the draw and bind counters.
+The ImGui window switches between two scenes: **Showcase**, a few textured models lit by colored
+point lights, and **Stress test**, up to 50,000 animated cubes. It also toggles instancing, VSync
+and the debug views, edits the lights, and shows the frame times and the draw and bind counters.
 
-To turn a frame sequence into a GIF:
+Two scripts turn the captures into README images. They need ffmpeg, and come in bash and
+PowerShell versions with the same arguments:
 
 ```bash
-ffmpeg -framerate 30 -i screenshots/<timestamp>/frame_%04d.png -vf "fps=30,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" demo.gif
+scripts/make-gif.sh bin/screenshots/<timestamp> demo.gif           # F11 sequence -> GIF
+scripts/make-debug-grid.sh bin/screenshots/<timestamp> grid.png    # F10 capture -> 2x2 grid
+```
+
+```powershell
+scripts\make-gif.ps1 bin\screenshots\<timestamp> demo.gif
+scripts\make-debug-grid.ps1 bin\screenshots\<timestamp> grid.png
 ```
 
 ### Use GEF in your project
@@ -162,7 +179,8 @@ int main()
 `OnInit`, `OnImGui` and `OnShutdown` are optional. The engine looks for assets in an `assets/`
 directory next to the executable (`GEF::FileSystem::AssetPath`). `SceneRenderer` carries its own lit
 shader, embedded in the library, so `SceneRenderer renderer(ctx.device);` is all it needs.
-[`Application/src/Sandbox.cpp`](Application/src/Sandbox.cpp) is the complete demo and the best example of the API.
+[`Application/src/`](Application/src) is the complete demo and the best example of the API:
+`Sandbox.cpp` owns the engine services, each scene spawns its own entities.
 
 ### Build options
 
@@ -223,26 +241,26 @@ Engine/
   include/Engine/   public headers: Core, Event, Renderer, Scene, Assets, UI, Utils
   src/Engine/       implementation; Platform/ holds the GLFW, OpenGL and ImGui code
   embed/            files compiled into the library
-Application/        the demo and its assets (OBJ models)
+Application/        the demo (two scenes) and its assets (OBJ models, textures)
 bench/              GEF_Bench
 tests/              tests, organized like Engine/
 docs/               architecture, benchmark results, media
+scripts/            GIF and debug view grid from the captures (ffmpeg)
 ```
 
 ## Limitations
 
-GEF v0.1.0 is a base to build on, not a complete renderer:
+GEF is a base to build on, not a complete renderer:
 
 - OpenGL 4.5 only, and a single window.
-- One directional light, no shadows, no textures, no anti-aliasing or HDR.
-- A single render pass, so no post-processing.
+- No shadows yet, no anti-aliasing, no HDR render targets or post-processing (the lit shader
+  tone maps its own output).
+- Passes are ordered by hand: no render graph yet.
 - No frustum culling or level of detail: every entity is drawn every frame.
-- Every instance is uploaded to the GPU every frame, even when it did not move.
-- Buffer updates are not recorded in the command list: a buffer can only hold one value per
-  frame.
+- Every instance is uploaded every frame, even when it did not move.
+- Buffer updates are not recorded in the command list.
 - Commands are recorded on one thread.
-- OBJ is the only model format, materials are a color and two specular values, and shaders are
-  only loaded at startup.
+- OBJ only, Blinn-Phong materials (no PBR), shaders compiled at startup (no hot reload).
 
 ## To do
 
@@ -276,14 +294,38 @@ Short-term work, before the next features:
 
 ## Credits
 
+### References
+
+- [LearnOpenGL](https://learnopengl.com/), Joey de Vries.
+- *Real-Time Rendering*, 4th edition, Eric Haines, Tomas Akenine-Möller, Naty Hoffman.
+- [*Game Programming Patterns*](https://gameprogrammingpatterns.com/), Robert Nystrom.
+- *Game Engine Architecture*, Jason Gregory.
+- [Hazel](https://github.com/TheCherno/Hazel) and its video series, The Cherno: the starting point
+  of the project. GEF then moved away from its design.
+
+### Assets
+
 - Stanford bunny: [Stanford 3D Scanning Repository](https://graphics.stanford.edu/data/3Dscanrep/),
   Stanford University Computer Graphics Laboratory. Converted to OBJ with MeshLab.
-- Libraries: [GLFW](https://www.glfw.org/), [glad](https://github.com/Dav1dde/glad),
-  [glm](https://github.com/g-truc/glm), [spdlog](https://github.com/gabime/spdlog),
-  [Dear ImGui](https://github.com/ocornut/imgui),
-  [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader),
-  [stb_image](https://github.com/nothings/stb),
-  [doctest](https://github.com/doctest/doctest).
+- Textures from [ambientCG](https://ambientcg.com/), CC0
+  1.0: [Metal Plates 013](https://ambientcg.com/view?id=MetalPlates013) and
+  [Paving Stones 138](https://ambientcg.com/view?id=PavingStones138).
+- Models from [Poly Haven](https://polyhaven.com/), CC0 1.0, converted to OBJ with Blender:
+  [Marble Bust 01](https://polyhaven.com/a/marble_bust_01),
+  [Concrete Cat Statue](https://polyhaven.com/a/concrete_cat_statue),
+  [Wine Barrel 01](https://polyhaven.com/a/wine_barrel_01),
+  [Wooden Crate 02](https://polyhaven.com/a/wooden_crate_02).
+
+### Libraries
+
+- [GLFW](https://www.glfw.org/)
+- [glad](https://github.com/Dav1dde/glad)
+- [glm](https://github.com/g-truc/glm)
+- [spdlog](https://github.com/gabime/spdlog)
+- [Dear ImGui](https://github.com/ocornut/imgui)
+- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader)
+- [stb_image](https://github.com/nothings/stb)
+- [doctest](https://github.com/doctest/doctest)
 
 ## License
 
