@@ -51,7 +51,10 @@ function(gef_set_warnings target)
             /W4 /permissive- /Zc:preprocessor /utf-8
             $<$<BOOL:${GEF_WARNINGS_AS_ERRORS}>:/WX>
             >
-            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:
+            $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>>:
+            /clang:-Wshadow /clang:-Wnon-virtual-dtor /clang:-Woverloaded-virtual
+            >
+            $<$<CXX_COMPILER_FRONTEND_VARIANT:GNU>:
             -Wall -Wextra -Wpedantic
             -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual
             $<$<BOOL:${GEF_WARNINGS_AS_ERRORS}>:-Werror>
