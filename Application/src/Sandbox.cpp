@@ -166,8 +166,8 @@ struct Sandbox
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
-        cmd.BeginPass(
-            { .target = sceneTarget, .clearValue = { 0.1f, 0.1f, 0.1f, 1 } });
+        cmd.BeginPass({ .target = sceneTarget,
+                        .clearValue = { 0.01f, 0.01f, 0.012f, 1 } });
         const auto& environment = activeScene == SceneId::Showcase
             ? showcase.GetEnvironment()
             : stressTest.GetEnvironment();

@@ -53,9 +53,9 @@ private:
     libecs::core::Entity sun_{};
     std::array<libecs::core::Entity, 3> pointLights_{};
 
-    bool animateLights_ = true;
+    bool animateLights_ = false;
 
     GEF::Scene::SceneRenderer::Environment environment_{
-        .ambient = { 0.02f, 0.02f, 0.025f }
+        .ambient = { 0.03f, 0.03f, 0.04f }
     };
 };

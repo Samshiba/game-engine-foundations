@@ -70,7 +70,7 @@ libecs::core::Entity ShowcaseScene::SpawnPointLight(Registry& registry,
     registry.EmplaceComponent<GEF::Scene::PointLight>(
         entity,
         GEF::Scene::PointLight{
-            .color = color, .intensity = intensity, .range = 3.5f });
+            .color = color, .intensity = intensity, .range = 3.0f });
     registry.EmplaceComponent<GEF::Scene::Transform>(
         entity, GEF::Scene::Transform{ .position = position });
     return entity;
@@ -78,29 +78,32 @@ libecs::core::Entity ShowcaseScene::SpawnPointLight(Registry& registry,
 
 void ShowcaseScene::Spawn(Registry& registry)
 {
-    SpawnProp(registry, floor_, { 0.0f, 0.0f, 0.0f }, 0.0f, 24.0f, 0.25f);
+    const auto floor =
+        SpawnProp(registry, floor_, { 0.0f, 0.0f, 0.0f }, 0.0f, 24.0f, 0.1f);
+    registry.GetComponent<GEF::Scene::MeshRenderer>(floor).material.albedo =
+        glm::vec3(0.45f);
     SpawnProp(registry, crate_, { 0.0f, 0.0f, 0.0f }, 90.0f, 16.0f, 0.15f);
     SpawnProp(registry, bust_, { 0.0f, 0.455f, 0.0f }, 0.0f, 64.0f, 0.6f);
-    SpawnProp(registry, barrel_, { -0.95f, 0.0f, -0.35f }, 20.0f, 32.0f, 0.3f);
-    SpawnProp(registry, cat_, { 0.6f, 0.0f, 0.55f }, -30.0f, 16.0f, 0.1f);
+    SpawnProp(registry, barrel_, { -0.75f, 0.0f, -0.3f }, 20.0f, 32.0f, 0.3f);
+    SpawnProp(registry, cat_, { 0.7f, 0.0f, 0.2f }, -30.0f, 16.0f, 0.1f);
 
     sun_ = registry.CreateEntity();
     registry.EmplaceComponent<GEF::Scene::DirectionalLight>(
         sun_,
         GEF::Scene::DirectionalLight{ .color = { 0.9f, 0.95f, 1.0f },
-                                      .intensity = 0.05f });
+                                      .intensity = 0.02f });
     registry.EmplaceComponent<GEF::Scene::Transform>(
         sun_,
         GEF::Scene::Transform{
             .rotation = glm::angleAxis(glm::radians(-60.0f),
                                        glm::vec3(1.0f, 0.0f, 0.0f)) });
 
-    pointLights_[0] = SpawnPointLight(registry, { -1.1f, 0.4f, 0.6f },
-                                      { 1.0f, 0.45f, 0.1f }, 5.0f);
-    pointLights_[1] = SpawnPointLight(registry, { 1.2f, 0.5f, 0.2f },
+    pointLights_[0] = SpawnPointLight(registry, { -1.0f, 0.7f, 0.5f },
+                                      { 1.0f, 0.45f, 0.1f }, 6.0f);
+    pointLights_[1] = SpawnPointLight(registry, { 1.0f, 0.8f, 0.05f },
                                       { 0.15f, 0.4f, 1.0f }, 6.0f);
-    pointLights_[2] = SpawnPointLight(registry, { 0.0f, 1.1f, -1.0f },
-                                      { 1.0f, 0.15f, 0.7f }, 6.0f);
+    pointLights_[2] = SpawnPointLight(registry, { 0.25f, 1.2f, -0.8f },
+                                      { 1.0f, 0.15f, 0.7f }, 5.0f);
 }
 
 void ShowcaseScene::Despawn(Registry& registry)
@@ -151,9 +154,9 @@ void ShowcaseScene::OnImGui(Registry& registry)
 
 GEF::Renderer::Camera ShowcaseScene::DefaultCamera() const
 {
-    return GEF::Renderer::Camera{ .position = { 0.0f, 0.95f, 1.75f },
-                                  .yaw = -90.0f,
-                                  .pitch = -14.0f };
+    return GEF::Renderer::Camera{ .position = { 0.05f, 0.85f, 1.4f },
+                                  .yaw = -92.0f,
+                                  .pitch = -11.0f };
 }
 
 const GEF::Scene::SceneRenderer::Environment&
