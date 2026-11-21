@@ -20,6 +20,6 @@ namespace GEF::Renderer
     using Texture = TextureHandle; // GPU side
 
     Texture UploadTexture(GraphicsDevice& device, const ImageData& data,
-                          TextureFormat format);
+                          TextureFormat format, TextureWrap wrap);
     void DestroyTexture(GraphicsDevice& device, const Texture& texture);
 } // namespace GEF::Renderer

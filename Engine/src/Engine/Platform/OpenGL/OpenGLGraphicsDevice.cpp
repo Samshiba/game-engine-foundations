@@ -362,6 +362,7 @@ namespace GEF::Platform
         GLenum internalFormat = 0;
         GLenum uploadFormat = 0;
         GLenum uploadType = 0;
+        GLint wrap = 0;
 
         switch (desc.format)
         {
@@ -385,6 +386,22 @@ namespace GEF::Platform
             return Renderer::TextureHandle{};
         }
 
+        switch (desc.wrap)
+        {
+        case Renderer::TextureWrap::ClampToEdge:
+            wrap = GL_CLAMP_TO_EDGE;
+            break;
+        case Renderer::TextureWrap::ClampToBorder:
+            wrap = GL_CLAMP_TO_BORDER;
+            break;
+        case Renderer::TextureWrap::Repeat:
+            wrap = GL_REPEAT;
+            break;
+        case Renderer::TextureWrap::MirroredRepeat:
+            wrap = GL_MIRRORED_REPEAT;
+            break;
+        }
+
         bool useMipmaps = desc.generateMipmaps
             && !(desc.format == Renderer::TextureFormat::Depth32F);
         int levels =
@@ -394,8 +411,9 @@ namespace GEF::Platform
                            .width = desc.width,
                            .height = desc.height,
                            .internalFormat = internalFormat,
-                           .levels = levels };
-        if (!AllocateTextureStorage(texture, false))
+                           .levels = levels,
+                           .wrapMode = wrap };
+        if (!AllocateTextureStorage(texture))
         {
             return Renderer::TextureHandle{};
         }
@@ -449,6 +467,7 @@ namespace GEF::Platform
             texDesc.height = target.height;
             texDesc.format = desc.attachments[i];
             texDesc.generateMipmaps = false;
+            texDesc.wrap = Renderer::TextureWrap::ClampToEdge;
 
             Renderer::TextureHandle texHandle = CreateTexture(texDesc);
             if (!texHandle.IsValid())
@@ -457,11 +476,6 @@ namespace GEF::Platform
                 DestroyRenderTargetResources(target);
                 return Renderer::RenderTargetHandle{};
             }
-
-            glTextureParameteri(GetTexture(texHandle)->id, GL_TEXTURE_WRAP_S,
-                                GL_CLAMP_TO_EDGE);
-            glTextureParameteri(GetTexture(texHandle)->id, GL_TEXTURE_WRAP_T,
-                                GL_CLAMP_TO_EDGE);
 
             target.attachments[i] = texHandle;
 
@@ -491,6 +505,7 @@ namespace GEF::Platform
             depthTexDesc.width = target.width;
             depthTexDesc.height = target.height;
             depthTexDesc.format = desc.depthStencil;
+            depthTexDesc.wrap = Renderer::TextureWrap::ClampToEdge;
 
             Renderer::TextureHandle depthTexHandle =
                 CreateTexture(depthTexDesc);
@@ -501,11 +516,6 @@ namespace GEF::Platform
                 DestroyRenderTargetResources(target);
                 return Renderer::RenderTargetHandle{};
             }
-
-            glTextureParameteri(GetTexture(depthTexHandle)->id,
-                                GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-            glTextureParameteri(GetTexture(depthTexHandle)->id,
-                                GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
             target.depthStencil = depthTexHandle;
             glNamedFramebufferTexture(target.id, GL_DEPTH_ATTACHMENT,
@@ -893,7 +903,7 @@ namespace GEF::Platform
                     texture->width = size.x;
                     texture->height = size.y;
 
-                    if (!AllocateTextureStorage(*texture, true))
+                    if (!AllocateTextureStorage(*texture))
                     {
                         GEF_CORE_ASSERT(
                             false, "Failed to allocate texture storage buffer");
@@ -914,7 +924,7 @@ namespace GEF::Platform
                 texture->width = size.x;
                 texture->height = size.y;
 
-                if (!AllocateTextureStorage(*texture, true))
+                if (!AllocateTextureStorage(*texture))
                 {
                     GEF_CORE_ASSERT(
                         false, "Failed to allocate texture storage buffer");
@@ -958,8 +968,7 @@ namespace GEF::Platform
         }
     }
 
-    bool OpenGLGraphicsDevice::AllocateTextureStorage(GLTexture& texture,
-                                                      bool clampToEdge)
+    bool OpenGLGraphicsDevice::AllocateTextureStorage(GLTexture& texture)
     {
         GLuint id = 0;
         glCreateTextures(GL_TEXTURE_2D, 1, &id);
@@ -979,12 +988,11 @@ namespace GEF::Platform
 
         bool useMipmaps = texture.levels > 1;
         GLint minFilter = useMipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR;
-        GLint wrapMode = clampToEdge ? GL_CLAMP_TO_EDGE : GL_REPEAT;
 
         glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, minFilter);
         glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTextureParameteri(id, GL_TEXTURE_WRAP_S, wrapMode);
-        glTextureParameteri(id, GL_TEXTURE_WRAP_T, wrapMode);
+        glTextureParameteri(id, GL_TEXTURE_WRAP_S, texture.wrapMode);
+        glTextureParameteri(id, GL_TEXTURE_WRAP_T, texture.wrapMode);
 
         texture.id = id;
         return true;

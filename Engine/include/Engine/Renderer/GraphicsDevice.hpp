@@ -93,12 +93,21 @@ namespace GEF::Renderer
         Depth32F
     };
 
+    enum class TextureWrap : uint8_t
+    {
+        ClampToEdge,
+        ClampToBorder,
+        Repeat,
+        MirroredRepeat,
+    };
+
     struct TextureDesc
     {
         uint32_t width = 0;
         uint32_t height = 0;
         bool generateMipmaps = true;
         TextureFormat format = TextureFormat::RGBA8;
+        TextureWrap wrap = TextureWrap::ClampToEdge;
         const void* data = nullptr;
     };
 

@@ -7,11 +7,13 @@
 
 GEF::Renderer::Texture GEF::Renderer::UploadTexture(GraphicsDevice& device,
                                                     const ImageData& data,
-                                                    TextureFormat format)
+                                                    TextureFormat format,
+                                                    TextureWrap wrap)
 {
     return device.CreateTexture({ .width = data.width,
                                   .height = data.height,
                                   .format = format,
+                                  .wrap = wrap,
                                   .data = data.pixels.data() });
 }
 

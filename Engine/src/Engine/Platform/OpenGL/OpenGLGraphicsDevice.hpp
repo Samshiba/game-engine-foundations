@@ -45,6 +45,7 @@ namespace GEF::Platform
         uint32_t height;
         GLenum internalFormat;
         GLint levels;
+        GLint wrapMode;
     };
 
     struct GLRenderTarget
@@ -166,7 +167,7 @@ namespace GEF::Platform
                                   uint32_t baseInstance);
 
         void DestroyRenderTargetResources(GLRenderTarget& target);
-        bool AllocateTextureStorage(GLTexture& texture, bool clampToEdge);
+        bool AllocateTextureStorage(GLTexture& texture);
         glm::uvec2 ComputeSize(const Renderer::RenderTargetDesc& desc) const;
 
     private:
