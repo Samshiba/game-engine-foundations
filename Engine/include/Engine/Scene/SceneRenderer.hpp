@@ -37,6 +37,13 @@ namespace GEF::Scene
             LightingOnly,
         };
 
+        struct ShadowSettings
+        {
+            uint32_t resolution = 2048;
+            float bias = 0.05f;
+            float distance = 50.0f;
+        };
+
     private:
         struct Batch
         {
@@ -72,22 +79,21 @@ namespace GEF::Scene
 
     public:
         SceneRenderer(Renderer::GraphicsDevice& device,
+                      ShadowSettings shadowSettings,
                       Renderer::ShaderHandle litShader);
-        explicit SceneRenderer(Renderer::GraphicsDevice& device);
+        explicit SceneRenderer(Renderer::GraphicsDevice& device,
+                               ShadowSettings shadowSettings);
         ~SceneRenderer();
 
         SceneRenderer(const SceneRenderer&) = delete;
         SceneRenderer& operator=(const SceneRenderer&) = delete;
 
-        void Render(const libecs::core::registry::Registry& registry,
-                    const Renderer::Camera& camera,
-                    const Environment& environment, Renderer::CommandList& cmd);
+        void Prepare(const libecs::core::registry::Registry& registry,
+                     const Renderer::Camera& camera,
+                     const Environment& environment);
 
-        void RenderShadow(const libecs::core::registry::Registry& registry,
-                          const Renderer::Camera& camera,
-                          const Environment& environment,
-                          Renderer::CommandList& cmd);
-        void SetShadowMap(Renderer::TextureHandle handle);
+        void Render(Renderer::CommandList& cmd);
+        void RenderShadow(Renderer::CommandList& cmd);
 
         void SetInstancingEnabled(bool enabled);
         [[nodiscard]] bool IsInstancingEnabled() const;
@@ -133,8 +139,10 @@ namespace GEF::Scene
         Renderer::TextureHandle defaultAlbedo_;
         Renderer::TextureHandle defaultNormal_;
 
+        ShadowSettings shadowSettings_;
+        Renderer::ShaderHandle shadowShader_;
         Renderer::PipelineHandle shadowPipeline_;
-        Renderer::TextureHandle shadowDepth_;
+        Renderer::RenderTargetHandle shadowTarget_;
     };
 } // namespace GEF::Scene
 
