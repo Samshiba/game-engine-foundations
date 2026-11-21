@@ -46,6 +46,7 @@ namespace GEF::Platform
         GLenum internalFormat;
         GLint levels;
         GLint wrapMode;
+        std::array<float, 4> borderColor = { 0.0f, 0.0f, 0.0f, 0.0f };
     };
 
     struct GLRenderTarget

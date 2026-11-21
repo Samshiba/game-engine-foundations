@@ -99,6 +99,7 @@ namespace GEF::Renderer
         ClampToBorder,
         Repeat,
         MirroredRepeat,
+        MirrorClampToEdge,
     };
 
     struct TextureDesc
@@ -108,6 +109,7 @@ namespace GEF::Renderer
         bool generateMipmaps = true;
         TextureFormat format = TextureFormat::RGBA8;
         TextureWrap wrap = TextureWrap::ClampToEdge;
+        std::array<float, 4> borderColor = { 0.0f, 0.0f, 0.0f, 0.0f };
         const void* data = nullptr;
     };
 

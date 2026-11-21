@@ -362,7 +362,7 @@ namespace GEF::Platform
         GLenum internalFormat = 0;
         GLenum uploadFormat = 0;
         GLenum uploadType = 0;
-        GLint wrap = 0;
+        GLint wrap = GL_REPEAT;
 
         switch (desc.format)
         {
@@ -394,11 +394,14 @@ namespace GEF::Platform
         case Renderer::TextureWrap::ClampToBorder:
             wrap = GL_CLAMP_TO_BORDER;
             break;
-        case Renderer::TextureWrap::Repeat:
-            wrap = GL_REPEAT;
-            break;
         case Renderer::TextureWrap::MirroredRepeat:
             wrap = GL_MIRRORED_REPEAT;
+            break;
+        case Renderer::TextureWrap::MirrorClampToEdge:
+            wrap = GL_MIRROR_CLAMP_TO_EDGE;
+            break;
+        case Renderer::TextureWrap::Repeat:
+            wrap = GL_REPEAT;
             break;
         }
 
@@ -412,7 +415,8 @@ namespace GEF::Platform
                            .height = desc.height,
                            .internalFormat = internalFormat,
                            .levels = levels,
-                           .wrapMode = wrap };
+                           .wrapMode = wrap,
+                           .borderColor = desc.borderColor };
         if (!AllocateTextureStorage(texture))
         {
             return Renderer::TextureHandle{};
@@ -505,7 +509,8 @@ namespace GEF::Platform
             depthTexDesc.width = target.width;
             depthTexDesc.height = target.height;
             depthTexDesc.format = desc.depthStencil;
-            depthTexDesc.wrap = Renderer::TextureWrap::ClampToEdge;
+            depthTexDesc.wrap = Renderer::TextureWrap::ClampToBorder;
+            depthTexDesc.borderColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 
             Renderer::TextureHandle depthTexHandle =
                 CreateTexture(depthTexDesc);
@@ -993,6 +998,9 @@ namespace GEF::Platform
         glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTextureParameteri(id, GL_TEXTURE_WRAP_S, texture.wrapMode);
         glTextureParameteri(id, GL_TEXTURE_WRAP_T, texture.wrapMode);
+
+        glTextureParameterfv(id, GL_TEXTURE_BORDER_COLOR,
+                             texture.borderColor.data());
 
         texture.id = id;
         return true;
