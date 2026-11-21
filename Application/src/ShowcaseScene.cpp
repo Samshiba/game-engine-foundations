@@ -61,6 +61,15 @@ libecs::core::Entity ShowcaseScene::SpawnProp(Registry& registry,
     return entity;
 }
 
+glm::quat ShowcaseScene::SunRotation() const
+{
+    // Lights shine along their local -Z: pitch it down first, then turn it
+    return glm::angleAxis(glm::radians(sunYawDegrees_),
+                          glm::vec3(0.0f, 1.0f, 0.0f))
+        * glm::angleAxis(glm::radians(sunPitchDegrees_),
+                         glm::vec3(1.0f, 0.0f, 0.0f));
+}
+
 libecs::core::Entity ShowcaseScene::SpawnPointLight(Registry& registry,
                                                     glm::vec3 position,
                                                     glm::vec3 color,
@@ -90,13 +99,10 @@ void ShowcaseScene::Spawn(Registry& registry)
     sun_ = registry.CreateEntity();
     registry.EmplaceComponent<GEF::Scene::DirectionalLight>(
         sun_,
-        GEF::Scene::DirectionalLight{ .color = { 0.9f, 0.95f, 1.0f },
-                                      .intensity = 0.02f });
+        GEF::Scene::DirectionalLight{ .color = { 1.0f, 0.9f, 0.75f },
+                                      .intensity = 1.5f });
     registry.EmplaceComponent<GEF::Scene::Transform>(
-        sun_,
-        GEF::Scene::Transform{
-            .rotation = glm::angleAxis(glm::radians(-60.0f),
-                                       glm::vec3(1.0f, 0.0f, 0.0f)) });
+        sun_, GEF::Scene::Transform{ .rotation = SunRotation() });
 
     pointLights_[0] = SpawnPointLight(registry, { -1.0f, 0.7f, 0.5f },
                                       { 1.0f, 0.45f, 0.1f }, 6.0f);
@@ -138,6 +144,15 @@ void ShowcaseScene::OnImGui(Registry& registry)
 
     auto& sun = registry.GetComponent<GEF::Scene::DirectionalLight>(sun_);
     ImGui::SliderFloat("Sun Intensity", &sun.intensity, 0.0f, 5.0f);
+    const bool pitchChanged =
+        ImGui::SliderFloat("Sun Pitch", &sunPitchDegrees_, -89.0f, -5.0f);
+    const bool yawChanged =
+        ImGui::SliderFloat("Sun Yaw", &sunYawDegrees_, -180.0f, 180.0f);
+    if (pitchChanged || yawChanged)
+    {
+        registry.GetComponent<GEF::Scene::Transform>(sun_).rotation =
+            SunRotation();
+    }
 
     for (size_t i = 0; i < pointLights_.size(); ++i)
     {

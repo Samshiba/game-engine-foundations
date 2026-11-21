@@ -159,7 +159,7 @@ void main()
 
     vec3 p = v_PosLightSpace.xyz / v_PosLightSpace.w;   // clip → NDC [-1, 1]
     p = p * 0.5 + 0.5;
-    float shadow = (p.z > 1.0) ? 0.0 : (p.z > texture(u_ShadowMap, p.xy).r ? 1.0 : 0.0);
+    float shadow = (p.z > 1.0) ? 0.0 : (p.z - 0.005 > texture(u_ShadowMap, p.xy).r ? 1.0 : 0.0);
     vec3 color = u_Ambient.rgb * albedo + (1.0 - shadow) * lighting;
 
     color = color / (color + 1.0); // tonemap
