@@ -170,6 +170,12 @@ struct Sandbox
             ctx.capture.RequestScreenshot();
         if (ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_F11))
             ctx.capture.RequestSequence(200);
+        if (ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_R))
+        {
+            activeScene == SceneId::Showcase
+                ? camera = showcase.DefaultCamera()
+                : camera = stressTest.DefaultCamera();
+        }
     }
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
@@ -225,6 +231,7 @@ struct Sandbox
         ImGui::TextDisabled(
             "F11: capture sequence (gif), F12: capture screenshot ");
         ImGui::TextDisabled("Hold right click: enable free fLy");
+        ImGui::TextDisabled("R: reset camera");
 
         ImGui::SeparatorText("Frame");
         // Frame Infos

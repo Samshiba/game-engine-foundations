@@ -142,7 +142,9 @@ void StressTestScene::OnImGui(Registry& registry)
 
 GEF::Renderer::Camera StressTestScene::DefaultCamera() const
 {
-    return GEF::Renderer::Camera{};
+    return GEF::Renderer::Camera{ .position = { -20.0f, 20.0f, -20.0f },
+                                  .yaw = 45.0f,
+                                  .pitch = -10.0f };
 }
 
 const GEF::Scene::SceneRenderer::Environment&
