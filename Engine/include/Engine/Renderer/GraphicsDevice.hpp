@@ -188,6 +188,8 @@ namespace GEF::Renderer
         [[nodiscard]] virtual RenderTargetHandle
         CreateRenderTarget(const RenderTargetDesc& desc) = 0;
         virtual void DestroyRenderTarget(RenderTargetHandle handle) = 0;
+        [[nodiscard]] virtual TextureHandle
+        GetRenderTargetDepth(RenderTargetHandle handle) = 0;
 
         // Infos
         [[nodiscard]] virtual const AdapterInfo& GetAdapterInfo() const = 0;

@@ -83,6 +83,12 @@ namespace GEF::Scene
                     const Renderer::Camera& camera,
                     const Environment& environment, Renderer::CommandList& cmd);
 
+        void RenderShadow(const libecs::core::registry::Registry& registry,
+                          const Renderer::Camera& camera,
+                          const Environment& environment,
+                          Renderer::CommandList& cmd);
+        void SetShadowMap(Renderer::TextureHandle handle);
+
         void SetInstancingEnabled(bool enabled);
         [[nodiscard]] bool IsInstancingEnabled() const;
 
@@ -126,6 +132,9 @@ namespace GEF::Scene
 
         Renderer::TextureHandle defaultAlbedo_;
         Renderer::TextureHandle defaultNormal_;
+
+        Renderer::PipelineHandle shadowPipeline_;
+        Renderer::TextureHandle shadowDepth_;
     };
 } // namespace GEF::Scene
 

@@ -42,8 +42,9 @@ namespace GEF::Renderer::Layout
         glm::mat4 viewProjection;
         glm::vec4 cameraPosition; // xyz, w unused
         glm::uvec4 flags; // x = debug view mode, yzw unused
+        glm::mat4 lightViewProjection;
     };
-    static_assert(sizeof(FrameUniforms) == 96);
+    static_assert(sizeof(FrameUniforms) == 160);
 
     struct EnvironmentUniforms // binding 1: once per frame
     {
@@ -105,6 +106,7 @@ namespace GEF::Renderer::Layout
     {
         constexpr uint32_t Albedo = 0;
         constexpr uint32_t Normal = 1;
+        constexpr uint32_t ShadowMap = 2;
         // constexpr uint32_t Roughness = 2;
         // constexpr uint32_t Metallic = 3;
         // constexpr uint32_t Emissive = 4;

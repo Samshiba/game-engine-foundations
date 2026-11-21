@@ -17,6 +17,7 @@ layout (std140, binding = 0) uniform Frame
     mat4 u_ViewProjection;
     vec4 u_CameraPosition;
     uvec4 u_Flags;
+    mat4 u_LightViewProjection;
 };
 
 out vec3 v_WorldPos;
@@ -24,6 +25,7 @@ out vec2 v_UV;
 out mat3 v_TBN;
 flat out vec3 v_Albedo;
 flat out vec2 v_Params;
+out vec4 v_PosLightSpace;
 
 void main()
 {
@@ -37,5 +39,6 @@ void main()
     v_UV = a_UV;
     v_Albedo = a_Albedo;
     v_Params = a_Params;
+    v_PosLightSpace = u_LightViewProjection * vec4(v_WorldPos, 1.0);
     gl_Position = u_ViewProjection * a_Model * vec4(a_Position, 1.0);
 }

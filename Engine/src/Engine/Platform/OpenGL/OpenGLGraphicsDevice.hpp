@@ -121,6 +121,8 @@ namespace GEF::Platform
         [[nodiscard]] Renderer::RenderTargetHandle
         CreateRenderTarget(const Renderer::RenderTargetDesc& desc) override;
         void DestroyRenderTarget(Renderer::RenderTargetHandle handle) override;
+        [[nodiscard]] Renderer::TextureHandle
+        GetRenderTargetDepth(Renderer::RenderTargetHandle handle) override;
 
         // Backend-side lookup (command list execution, tests), nullptr if stale
         [[nodiscard]] const GLBuffer*

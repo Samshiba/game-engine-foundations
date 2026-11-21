@@ -118,6 +118,8 @@ set(ENGINE_HEADERS
 include(${PROJECT_SOURCE_DIR}/cmake/Embed.cmake)
 gef_embed_text(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/lit.vert.glsl" LitVertexSource)
 gef_embed_text(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/lit.frag.glsl" LitFragmentSource)
+gef_embed_text(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/shadow.vert.glsl" ShadowVertexSource)
+gef_embed_text(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/shadow.frag.glsl" ShadowFragmentSource)
 
 target_sources(GEF_Engine
         PRIVATE

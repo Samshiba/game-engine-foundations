@@ -321,6 +321,8 @@ namespace GEF::Platform
         glDeleteShader(vs);
         glDeleteShader(fs);
 
+        GEF_ENGINE_DEBUG("Shader created successfully: {}", program);
+
         return shaders_.Insert(GLShader{ program });
     }
 
@@ -532,6 +534,18 @@ namespace GEF::Platform
             DestroyRenderTargetResources(*renderTarget);
             renderTargets_.Remove(handle);
         }
+    }
+
+    Renderer::TextureHandle OpenGLGraphicsDevice::GetRenderTargetDepth(
+        Renderer::RenderTargetHandle handle)
+    {
+        auto renderTarget = renderTargets_.Get(handle);
+        if (renderTarget)
+        {
+            return renderTarget->depthStencil;
+        }
+
+        return Renderer::TextureHandle{};
     }
 
     const GLBuffer*

@@ -5,6 +5,7 @@ in vec2 v_UV;
 in mat3 v_TBN;
 flat in vec3 v_Albedo;
 flat in vec2 v_Params;
+in vec4 v_PosLightSpace;
 
 // ---------- UBO ----------
 layout (std140, binding = 0) uniform Frame
@@ -12,6 +13,7 @@ layout (std140, binding = 0) uniform Frame
     mat4 u_ViewProjection;
     vec4 u_CameraPosition;
     uvec4 u_Flags;
+    mat4 u_LightViewProjection;
 };
 
 // Debug View Enum
@@ -67,6 +69,7 @@ layout (std430, binding = 2) readonly buffer SpotLights
 // ---------- Textures ----------
 layout (binding = 0) uniform sampler2D u_Albedo;
 layout (binding = 1) uniform sampler2D u_Normal;
+layout (binding = 2) uniform sampler2D u_ShadowMap;
 
 out vec4 o_Color;
 
@@ -137,22 +140,27 @@ void main()
         albedo = vec3(0.5);
     }
 
-    vec3 color = u_Ambient.rgb * albedo;
+    vec3 lighting = vec3(0);
 
     vec3 n = texture(u_Normal, v_UV).xyz * 2.0 - 1.0;
     vec3 N = normalize(v_TBN * n);
 
     for (uint i = 0; i < dirCount; i++) {
-        EvalDirectionalLight(dirLights[i], N, V, albedo, color);
+        EvalDirectionalLight(dirLights[i], N, V, albedo, lighting);
     }
 
     for (uint i = 0; i < pointCount; i++) {
-        EvalPointLight(pointLights[i], N, V, albedo, color);
+        EvalPointLight(pointLights[i], N, V, albedo, lighting);
     }
 
     for (uint i = 0; i < spotCount; i++) {
-        EvalSpotLight(spotLights[i], N, V, albedo, color);
+        EvalSpotLight(spotLights[i], N, V, albedo, lighting);
     }
+
+    vec3 p = v_PosLightSpace.xyz / v_PosLightSpace.w;   // clip → NDC [-1, 1]
+    p = p * 0.5 + 0.5;
+    float shadow = (p.z > 1.0) ? 0.0 : (p.z > texture(u_ShadowMap, p.xy).r ? 1.0 : 0.0);
+    vec3 color = u_Ambient.rgb * albedo + (1.0 - shadow) * lighting;
 
     color = color / (color + 1.0); // tonemap
 

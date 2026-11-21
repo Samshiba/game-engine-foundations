@@ -126,11 +126,23 @@ void GEF::Scene::SceneRenderer::Render(
     UploadLights(spotLightSSBO_, spotLights_,
                  Renderer::Layout::ShaderStorageBinding::SpotLight, cmd);
 
+    // ----- Hardcoded shadow -----
+    // TODO : Refacto
+    glm::mat4 lightProjection =
+        glm::ortho(-3.0f, 3.0f, -3.0f, 3.0f, 0.1f, 20.0f);
+
+    auto light = directionalLights_.front();
+    glm::vec3 up = std::abs(light.direction.y) > 0.99f ? glm::vec3(0, 0, 1)
+                                                       : glm::vec3(0, 1, 0);
+    glm::mat4 lightView = glm::lookAt(-xyz(light.direction) * 10.0f,
+                                      glm::vec3(0.0f, 0.0f, 0.0f), up);
+
     // ----- Frame -----
     const Renderer::Layout::FrameUniforms frameU{
         .viewProjection = camera.GetViewProjection(),
         .cameraPosition = glm::vec4(camera.position, 1.0f),
-        .flags = glm::uvec4(debugView_, 0u, 0u, 0u)
+        .flags = glm::uvec4(debugView_, 0u, 0u, 0u),
+        .lightViewProjection = lightProjection * lightView,
     };
     device_.UpdateBuffer(frameUBO_, 0, &frameU, sizeof(frameU));
 
@@ -196,6 +208,9 @@ void GEF::Scene::SceneRenderer::Render(
                         key.albedoMap);
         cmd.BindTexture(Renderer::Layout::TextureBinding::Normal,
                         key.normalMap);
+        // bind shadow map
+        cmd.BindTexture(Renderer::Layout::TextureBinding::ShadowMap,
+                        shadowDepth_);
 
         if (instancing_)
         {
@@ -210,12 +225,186 @@ void GEF::Scene::SceneRenderer::Render(
     }
 }
 
+void GEF::Scene::SceneRenderer::RenderShadow(
+    const libecs::core::registry::Registry& registry,
+    const Renderer::Camera& camera, const Environment& environment,
+    Renderer::CommandList& cmd)
+{
+    cmd.BindPipeline(shadowPipeline_);
+    cmd.BindUniformBuffer(Renderer::Layout::UniformBinding::Frame, frameUBO_);
+    cmd.BindUniformBuffer(Renderer::Layout::UniformBinding::Environment,
+                          environmentUBO_);
+
+    // ----- Environment -----
+    const Renderer::Layout::EnvironmentUniforms envU{
+        .ambient = glm::vec4(environment.ambient, 0.0f)
+    };
+    device_.UpdateBuffer(environmentUBO_, 0, &envU, sizeof(envU));
+
+    // ----- Lights -----
+    // collect -> (grow) -> update -> bind
+    directionalLights_.clear();
+    registry.GetView<const Transform, const DirectionalLight>().Each(
+        [&](libecs::core::Entity, const Transform& transform,
+            const DirectionalLight& light) {
+            directionalLights_.push_back({
+                .direction = glm::vec4(Forward(transform), 0.0f),
+                .color = glm::vec4(light.color * light.intensity, 0.0f),
+            });
+        });
+
+    pointLights_.clear();
+    registry.GetView<const Transform, const PointLight>().Each(
+        [&](libecs::core::Entity, const Transform& transform,
+            const PointLight& light) {
+            pointLights_.push_back({
+                .positionRange = glm::vec4(transform.position, light.range),
+                .color = glm::vec4(light.color * light.intensity, 0.0f),
+            });
+        });
+
+    spotLights_.clear();
+    registry.GetView<const Transform, const SpotLight>().Each(
+        [&](libecs::core::Entity, const Transform& transform,
+            const SpotLight& light) {
+            GEF_CORE_ASSERT(
+                light.innerConeAngle < light.outerConeAngle,
+                "Inner cone angle must be less than outer cone angle");
+            const float inner = light.innerConeAngle;
+            const float outer = glm::max(light.outerConeAngle, inner + 0.01f);
+            spotLights_.push_back({
+                .positionRange = glm::vec4(transform.position, light.range),
+                .direction = glm::vec4(Forward(transform), 0.0f),
+                .color = glm::vec4(light.color * light.intensity, 0.0f),
+                .coneCos = glm::vec4(glm::cos(glm::radians(inner)),
+                                     glm::cos(glm::radians(outer)), 0.0f, 0.0f),
+            });
+        });
+
+    UploadLights(directionalLightSSBO_, directionalLights_,
+                 Renderer::Layout::ShaderStorageBinding::DirectionalLight, cmd);
+    UploadLights(pointLightSSBO_, pointLights_,
+                 Renderer::Layout::ShaderStorageBinding::PointLight, cmd);
+    UploadLights(spotLightSSBO_, spotLights_,
+                 Renderer::Layout::ShaderStorageBinding::SpotLight, cmd);
+
+    // ----- Hardcoded shadow -----
+    // TODO : Refacto
+    glm::mat4 lightProjection =
+        glm::ortho(-3.0f, 3.0f, -3.0f, 3.0f, 0.1f, 20.0f);
+
+    auto light = directionalLights_.front();
+    glm::vec3 up = std::abs(light.direction.y) > 0.99f ? glm::vec3(0, 0, 1)
+                                                       : glm::vec3(0, 1, 0);
+    glm::mat4 lightView = glm::lookAt(-xyz(light.direction) * 10.0f,
+                                      glm::vec3(0.0f, 0.0f, 0.0f), up);
+
+    // ----- Frame -----
+    const Renderer::Layout::FrameUniforms frameU{
+        .viewProjection = camera.GetViewProjection(),
+        .cameraPosition = glm::vec4(camera.position, 1.0f),
+        .flags = glm::uvec4(debugView_, 0u, 0u, 0u),
+        .lightViewProjection = lightProjection * lightView,
+    };
+    device_.UpdateBuffer(frameUBO_, 0, &frameU, sizeof(frameU));
+
+    // ----- Instance -----
+    // Cleaning batch
+    for (auto& batch : batches_ | std::views::values)
+    {
+        batch.instances.clear();
+    }
+
+    // Add batch
+    registry.GetView<const Transform, const MeshRenderer>().Each(
+        [&](libecs::core::Entity, const Transform& transform,
+            const MeshRenderer& meshRenderer) {
+            auto mesh = meshRenderer.mesh;
+
+            BatchKey key{};
+            key.albedoMap = meshRenderer.material.albedoMap.IsValid()
+                ? meshRenderer.material.albedoMap
+                : defaultAlbedo_;
+            key.normalMap = meshRenderer.material.normalMap.IsValid()
+                ? meshRenderer.material.normalMap
+                : defaultNormal_;
+            key.mesh = mesh.vertexArray;
+
+            auto [it, inserted] = batches_.try_emplace(key);
+
+            if (inserted)
+            {
+                it->second = CreateBatch(mesh, InitialBatchCapacity);
+            }
+
+            it->second.instances.push_back(Renderer::Layout::InstanceData{
+                .model = transform.GetMatrix(),
+                .normalMatrix = transform.GetNormalMatrix(),
+                .albedo =
+                    glm::pow(meshRenderer.material.albedo, glm::vec3(2.2f)),
+                .params = glm::vec2(meshRenderer.material.shininess,
+                                    meshRenderer.material.specularStrength) });
+        });
+
+    // Draw
+    for (auto& [key, batch] : batches_)
+    {
+        if (batch.instances.empty())
+            continue;
+
+        const auto count = batch.instances.size();
+
+        if (batch.instances.size() > batch.capacity)
+        {
+            GrowBatch(
+                batch,
+                std::max(static_cast<uint32_t>(count), batch.capacity * 2));
+        }
+
+        device_.UpdateBuffer(batch.instanceBuffer, 0, batch.instances.data(),
+                             static_cast<uint32_t>(count)
+                                 * sizeof(Renderer::Layout::InstanceData));
+
+        cmd.BindVertexArray(batch.vertexArray);
+        cmd.BindTexture(Renderer::Layout::TextureBinding::Albedo,
+                        key.albedoMap);
+        cmd.BindTexture(Renderer::Layout::TextureBinding::Normal,
+                        key.normalMap);
+        // bind shadow map
+        // cmd.BindTexture(Renderer::Layout::TextureBinding::ShadowMap,
+        // shadowDepth_);
+
+        if (instancing_)
+        {
+            cmd.DrawIndexedInstanced(batch.mesh.indexCount,
+                                     static_cast<uint32_t>(count), 0);
+        }
+        else
+        {
+            for (uint32_t i = 0; i < count; ++i)
+                cmd.DrawIndexedInstanced(batch.mesh.indexCount, 1, i);
+        }
+    }
+}
+
+void GEF::Scene::SceneRenderer::SetShadowMap(Renderer::TextureHandle handle)
+{
+    shadowDepth_ = handle;
+}
+
 void GEF::Scene::SceneRenderer::CreateResources(
     Renderer::ShaderHandle litShader)
 {
     pipeline_ = device_.CreatePipeline({ .shader = litShader,
                                          .depth = { true, true },
                                          .cull = Renderer::CullMode::Back });
+
+    auto shadowShader = device_.CreateShader(
+        { Embedded::ShadowVertexSource(), Embedded::ShadowFragmentSource() });
+    shadowPipeline_ =
+        device_.CreatePipeline({ .shader = shadowShader,
+                                 .depth = { true, true },
+                                 .cull = Renderer::CullMode::Back });
 
     frameUBO_ = device_.CreateBuffer(
         { .type = Renderer::BufferType::Uniform,

@@ -58,6 +58,8 @@ struct Sandbox
     bool showUi = true;
     int capturedView = -1; // -1 when no F10 capture is running
 
+    RenderTargetHandle shadowTarget;
+
     void SpawnActiveScene()
     {
         const float aspectRatio = camera.aspectRatio;
@@ -105,7 +107,14 @@ struct Sandbox
               .attachments = { TextureFormat::RGBA8 },
               .depthStencil = TextureFormat::Depth32F });
 
+        shadowTarget = ctx.device.CreateRenderTarget(
+            { .width = 2048,
+              .height = 2048,
+              .depthStencil = TextureFormat::Depth32F });
+
         renderer.emplace(ctx.device);
+
+        renderer->SetShadowMap(ctx.device.GetRenderTargetDepth(shadowTarget));
 
         showcase.Load(ctx.device);
         stressTest.Load(ctx.device);
@@ -165,13 +174,19 @@ struct Sandbox
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
-        cmd.BeginPass({ .target = sceneTarget,
-                        .clearValue = { 0.01f, 0.01f, 0.012f, 1 } });
         const auto& environment = activeScene == SceneId::Showcase
             ? showcase.GetEnvironment()
             : stressTest.GetEnvironment();
+
+        cmd.BeginPass({ .target = shadowTarget, .clearColor = false });
+        renderer->RenderShadow(registry, camera, environment, cmd);
+        cmd.EndPass();
+
+        cmd.BeginPass({ .target = sceneTarget,
+                        .clearValue = { 0.01f, 0.01f, 0.012f, 1 } });
         renderer->Render(registry, camera, environment, cmd);
         cmd.EndPass();
+
         cmd.BeginPass({ .clearColor = false, .clearDepth = false });
         cmd.Blit(sceneTarget);
         cmd.EndPass();
@@ -189,6 +204,7 @@ struct Sandbox
         showcase.Unload(ctx.device);
         stressTest.Unload(ctx.device);
         ctx.device.DestroyRenderTarget(sceneTarget);
+        ctx.device.DestroyRenderTarget(shadowTarget);
     }
 
     void OnImGui(GEF::EngineContext& ctx)
