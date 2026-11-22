@@ -51,9 +51,9 @@ namespace GEF::Renderer
     class CommandList
     {
     public:
-        static constexpr uint32_t MaxUniformBindings = 2;
+        static constexpr uint32_t MaxUniformBindings = 3;
         static constexpr uint32_t MaxShaderStorageBindings = 3;
-        static constexpr uint32_t MaxTextureBindings = 2;
+        static constexpr uint32_t MaxTextureBindings = 3;
 
         struct DrawPacket
         {

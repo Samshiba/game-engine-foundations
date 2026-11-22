@@ -14,12 +14,13 @@ namespace
 {
     GEF::Renderer::Texture LoadTexture(GEF::Renderer::GraphicsDevice& device,
                                        std::string_view name,
-                                       GEF::Renderer::TextureFormat format)
+                                       GEF::Renderer::TextureFormat format,
+                                       GEF::Renderer::TextureWrap wrap)
     {
         const auto path =
             GEF::FileSystem::AssetPath(std::string("textures/") += name);
         if (const auto image = GEF::Assets::LoadImage(path))
-            return UploadTexture(device, *image, format);
+            return UploadTexture(device, *image, format, wrap);
 
         GEF_ERROR("Failed to load texture: {}", path.string());
         return {};
@@ -39,9 +40,11 @@ Model LoadModel(GEF::Renderer::GraphicsDevice& device, std::string_view obj,
 
     // Albedo is authored in sRGB, the normal map holds plain vectors
     model.albedoMap =
-        LoadTexture(device, albedoMap, GEF::Renderer::TextureFormat::SRGBA8);
+        LoadTexture(device, albedoMap, GEF::Renderer::TextureFormat::SRGBA8,
+                    GEF::Renderer::TextureWrap::Repeat);
     model.normalMap =
-        LoadTexture(device, normalMap, GEF::Renderer::TextureFormat::RGBA8);
+        LoadTexture(device, normalMap, GEF::Renderer::TextureFormat::RGBA8,
+                    GEF::Renderer::TextureWrap::Repeat);
     return model;
 }
 

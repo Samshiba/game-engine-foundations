@@ -105,7 +105,9 @@ struct Sandbox
               .attachments = { TextureFormat::RGBA8 },
               .depthStencil = TextureFormat::Depth32F });
 
-        renderer.emplace(ctx.device);
+        renderer.emplace(ctx.device,
+                         GEF::Scene::SceneRenderer::ShadowSettings{
+                             .resolution = 4096, .distance = 20.0f });
 
         showcase.Load(ctx.device);
         stressTest.Load(ctx.device);
@@ -161,17 +163,29 @@ struct Sandbox
             ctx.capture.RequestScreenshot();
         if (ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_F11))
             ctx.capture.RequestSequence(200);
+        if (ctx.input.IsKeyJustPressed(GEF::Key::KeyCode::KEY_R))
+        {
+            activeScene == SceneId::Showcase
+                ? camera = showcase.DefaultCamera()
+                : camera = stressTest.DefaultCamera();
+        }
     }
 
     void OnRender(GEF::EngineContext&, CommandList& cmd)
     {
-        cmd.BeginPass({ .target = sceneTarget,
-                        .clearValue = { 0.01f, 0.01f, 0.012f, 1 } });
         const auto& environment = activeScene == SceneId::Showcase
             ? showcase.GetEnvironment()
             : stressTest.GetEnvironment();
-        renderer->Render(registry, camera, environment, cmd);
+
+        renderer->Prepare(registry, camera, environment);
+
+        renderer->RenderShadow(cmd);
+
+        cmd.BeginPass({ .target = sceneTarget,
+                        .clearValue = { 0.01f, 0.01f, 0.012f, 1 } });
+        renderer->Render(cmd);
         cmd.EndPass();
+
         cmd.BeginPass({ .clearColor = false, .clearDepth = false });
         cmd.Blit(sceneTarget);
         cmd.EndPass();
@@ -209,6 +223,7 @@ struct Sandbox
         ImGui::TextDisabled(
             "F11: capture sequence (gif), F12: capture screenshot ");
         ImGui::TextDisabled("Hold right click: enable free fLy");
+        ImGui::TextDisabled("R: reset camera");
 
         ImGui::SeparatorText("Frame");
         // Frame Infos

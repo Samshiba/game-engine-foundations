@@ -93,12 +93,23 @@ namespace GEF::Renderer
         Depth32F
     };
 
+    enum class TextureWrap : uint8_t
+    {
+        ClampToEdge,
+        ClampToBorder,
+        Repeat,
+        MirroredRepeat,
+        MirrorClampToEdge,
+    };
+
     struct TextureDesc
     {
         uint32_t width = 0;
         uint32_t height = 0;
         bool generateMipmaps = true;
         TextureFormat format = TextureFormat::RGBA8;
+        TextureWrap wrap = TextureWrap::ClampToEdge;
+        std::array<float, 4> borderColor = { 0.0f, 0.0f, 0.0f, 0.0f };
         const void* data = nullptr;
     };
 
@@ -188,6 +199,8 @@ namespace GEF::Renderer
         [[nodiscard]] virtual RenderTargetHandle
         CreateRenderTarget(const RenderTargetDesc& desc) = 0;
         virtual void DestroyRenderTarget(RenderTargetHandle handle) = 0;
+        [[nodiscard]] virtual TextureHandle
+        GetRenderTargetDepth(RenderTargetHandle handle) = 0;
 
         // Infos
         [[nodiscard]] virtual const AdapterInfo& GetAdapterInfo() const = 0;

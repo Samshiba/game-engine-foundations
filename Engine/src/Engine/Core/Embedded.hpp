@@ -11,4 +11,6 @@ namespace GEF::Embedded
 {
     std::string_view LitVertexSource();
     std::string_view LitFragmentSource();
+    std::string_view ShadowVertexSource();
+    std::string_view ShadowFragmentSource();
 } // namespace GEF::Embedded

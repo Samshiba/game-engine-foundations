@@ -17,7 +17,7 @@ class FreeFlyController
 {
 public:
     float moveSpeed = 5.0f;
-    float fastMultiplier = 50.0f;
+    float fastMultiplier = 25.0f;
     float sensitivity = 0.1f;
 
     void Update(GEF::Renderer::Camera& camera, const GEF::Input& input,

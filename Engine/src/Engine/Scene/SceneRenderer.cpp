@@ -10,7 +10,7 @@
 
 #include <Engine/Core/Assert.hpp>
 #include <Engine/Core/Embedded.hpp>
-#include <Engine/Renderer/Layout/LitShaderLayout.hpp>
+#include <Engine/Renderer/Layout/LitLayout.hpp>
 #include <Engine/Scene/Components.hpp>
 
 namespace
@@ -24,27 +24,33 @@ namespace
 } // namespace
 
 GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device,
+                                         ShadowSettings shadowSettings,
                                          Renderer::ShaderHandle litShader)
     : device_(device)
+    , shadowSettings_(shadowSettings)
 {
     CreateResources(litShader);
 }
 
-GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device)
+GEF::Scene::SceneRenderer::SceneRenderer(Renderer::GraphicsDevice& device,
+                                         ShadowSettings shadowSettings)
     : device_(device)
+    , shadowSettings_(shadowSettings)
 {
     litShader_ = device.CreateShader(
         { Embedded::LitVertexSource(), Embedded::LitFragmentSource() });
-    GEF_CORE_ASSERT(litShader_.IsValid(), "Failed to create shader");
+    GEF_CORE_ASSERT(litShader_.IsValid(), "Failed to create lit shader");
 
     CreateResources(litShader_);
 }
 
 GEF::Scene::SceneRenderer::~SceneRenderer()
 {
-    device_.DestroyPipeline(pipeline_);
-    device_.DestroyBuffer(frameUBO_);
+    device_.DestroyPipeline(shadowPipeline_);
+    device_.DestroyPipeline(litPipeline_);
+    device_.DestroyBuffer(litViewUBO_);
     device_.DestroyBuffer(environmentUBO_);
+    device_.DestroyBuffer(shadowUBO_);
     device_.DestroyBuffer(directionalLightSSBO_.handle);
     device_.DestroyBuffer(pointLightSSBO_.handle);
     device_.DestroyBuffer(spotLightSSBO_.handle);
@@ -61,21 +67,24 @@ GEF::Scene::SceneRenderer::~SceneRenderer()
     {
         device_.DestroyShader(litShader_);
     }
+
+    if (shadowShader_.IsValid())
+    {
+        device_.DestroyShader(shadowShader_);
+    }
+
+    device_.DestroyRenderTarget(shadowTarget_);
+    device_.DestroyBuffer(shadowViewUBO_);
 }
 
-void GEF::Scene::SceneRenderer::Render(
+void GEF::Scene::SceneRenderer::Prepare(
     const libecs::core::registry::Registry& registry,
-    const Renderer::Camera& camera, const Environment& environment,
-    Renderer::CommandList& cmd)
+    const Renderer::Camera& camera, const Environment& environment)
 {
-    cmd.BindPipeline(pipeline_);
-    cmd.BindUniformBuffer(Renderer::Layout::UniformBinding::Frame, frameUBO_);
-    cmd.BindUniformBuffer(Renderer::Layout::UniformBinding::Environment,
-                          environmentUBO_);
-
     // ----- Environment -----
     const Renderer::Layout::EnvironmentUniforms envU{
-        .ambient = glm::vec4(environment.ambient, 0.0f)
+        .ambient = glm::vec4(environment.ambient, 0.0f),
+        .flags = glm::uvec4(debugView_, 0u, 0u, 0u),
     };
     device_.UpdateBuffer(environmentUBO_, 0, &envU, sizeof(envU));
 
@@ -119,20 +128,36 @@ void GEF::Scene::SceneRenderer::Render(
             });
         });
 
-    UploadLights(directionalLightSSBO_, directionalLights_,
-                 Renderer::Layout::ShaderStorageBinding::DirectionalLight, cmd);
-    UploadLights(pointLightSSBO_, pointLights_,
-                 Renderer::Layout::ShaderStorageBinding::PointLight, cmd);
-    UploadLights(spotLightSSBO_, spotLights_,
-                 Renderer::Layout::ShaderStorageBinding::SpotLight, cmd);
+    // ----- Hardcoded shadow -----
+    // TODO : Refacto
+    glm::mat4 lightProjection = glm::ortho(-3.0f, 3.0f, -3.0f, 3.0f, 0.1f,
+                                           shadowSettings_.distance * 2.0f);
 
-    // ----- Frame -----
-    const Renderer::Layout::FrameUniforms frameU{
-        .viewProjection = camera.GetViewProjection(),
-        .cameraPosition = glm::vec4(camera.position, 1.0f),
-        .flags = glm::uvec4(debugView_, 0u, 0u, 0u)
+    auto light = directionalLights_.front();
+    glm::vec3 up = std::abs(light.direction.y) > 0.99f ? glm::vec3(0, 0, 1)
+                                                       : glm::vec3(0, 1, 0);
+    glm::mat4 lightView =
+        glm::lookAt(-xyz(light.direction) * shadowSettings_.distance,
+                    glm::vec3(0.0f, 0.0f, 0.0f), up);
+
+    const Renderer::Layout::ShadowUniforms shadowUBO{
+        .lightViewProjection = lightProjection * lightView,
+        .settings = glm::vec4(shadowSettings_.bias, shadowSettings_.normalBias,
+                              shadowSettings_.texelSize, 0.0f),
     };
-    device_.UpdateBuffer(frameUBO_, 0, &frameU, sizeof(frameU));
+    device_.UpdateBuffer(shadowUBO_, 0, &shadowUBO, sizeof(shadowUBO));
+
+    // ----- View -----
+    const Renderer::Layout::ViewUniforms litViewU{
+        .viewProjection = camera.GetViewProjection(),
+        .cameraPosition = glm::vec4(camera.position, 1.0f)
+    };
+    const Renderer::Layout::ViewUniforms shadowViewU{
+        .viewProjection = lightProjection * lightView,
+        .cameraPosition = glm::vec4(0.0f)
+    };
+    device_.UpdateBuffer(litViewUBO_, 0, &litViewU, sizeof(litViewU));
+    device_.UpdateBuffer(shadowViewUBO_, 0, &shadowViewU, sizeof(shadowViewU));
 
     // ----- Instance -----
     // Cleaning batch
@@ -163,14 +188,42 @@ void GEF::Scene::SceneRenderer::Render(
                 it->second = CreateBatch(mesh, InitialBatchCapacity);
             }
 
-            it->second.instances.push_back(Renderer::Layout::InstanceData{
-                .model = transform.GetMatrix(),
+            it->second.instances.push_back(Renderer::Layout::ShadingInstance{
+                .transform = { .model = transform.GetMatrix() },
                 .normalMatrix = transform.GetNormalMatrix(),
                 .albedo =
                     glm::pow(meshRenderer.material.albedo, glm::vec3(2.2f)),
                 .params = glm::vec2(meshRenderer.material.shininess,
                                     meshRenderer.material.specularStrength) });
         });
+}
+
+void GEF::Scene::SceneRenderer::Render(Renderer::CommandList& cmd)
+{
+    cmd.BindPipeline(litPipeline_);
+    cmd.BindUniformBuffer(
+        static_cast<uint32_t>(Renderer::Layout::CommonUniformBinding::View),
+        litViewUBO_);
+    cmd.BindUniformBuffer(
+        static_cast<uint32_t>(Renderer::Layout::LitUniformBinding::Environment),
+        environmentUBO_);
+    cmd.BindUniformBuffer(
+        static_cast<uint32_t>(Renderer::Layout::LitUniformBinding::Shadow),
+        shadowUBO_);
+
+    UploadLights(
+        directionalLightSSBO_, directionalLights_,
+        static_cast<uint32_t>(
+            Renderer::Layout::LitShaderStorageBinding::DirectionalLight),
+        cmd);
+    UploadLights(pointLightSSBO_, pointLights_,
+                 static_cast<uint32_t>(
+                     Renderer::Layout::LitShaderStorageBinding::PointLight),
+                 cmd);
+    UploadLights(spotLightSSBO_, spotLights_,
+                 static_cast<uint32_t>(
+                     Renderer::Layout::LitShaderStorageBinding::SpotLight),
+                 cmd);
 
     // Draw
     for (auto& [key, batch] : batches_)
@@ -189,13 +242,19 @@ void GEF::Scene::SceneRenderer::Render(
 
         device_.UpdateBuffer(batch.instanceBuffer, 0, batch.instances.data(),
                              static_cast<uint32_t>(count)
-                                 * sizeof(Renderer::Layout::InstanceData));
+                                 * sizeof(Renderer::Layout::ShadingInstance));
 
         cmd.BindVertexArray(batch.vertexArray);
-        cmd.BindTexture(Renderer::Layout::TextureBinding::Albedo,
-                        key.albedoMap);
-        cmd.BindTexture(Renderer::Layout::TextureBinding::Normal,
-                        key.normalMap);
+        cmd.BindTexture(
+            static_cast<uint32_t>(Renderer::Layout::LitTextureBinding::Albedo),
+            key.albedoMap);
+        cmd.BindTexture(
+            static_cast<uint32_t>(Renderer::Layout::LitTextureBinding::Normal),
+            key.normalMap);
+        // bind shadow map
+        cmd.BindTexture(static_cast<uint32_t>(
+                            Renderer::Layout::LitTextureBinding::ShadowMap),
+                        device_.GetRenderTargetDepth(shadowTarget_));
 
         if (instancing_)
         {
@@ -210,22 +269,86 @@ void GEF::Scene::SceneRenderer::Render(
     }
 }
 
+void GEF::Scene::SceneRenderer::RenderShadow(Renderer::CommandList& cmd)
+{
+    cmd.BeginPass({ .target = shadowTarget_, .clearColor = false });
+    cmd.BindPipeline(shadowPipeline_);
+    cmd.BindUniformBuffer(
+        static_cast<uint32_t>(Renderer::Layout::CommonUniformBinding::View),
+        shadowUBO_);
+
+    UploadLights(
+        directionalLightSSBO_, directionalLights_,
+        static_cast<uint32_t>(
+            Renderer::Layout::LitShaderStorageBinding::DirectionalLight),
+        cmd);
+    UploadLights(pointLightSSBO_, pointLights_,
+                 static_cast<uint32_t>(
+                     Renderer::Layout::LitShaderStorageBinding::PointLight),
+                 cmd);
+    UploadLights(spotLightSSBO_, spotLights_,
+                 static_cast<uint32_t>(
+                     Renderer::Layout::LitShaderStorageBinding::SpotLight),
+                 cmd);
+
+    // Draw
+    for (auto& [key, batch] : batches_)
+    {
+        if (batch.instances.empty())
+            continue;
+
+        const auto count = batch.instances.size();
+
+        if (batch.instances.size() > batch.capacity)
+        {
+            GrowBatch(
+                batch,
+                std::max(static_cast<uint32_t>(count), batch.capacity * 2));
+        }
+
+        device_.UpdateBuffer(batch.instanceBuffer, 0, batch.instances.data(),
+                             static_cast<uint32_t>(count)
+                                 * sizeof(Renderer::Layout::ShadingInstance));
+
+        cmd.BindVertexArray(batch.vertexArray);
+
+        if (instancing_)
+        {
+            cmd.DrawIndexedInstanced(batch.mesh.indexCount,
+                                     static_cast<uint32_t>(count), 0);
+        }
+        else
+        {
+            for (uint32_t i = 0; i < count; ++i)
+                cmd.DrawIndexedInstanced(batch.mesh.indexCount, 1, i);
+        }
+    }
+
+    cmd.EndPass();
+}
+
 void GEF::Scene::SceneRenderer::CreateResources(
     Renderer::ShaderHandle litShader)
 {
-    pipeline_ = device_.CreatePipeline({ .shader = litShader,
-                                         .depth = { true, true },
-                                         .cull = Renderer::CullMode::Back });
+    // ---------- Lit Shader ----------
+    litPipeline_ = device_.CreatePipeline({ .shader = litShader,
+                                            .depth = { true, true },
+                                            .cull = Renderer::CullMode::Back });
 
-    frameUBO_ = device_.CreateBuffer(
+    litViewUBO_ = device_.CreateBuffer(
         { .type = Renderer::BufferType::Uniform,
           .usage = Renderer::BufferUsage::Dynamic,
-          .size = sizeof(Renderer::Layout::FrameUniforms) });
+          .size = sizeof(Renderer::Layout::ViewUniforms) });
 
     environmentUBO_ = device_.CreateBuffer(
         { .type = Renderer::BufferType::Uniform,
           .usage = Renderer::BufferUsage::Dynamic,
           .size = sizeof(Renderer::Layout::EnvironmentUniforms) });
+
+    shadowUBO_ = device_.CreateBuffer(
+        { .type = Renderer::BufferType::Uniform,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = sizeof(Renderer::Layout::ShadowUniforms) });
 
     directionalLightSSBO_ =
         CreateLightBuffer<Renderer::Layout::GpuDirectionalLight>(
@@ -250,6 +373,26 @@ void GEF::Scene::SceneRenderer::CreateResources(
                                 .generateMipmaps = false,
                                 .format = Renderer::TextureFormat::RGBA8,
                                 .data = flat });
+
+    // ---------- Lit Shader ----------
+    shadowShader_ = device_.CreateShader(
+        { Embedded::ShadowVertexSource(), Embedded::ShadowFragmentSource() });
+    GEF_CORE_ASSERT(shadowShader_.IsValid(), "Failed to create shadow shader");
+
+    shadowPipeline_ =
+        device_.CreatePipeline({ .shader = shadowShader_,
+                                 .depth = { true, true },
+                                 .cull = Renderer::CullMode::Back });
+
+    shadowTarget_ = device_.CreateRenderTarget(
+        { .width = shadowSettings_.resolution,
+          .height = shadowSettings_.resolution,
+          .depthStencil = Renderer::TextureFormat::Depth32F });
+
+    shadowViewUBO_ = device_.CreateBuffer(
+        { .type = Renderer::BufferType::Uniform,
+          .usage = Renderer::BufferUsage::Dynamic,
+          .size = sizeof(Renderer::Layout::ViewUniforms) });
 }
 
 GEF::Scene::SceneRenderer::Batch
@@ -262,7 +405,8 @@ GEF::Scene::SceneRenderer::CreateBatch(const Renderer::Mesh& mesh,
     batch.instanceBuffer = device_.CreateBuffer(
         { .type = Renderer::BufferType::Vertex,
           .usage = Renderer::BufferUsage::Dynamic,
-          .size = static_cast<uint32_t>(sizeof(Renderer::Layout::InstanceData))
+          .size =
+              static_cast<uint32_t>(sizeof(Renderer::Layout::ShadingInstance))
               * capacity });
     batch.vertexArray = device_.CreateVertexArray({
         .vertexBuffers = {
@@ -271,7 +415,7 @@ GEF::Scene::SceneRenderer::CreateBatch(const Renderer::Mesh& mesh,
               .layout = Renderer::Vertex::Layout() },
             { .buffer = batch.instanceBuffer,
               // binding 1: per instance
-              .layout = Renderer::Layout::InstanceData::Layout(),
+              .layout = Renderer::Layout::ShadingInstance::Layout(),
               .instanceDivisor = 1 },
         },
         .indexBuffer = mesh.indexBuffer,
@@ -288,7 +432,8 @@ void GEF::Scene::SceneRenderer::GrowBatch(Batch& batch, uint32_t capacity)
     batch.instanceBuffer = device_.CreateBuffer(
         { .type = Renderer::BufferType::Vertex,
           .usage = Renderer::BufferUsage::Dynamic,
-          .size = static_cast<uint32_t>(sizeof(Renderer::Layout::InstanceData))
+          .size =
+              static_cast<uint32_t>(sizeof(Renderer::Layout::ShadingInstance))
               * capacity });
     batch.vertexArray = device_.CreateVertexArray({
         .vertexBuffers = {
@@ -297,7 +442,7 @@ void GEF::Scene::SceneRenderer::GrowBatch(Batch& batch, uint32_t capacity)
               .layout = Renderer::Vertex::Layout() },
             { .buffer = batch.instanceBuffer,
               // binding 1: per instance
-              .layout = Renderer::Layout::InstanceData::Layout(),
+              .layout = Renderer::Layout::ShadingInstance::Layout(),
               .instanceDivisor = 1 },
         },
         .indexBuffer = batch.mesh.indexBuffer,

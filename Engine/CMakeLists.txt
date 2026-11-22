@@ -99,7 +99,9 @@ set(ENGINE_HEADERS
         "include/Engine/Renderer/FrameCapture.hpp"
         "include/Engine/Renderer/Texture.hpp"
         # Layout
-        "include/Engine/Renderer/Layout/LitShaderLayout.hpp"
+        "include/Engine/Renderer/Layout/LitLayout.hpp"
+        "include/Engine/Renderer/Layout/CommonLayout.hpp"
+        "include/Engine/Renderer/Layout/ShadowLayout.hpp"
 
         # Assets
         "include/Engine/Assets/ObjLoader.hpp"
@@ -115,9 +117,12 @@ set(ENGINE_HEADERS
 )
 
 # Embed
-include(${PROJECT_SOURCE_DIR}/cmake/Embed.cmake)
-gef_embed_text(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/lit.vert.glsl" LitVertexSource)
-gef_embed_text(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/lit.frag.glsl" LitFragmentSource)
+include(${PROJECT_SOURCE_DIR}/cmake/EmbedText.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/EmbedShader.cmake)
+gef_embed_shader(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/lit.vert.glsl" LitVertexSource)
+gef_embed_shader(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/lit.frag.glsl" LitFragmentSource)
+gef_embed_shader(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/shadow.vert.glsl" ShadowVertexSource)
+gef_embed_shader(GEF_Engine "${CMAKE_CURRENT_SOURCE_DIR}/embed/shaders/shadow.frag.glsl" ShadowFragmentSource)
 
 target_sources(GEF_Engine
         PRIVATE

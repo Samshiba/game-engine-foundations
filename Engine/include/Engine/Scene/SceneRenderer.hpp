@@ -10,7 +10,7 @@
 #include <Engine/Renderer/Camera.hpp>
 #include <Engine/Renderer/CommandList.hpp>
 #include <Engine/Renderer/GraphicsDevice.hpp>
-#include <Engine/Renderer/Layout/LitShaderLayout.hpp>
+#include <Engine/Renderer/Layout/LitLayout.hpp>
 #include <Engine/Renderer/Mesh.hpp>
 #include <Engine/Utils/HashCombine.hpp>
 
@@ -37,13 +37,22 @@ namespace GEF::Scene
             LightingOnly,
         };
 
+        struct ShadowSettings
+        {
+            uint32_t resolution = 2048;
+            float bias = 0.005f;
+            float normalBias = 0.05f;
+            float texelSize = 1.0f;
+            float distance = 50.0f;
+        };
+
     private:
         struct Batch
         {
             Renderer::BufferHandle instanceBuffer;
             Renderer::VertexArrayHandle vertexArray;
             uint32_t capacity = 0; // instances the buffer can hold
-            std::vector<Renderer::Layout::InstanceData>
+            std::vector<Renderer::Layout::ShadingInstance>
                 instances; // filled each frame
             Renderer::Mesh mesh;
         };
@@ -72,16 +81,21 @@ namespace GEF::Scene
 
     public:
         SceneRenderer(Renderer::GraphicsDevice& device,
+                      ShadowSettings shadowSettings,
                       Renderer::ShaderHandle litShader);
-        explicit SceneRenderer(Renderer::GraphicsDevice& device);
+        explicit SceneRenderer(Renderer::GraphicsDevice& device,
+                               ShadowSettings shadowSettings);
         ~SceneRenderer();
 
         SceneRenderer(const SceneRenderer&) = delete;
         SceneRenderer& operator=(const SceneRenderer&) = delete;
 
-        void Render(const libecs::core::registry::Registry& registry,
-                    const Renderer::Camera& camera,
-                    const Environment& environment, Renderer::CommandList& cmd);
+        void Prepare(const libecs::core::registry::Registry& registry,
+                     const Renderer::Camera& camera,
+                     const Environment& environment);
+
+        void Render(Renderer::CommandList& cmd);
+        void RenderShadow(Renderer::CommandList& cmd);
 
         void SetInstancingEnabled(bool enabled);
         [[nodiscard]] bool IsInstancingEnabled() const;
@@ -106,11 +120,16 @@ namespace GEF::Scene
 
     private:
         std::unordered_map<BatchKey, Batch, BatchKeyHasher> batches_{};
-
         Renderer::GraphicsDevice& device_;
-        Renderer::PipelineHandle pipeline_;
-        Renderer::BufferHandle frameUBO_;
+        bool instancing_ = true;
+
+        // Lit shader
+        Renderer::ShaderHandle litShader_{};
+        Renderer::PipelineHandle litPipeline_;
+
+        Renderer::BufferHandle litViewUBO_;
         Renderer::BufferHandle environmentUBO_;
+        Renderer::BufferHandle shadowUBO_;
 
         LightBuffer directionalLightSSBO_{};
         LightBuffer pointLightSSBO_{};
@@ -119,13 +138,19 @@ namespace GEF::Scene
         std::vector<Renderer::Layout::GpuPointLight> pointLights_;
         std::vector<Renderer::Layout::GpuSpotLight> spotLights_;
 
-        bool instancing_ = true;
         DebugView debugView_ = DebugView::None;
-
-        Renderer::ShaderHandle litShader_{};
 
         Renderer::TextureHandle defaultAlbedo_;
         Renderer::TextureHandle defaultNormal_;
+
+        ShadowSettings shadowSettings_;
+
+        // Shadow shader
+        Renderer::ShaderHandle shadowShader_{};
+        Renderer::PipelineHandle shadowPipeline_;
+        Renderer::RenderTargetHandle shadowTarget_;
+
+        Renderer::BufferHandle shadowViewUBO_;
     };
 } // namespace GEF::Scene
 

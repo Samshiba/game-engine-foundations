@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <libecs/core/registry/Registry.hpp>
 
 #include <Engine/Renderer/Camera.hpp>
@@ -38,6 +39,7 @@ private:
                                    const Model& model, glm::vec3 position,
                                    float yawDegrees, float shininess,
                                    float specularStrength);
+    [[nodiscard]] glm::quat SunRotation() const;
     libecs::core::Entity
     SpawnPointLight(libecs::core::registry::Registry& registry,
                     glm::vec3 position, glm::vec3 color, float intensity);
@@ -54,6 +56,11 @@ private:
     std::array<libecs::core::Entity, 3> pointLights_{};
 
     bool animateLights_ = false;
+
+    // Sun orientation: pitch tilts it below the horizon line, yaw turns it
+    // around the vertical axis
+    float sunPitchDegrees_ = -30.0f;
+    float sunYawDegrees_ = 70.0f;
 
     GEF::Scene::SceneRenderer::Environment environment_{
         .ambient = { 0.03f, 0.03f, 0.04f }
