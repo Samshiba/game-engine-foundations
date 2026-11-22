@@ -1,5 +1,25 @@
 #version 450 core
 
+layout (std140, binding = 1) uniform Shadow
+{
+    mat4 u_LightViewProjection;
+    vec4 u_Settings; // x = bias, y = normal bias, z = texelSize, w = unused
+};
+
+layout (std140, binding = 2) uniform Environment
+{
+    vec4 u_Ambient; // rgb = ambient color, a unused
+    uvec4 u_Flags; // x = debug view mode, yzw unused
+};
+
+layout (std140, binding = 0) uniform View
+{
+    mat4 u_ViewProjection;
+    vec4 u_CameraPosition;
+};
+
+// #include "lit_common.glsl"
+
 in vec3 v_WorldPos;
 in vec2 v_UV;
 in mat3 v_TBN;
@@ -7,15 +27,9 @@ flat in vec3 v_Albedo;
 flat in vec2 v_Params;
 in vec4 v_PosLightSpace;
 
-// ---------- UBO ----------
-layout (std140, binding = 0) uniform Frame
-{
-    mat4 u_ViewProjection;
-    vec4 u_CameraPosition;
-    uvec4 u_Flags;
-    mat4 u_LightViewProjection;
-};
+out vec4 o_Color;
 
+// ---------- UBO ----------
 // Debug View Enum
 const uint DEBUG_NONE = 0u;
 const uint DEBUG_ALBEDO = 1u;
@@ -24,11 +38,6 @@ const uint DEBUG_UV = 3u;
 const uint DEBUG_TANGENT = 4u;
 const uint DEBUG_NORMAL_MAP = 5u;
 const uint DEBUG_LIGHTING_ONLY = 6u;
-
-layout (std140, binding = 1) uniform Environment
-{
-    vec4 u_Ambient;
-};
 
 // ---------- SSBO ----------
 struct DirectionalLight
@@ -70,8 +79,6 @@ layout (std430, binding = 2) readonly buffer SpotLights
 layout (binding = 0) uniform sampler2D u_Albedo;
 layout (binding = 1) uniform sampler2D u_Normal;
 layout (binding = 2) uniform sampler2D u_ShadowMap;
-
-out vec4 o_Color;
 
 // ---------- Helper Functions ----------
 
@@ -159,7 +166,7 @@ void main()
 
     vec3 p = v_PosLightSpace.xyz / v_PosLightSpace.w;   // clip → NDC [-1, 1]
     p = p * 0.5 + 0.5;
-    float shadow = (p.z > 1.0) ? 0.0 : (p.z - 0.005 > texture(u_ShadowMap, p.xy).r ? 1.0 : 0.0);
+    float shadow = (p.z > 1.0) ? 0.0 : (p.z - u_Settings.x > texture(u_ShadowMap, p.xy).r ? 1.0 : 0.0);
     vec3 color = u_Ambient.rgb * albedo + (1.0 - shadow) * lighting;
 
     color = color / (color + 1.0); // tonemap

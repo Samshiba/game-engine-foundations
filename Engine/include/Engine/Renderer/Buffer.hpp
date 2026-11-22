@@ -63,6 +63,8 @@ namespace GEF::Renderer
         [[nodiscard]] std::vector<BufferElement>::const_iterator begin() const;
         [[nodiscard]] std::vector<BufferElement>::const_iterator end() const;
 
+        void Append(const BufferLayout& layout);
+
     private:
         void CalculateOffsetsAndStride();
 
@@ -185,6 +187,15 @@ namespace GEF::Renderer
     inline std::vector<BufferElement>::const_iterator BufferLayout::end() const
     {
         return elements_.end();
+    }
+
+    inline void BufferLayout::Append(const BufferLayout& layout)
+    {
+        for (const auto& element : layout.GetElements())
+        {
+            elements_.push_back(element);
+        }
+        CalculateOffsetsAndStride();
     }
 
     inline void BufferLayout::CalculateOffsetsAndStride()

@@ -1,5 +1,25 @@
 #version 450 core
 
+layout (std140, binding = 1) uniform Shadow
+{
+    mat4 u_LightViewProjection;
+    vec4 u_Settings; // x = bias, y = normal bias, z = texelSize, w = unused
+};
+
+layout (std140, binding = 2) uniform Environment
+{
+    vec4 u_Ambient; // rgb = ambient color, a unused
+    uvec4 u_Flags; // x = debug view mode, yzw unused
+};
+
+layout (std140, binding = 0) uniform View
+{
+    mat4 u_ViewProjection;
+    vec4 u_CameraPosition;
+};
+
+// #include "lit_common.glsl"
+
 // ----- Vertex Data -----
 layout (location = 0) in vec3 a_Position;
 layout (location = 1) in vec3 a_Normal;
@@ -11,14 +31,6 @@ layout (location = 4) in mat4 a_Model;
 layout (location = 8) in mat3 a_NormalMatrix;
 layout (location = 11) in vec3 a_Albedo;
 layout (location = 12) in vec2 a_Params;
-
-layout (std140, binding = 0) uniform Frame
-{
-    mat4 u_ViewProjection;
-    vec4 u_CameraPosition;
-    uvec4 u_Flags;
-    mat4 u_LightViewProjection;
-};
 
 out vec3 v_WorldPos;
 out vec2 v_UV;
@@ -35,10 +47,11 @@ void main()
     vec3 B = cross(N, T) * a_Tangent.w;
     v_TBN = mat3(T, B, N);
 
-    v_WorldPos = vec3(a_Model * vec4(a_Position, 1.0));
+    vec4 worldPos = a_Model * vec4(a_Position, 1.0);
+    v_WorldPos = worldPos.xyz;
     v_UV = a_UV;
     v_Albedo = a_Albedo;
     v_Params = a_Params;
-    v_PosLightSpace = u_LightViewProjection * vec4(v_WorldPos, 1.0);
-    gl_Position = u_ViewProjection * a_Model * vec4(a_Position, 1.0);
+    v_PosLightSpace = u_LightViewProjection * vec4(worldPos.xyz + N * u_Settings.y, 1.0);
+    gl_Position = u_ViewProjection * worldPos;
 }

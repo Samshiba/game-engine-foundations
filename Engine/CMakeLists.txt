@@ -99,7 +99,9 @@ set(ENGINE_HEADERS
         "include/Engine/Renderer/FrameCapture.hpp"
         "include/Engine/Renderer/Texture.hpp"
         # Layout
-        "include/Engine/Renderer/Layout/LitShaderLayout.hpp"
+        "include/Engine/Renderer/Layout/LitLayout.hpp"
+        "include/Engine/Renderer/Layout/CommonLayout.hpp"
+        "include/Engine/Renderer/Layout/ShadowLayout.hpp"
 
         # Assets
         "include/Engine/Assets/ObjLoader.hpp"
