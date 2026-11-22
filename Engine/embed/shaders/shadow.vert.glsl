@@ -1,12 +1,6 @@
 #version 450 core
 
-layout (std140, binding = 0) uniform View
-{
-    mat4 u_ViewProjection;
-    vec4 u_CameraPosition;
-};
-
-// #include "common.glsl"
+#include "common.glsl"
 
 // ----- Vertex Data -----
 layout (location = 0) in vec3 a_Position;

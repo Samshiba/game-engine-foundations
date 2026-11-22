@@ -1,24 +1,6 @@
 #version 450 core
 
-layout (std140, binding = 1) uniform Shadow
-{
-    mat4 u_LightViewProjection;
-    vec4 u_Settings; // x = bias, y = normal bias, z = texelSize, w = unused
-};
-
-layout (std140, binding = 2) uniform Environment
-{
-    vec4 u_Ambient; // rgb = ambient color, a unused
-    uvec4 u_Flags; // x = debug view mode, yzw unused
-};
-
-layout (std140, binding = 0) uniform View
-{
-    mat4 u_ViewProjection;
-    vec4 u_CameraPosition;
-};
-
-// #include "lit_common.glsl"
+#include "lit_common.glsl"
 
 // ----- Vertex Data -----
 layout (location = 0) in vec3 a_Position;
