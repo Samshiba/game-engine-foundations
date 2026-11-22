@@ -127,8 +127,8 @@ void GEF::Scene::SceneRenderer::Prepare(
 
     // ----- Hardcoded shadow -----
     // TODO : Refacto
-    glm::mat4 lightProjection =
-        glm::ortho(-3.0f, 3.0f, -3.0f, 3.0f, 0.1f, 20.0f);
+    glm::mat4 lightProjection = glm::ortho(-3.0f, 3.0f, -3.0f, 3.0f, 0.1f,
+                                           shadowSettings_.distance * 2.0f);
 
     auto light = directionalLights_.front();
     glm::vec3 up = std::abs(light.direction.y) > 0.99f ? glm::vec3(0, 0, 1)
